@@ -6,6 +6,32 @@ const db: SQLiteDatabase = openDatabaseSync('pagestreak.db');
 export type DB = SQLiteDatabase;
 export type DBResult<T = any> = SQLiteExecuteAsyncResult<T>;
 
+// Enhanced Book type with Open Library API fields
+export type EnhancedBook = {
+  id: number;
+  name: string;
+  author: string;
+  page: number;
+  // Open Library API fields
+  isbn?: string;
+  cover_id?: number;
+  cover_url?: string;
+  first_publish_year?: number;
+  publisher?: string;
+  language?: string;
+  description?: string;
+  subjects?: string;
+  open_library_key?: string;
+  author_key?: string;
+  rating?: number;
+  date_added?: string;
+  date_started?: string;
+  date_finished?: string;
+  current_page?: number;
+  reading_status?: 'want_to_read' | 'currently_reading' | 'read';
+  notes?: string;
+};
+
 /**
  * Helper to run a SQL query with parameters and get all results as array.
  * @param sql SQL query string

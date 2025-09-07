@@ -2,13 +2,13 @@
 import { Link, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { queryAll, queryFirst } from '../../../db/db';
+import BookCard from '../../../components/BookCard';
+import { EnhancedBook, queryAll, queryFirst } from '../../../db/db';
 
-type Book = { id: number; name: string; author: string; page: number };
 type UserPreferences = { id: number; username: string; yearly_book_goal: number };
 
 export default function HomeScreen() {
-  const [books, setBooks] = useState<Book[]>([]);
+  const [books, setBooks] = useState<EnhancedBook[]>([]);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -31,9 +31,26 @@ export default function HomeScreen() {
       const user = await queryFirst<UserPreferences>('SELECT * FROM user_preferences WHERE id = 1');
       setUserPreferences(user);
 
-      // Load books
-      const booksResult = await queryAll<Book>('SELECT * FROM books ORDER BY id DESC');
-      setBooks(booksResult);
+      // Load books - try enhanced books first, fallback to regular books
+      try {
+        const enhancedBooks = await queryAll<EnhancedBook>('SELECT * FROM enhanced_books ORDER BY date_added DESC');
+        setBooks(enhancedBooks);
+      } catch (e) {
+        // Fallback to regular books table
+        try {
+          const regularBooks = await queryAll<{id: number, name: string, author: string, page: number}>('SELECT * FROM books ORDER BY id DESC');
+          const mappedBooks: EnhancedBook[] = regularBooks.map(book => ({
+            ...book,
+            reading_status: 'read' as const,
+            date_added: new Date().toISOString(),
+            current_page: book.page,
+          }));
+          setBooks(mappedBooks);
+        } catch (bookError) {
+          console.log('No books table found');
+          setBooks([]);
+        }
+      }
     } catch (e) {
       console.error('Failed to load data:', e);
     } finally {
@@ -41,10 +58,16 @@ export default function HomeScreen() {
     }
   };
 
-  // Calculate reading progress
-  const booksRead = books.length;
+  // Calculate reading progress - only count 'read' books
+  const booksRead = books.filter(book => book.reading_status === 'read').length;
+  const currentlyReading = books.filter(book => book.reading_status === 'currently_reading').length;
+  const wantToRead = books.filter(book => book.reading_status === 'want_to_read').length;
   const yearlyGoal = userPreferences?.yearly_book_goal || 0;
   const progressPercentage = yearlyGoal > 0 ? Math.min((booksRead / yearlyGoal) * 100, 100) : 0;
+
+  const renderBook = ({ item }: { item: EnhancedBook }) => (
+    <BookCard book={item} compact={true} />
+  );
 
   return (
     <>
@@ -59,7 +82,7 @@ export default function HomeScreen() {
         
         {/* Reading Progress Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📊 Your Reading Progress</Text>
+          <Text style={styles.cardTitle}>📊 Your Reading Journey</Text>
           <View style={styles.progressContainer}>
             <View style={styles.progressStats}>
               <View style={styles.statItem}>
@@ -68,32 +91,34 @@ export default function HomeScreen() {
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{yearlyGoal}</Text>
-                <Text style={styles.statLabel}>Yearly Goal</Text>
+                <Text style={styles.statNumber}>{currentlyReading}</Text>
+                <Text style={styles.statLabel}>Reading</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{Math.round(progressPercentage)}%</Text>
-                <Text style={styles.statLabel}>Progress</Text>
+                <Text style={styles.statNumber}>{wantToRead}</Text>
+                <Text style={styles.statLabel}>Want to Read</Text>
               </View>
             </View>
             
-            <View style={styles.progressBarContainer}>
-              <View style={styles.progressBarBackground}>
-                <View 
-                  style={[
-                    styles.progressBarFill, 
-                    { width: `${progressPercentage}%` }
-                  ]} 
-                />
+            {yearlyGoal > 0 && (
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressBarBackground}>
+                  <View 
+                    style={[
+                      styles.progressBarFill, 
+                      { width: `${progressPercentage}%` }
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.progressText}>
+                  {booksRead >= yearlyGoal 
+                    ? "🎉 Goal achieved! Amazing work!" 
+                    : `${yearlyGoal - booksRead} more books to reach your yearly goal of ${yearlyGoal}`
+                  }
+                </Text>
               </View>
-              <Text style={styles.progressText}>
-                {booksRead >= yearlyGoal 
-                  ? "🎉 Goal achieved! Amazing work!" 
-                  : `${yearlyGoal - booksRead} more books to reach your goal`
-                }
-              </Text>
-            </View>
+            )}
           </View>
         </View>
 
@@ -109,28 +134,17 @@ export default function HomeScreen() {
           </View>
           
           <FlatList
-            data={books.slice(0, 3)} // Show only recent 3 books
+            data={books.slice(0, 4)} // Show only recent 4 books
             keyExtractor={item => item.id.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.bookItem}>
-                <View style={styles.bookIcon}>
-                  <Text style={styles.bookIconText}>📖</Text>
-                </View>
-                <View style={styles.bookInfo}>
-                  <Text style={styles.bookTitle}>{item.name}</Text>
-                  <Text style={styles.bookAuthor}>by {item.author}</Text>
-                  <Text style={styles.bookPages}>{item.page} pages</Text>
-                </View>
-              </View>
-            )}
+            renderItem={renderBook}
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Text style={styles.emptyIcon}>📚</Text>
                 <Text style={styles.emptyTitle}>No books yet</Text>
-                <Text style={styles.emptySubtitle}>Start by adding your first book!</Text>
+                <Text style={styles.emptySubtitle}>Start by discovering and adding books!</Text>
                 <Link href="/books" asChild>
                   <TouchableOpacity style={styles.addFirstBookBtn}>
-                    <Text style={styles.addFirstBookText}>Add Your First Book</Text>
+                    <Text style={styles.addFirstBookText}>🔍 Discover Books</Text>
                   </TouchableOpacity>
                 </Link>
               </View>
@@ -261,51 +275,6 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
-  },
-  bookItem: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  bookIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  bookIconText: {
-    fontSize: 20,
-  },
-  bookInfo: {
-    flex: 1,
-  },
-  bookTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  bookAuthor: {
-    fontSize: 14,
-    color: '#6C63FF',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  bookPages: {
-    fontSize: 12,
-    color: '#64748B',
-    fontStyle: 'italic',
   },
   emptyState: {
     alignItems: 'center',

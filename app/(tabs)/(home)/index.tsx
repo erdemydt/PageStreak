@@ -1,5 +1,5 @@
 
-import { Link, Stack, useFocusEffect } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BookCard from '../../../components/BookCard';
@@ -70,8 +70,8 @@ export default function HomeScreen() {
   );
 
   return (
-    <>
-      <Stack.Screen options={{ title: 'Home' }} />
+    <View style={{flex: 1}}>
+     
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>📚 PageStreak</Text>
@@ -126,7 +126,7 @@ export default function HomeScreen() {
         <View style={styles.listSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>📖 Recent Books ({books.length})</Text>
-            <Link href="/books" asChild>
+            <Link href={"/(books)" as any} asChild>
               <TouchableOpacity style={styles.seeAllBtn}>
                 <Text style={styles.seeAllText}>See All →</Text>
               </TouchableOpacity>
@@ -142,7 +142,7 @@ export default function HomeScreen() {
                 <Text style={styles.emptyIcon}>📚</Text>
                 <Text style={styles.emptyTitle}>No books yet</Text>
                 <Text style={styles.emptySubtitle}>Start by discovering and adding books!</Text>
-                <Link href="/books" asChild>
+                <Link href={"/(books)" as any} asChild>
                   <TouchableOpacity style={styles.addFirstBookBtn}>
                     <Text style={styles.addFirstBookText}>🔍 Discover Books</Text>
                   </TouchableOpacity>
@@ -154,7 +154,7 @@ export default function HomeScreen() {
           />
         </View>
       </View>
-    </>
+    </View>
   );
 }
 

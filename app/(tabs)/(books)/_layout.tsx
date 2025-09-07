@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 
-export default function HomeLayout() {
+export default function BooksLayout() {
   return (
     <Stack
       screenOptions={{
@@ -16,7 +16,14 @@ export default function HomeLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Books',
+        }}
+      />
+      <Stack.Screen
+        name="search"
+        options={{
+          title: 'Search Books',
+          presentation: 'card',
         }}
       />
     </Stack>

@@ -1,10 +1,8 @@
-import { Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, Animated, FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import BookCard from '../../components/BookCard';
-import BookSearchModal from '../../components/BookSearchModal';
-import { EnhancedBook, execute, queryAll } from '../../db/db';
-import { SearchBookResult } from '../../services/openLibrary';
+import { Link, Stack, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Animated, FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import BookCard from '../../../components/BookCard';
+import { EnhancedBook, execute, queryAll } from '../../../db/db';
 
 type BooksearchProps = {
   name: string;
@@ -57,7 +55,8 @@ function ManualBookEntry(props: BooksearchProps) {
   );
 }
 
-export default function BooksScreen() {
+export default function HomeScreen() {
+
   const [name, setName] = useState('');
   const [author, setAuthor] = useState('');
   const [page, setPage] = useState('');
@@ -65,13 +64,18 @@ export default function BooksScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAddingManually, setIsAddingManually] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0.8));
 
   useEffect(() => {
     initializeDatabase();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadBooks();
+    }, [])
+  );
 
   const initializeDatabase = async () => {
     try {
@@ -170,46 +174,6 @@ export default function BooksScreen() {
     }
   };
 
-  const saveSearchedBook = async (searchResult: SearchBookResult) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const subjects = searchResult.subjects ? JSON.stringify(searchResult.subjects) : null;
-      
-      await execute(`
-        INSERT INTO enhanced_books (
-          name, author, page, isbn, cover_id, cover_url,
-          first_publish_year, publisher, language, subjects,
-          open_library_key, author_key, rating, reading_status, date_added
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'want_to_read', datetime('now'))
-      `, [
-        searchResult.title,
-        searchResult.authors.join(', '),
-        searchResult.pageCount || 0,
-        searchResult.isbn || null,
-        searchResult.coverId || null,
-        searchResult.coverUrl || null,
-        searchResult.firstPublishYear || null,
-        searchResult.publisher || null,
-        searchResult.language || 'eng',
-        subjects,
-        searchResult.key,
-        null, // author_key - would need additional processing
-        searchResult.rating || null,
-      ]);
-      
-      await loadBooks();
-      toggleSearchModal();
-      
-      Alert.alert('Success', `"${searchResult.title}" has been added to your library!`);
-    } catch (e) {
-      setError('Failed to save book from search');
-      console.error('Save searched book error:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const deleteBook = async (bookId: number, bookTitle: string) => {
     Alert.alert(
       'Delete Book',
@@ -275,40 +239,6 @@ export default function BooksScreen() {
     }
   };
 
-  const toggleSearchModal = () => {
-    setIsSearching(!isSearching);
-    if (!isSearching) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.8,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setError(null);
-      });
-    }
-  };
-
   const renderBook = ({ item }: { item: EnhancedBook }) => (
     <BookCard
       book={item}
@@ -317,10 +247,15 @@ export default function BooksScreen() {
     />
   );
 
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
   return (
-    <>
-      <Stack.Screen options={{ title: 'Books' }} />
-      <View style={styles.container}>
+    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+      <View style={{flex: 1}}>
+        <Stack.Screen options={{ title: 'Books' }} />
+        <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>📖 Book Library</Text>
           <Text style={styles.subtitle}>Discover and track your reading journey</Text>
@@ -343,27 +278,20 @@ export default function BooksScreen() {
           />
         )}
 
-        <BookSearchModal
-          visible={isSearching}
-          onClose={toggleSearchModal}
-          onSelectBook={saveSearchedBook}
-          fadeAnim={fadeAnim}
-          scaleAnim={scaleAnim}
-        />
-
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={[styles.actionBtn, isAddingManually && styles.nonVisibleBtn]}
-            onPress={toggleSearchModal}
-            disabled={loading || isAddingManually}
-          >
-            <Text style={styles.actionBtnText}>🔍 Search Books</Text>
-          </TouchableOpacity>
+          <Link href="./search" asChild>
+            <TouchableOpacity 
+              style={[styles.actionBtn, isAddingManually && styles.nonVisibleBtn]}
+              disabled={loading || isAddingManually}
+            >
+              <Text style={styles.actionBtnText}>🔍 Search Books</Text>
+            </TouchableOpacity>
+          </Link>
           
           <TouchableOpacity 
             style={[styles.actionBtn, styles.secondaryBtn, isAddingManually && styles.nonVisibleBtn]}
             onPress={toggleManualForm}
-            disabled={loading || isSearching}
+            disabled={loading || isAddingManually}
           >
             <Text style={[styles.actionBtnText, styles.secondaryBtnText]}>✏️ Add Manually</Text>
           </TouchableOpacity>
@@ -387,7 +315,8 @@ export default function BooksScreen() {
           />
         </View>
       </View>
-    </>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 

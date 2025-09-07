@@ -9,7 +9,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { execute } from '../db/db';
 
@@ -60,11 +61,16 @@ export default function IntroScreen() {
     }
   };
 
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+      <KeyboardAvoidingView 
+        style={styles.container} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView 
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
@@ -113,15 +119,17 @@ export default function IntroScreen() {
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <TouchableOpacity 
-            style={[styles.getStartedBtn, (!username.trim() || !yearlyGoal.trim() || loading) && styles.getStartedBtnDisabled]}
-            onPress={handleGetStarted}
-            disabled={loading || !username.trim() || !yearlyGoal.trim()}
-          >
-            <Text style={styles.getStartedBtnText}>
-              {loading ? 'Setting up...' : 'Get Started! 🚀'}
-            </Text>
-          </TouchableOpacity>
+          {loading && (
+            <TouchableOpacity
+              style={[styles.getStartedBtn, (!username.trim() || !yearlyGoal.trim() || loading) && styles.getStartedBtnDisabled]}
+              onPress={handleGetStarted}
+              disabled={loading || !username.trim() || !yearlyGoal.trim()}
+            >
+              <Text style={styles.getStartedBtnText}>
+                {loading ? 'Setting up...' : 'Get Started! 🚀'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.featuresContainer}>
@@ -143,6 +151,7 @@ export default function IntroScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 }
 

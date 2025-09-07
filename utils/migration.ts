@@ -127,6 +127,66 @@ export const resetDatabase = async () => {
 };
 
 /**
+ * Logout user - resets all data and removes user preferences
+ * WARNING: This will delete all data!
+ */
+export const logoutUser = async () => {
+  console.log('👋 Logging out user - ALL DATA WILL BE LOST!');
+  
+  try {
+    await execute('DROP TABLE IF EXISTS enhanced_books');
+    await execute('DROP TABLE IF EXISTS books');
+    await execute('DROP TABLE IF EXISTS user_preferences');
+    
+    console.log('🗑️  All user data cleared');
+    
+    // Only recreate empty table structures without default data
+    await execute(`
+      CREATE TABLE IF NOT EXISTS enhanced_books (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        author TEXT NOT NULL,
+        page INTEGER NOT NULL,
+        isbn TEXT,
+        cover_id INTEGER,
+        cover_url TEXT,
+        first_publish_year INTEGER,
+        publisher TEXT,
+        language TEXT DEFAULT 'eng',
+        description TEXT,
+        subjects TEXT,
+        open_library_key TEXT,
+        author_key TEXT,
+        rating REAL,
+        date_added TEXT DEFAULT CURRENT_TIMESTAMP,
+        date_started TEXT,
+        date_finished TEXT,
+        current_page INTEGER DEFAULT 0,
+        reading_status TEXT DEFAULT 'want_to_read',
+        notes TEXT
+      )
+    `);
+
+    await execute(`
+      CREATE TABLE IF NOT EXISTS user_preferences (
+        id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL DEFAULT 'Reader',
+        yearly_book_goal INTEGER DEFAULT 12,
+        preferred_genres TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    console.log('🎉 User logout completed!');
+    return true;
+  } catch (error) {
+    console.error('❌ Logout failed:', error);
+    throw error;
+  }
+};
+
+/**
  * Get migration status
  */
 export const getMigrationStatus = async () => {

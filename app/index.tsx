@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { queryFirst } from '../db/db';
@@ -21,9 +21,17 @@ export default function Index() {
     try {
       const user = await queryFirst<UserPreferences>('SELECT * FROM user_preferences WHERE id = 1');
       setHasUser(!!user);
+      
+      // Automatically navigate based on user status
+      if (user) {
+        router.replace('/(tabs)/(home)');
+      } else {
+        router.replace('/intro');
+      }
     } catch (error) {
       // If table doesn't exist or error, show intro
       setHasUser(false);
+      router.replace('/intro');
     } finally {
       setIsLoading(false);
     }
@@ -38,11 +46,13 @@ export default function Index() {
     );
   }
 
-  if (!hasUser) {
-    return <Redirect href="/intro" />;
-  }
-
-  return <Redirect href="/(tabs)/(home)" />;
+  // This component will only briefly show while navigation is happening
+  return (
+    <View style={styles.loadingContainer}>
+      <Text style={styles.loadingEmoji}>📚</Text>
+      <Text style={styles.loadingText}>Loading...</Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

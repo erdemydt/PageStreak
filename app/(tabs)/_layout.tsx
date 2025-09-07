@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, Tabs } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 
 export default function TabLayout() {
   return (
-    <>
+    <View style={{flex: 1}}>
       <Stack.Screen options={{ headerShown: false }} />
       <Tabs
         screenOptions={{
@@ -50,12 +50,14 @@ export default function TabLayout() {
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="home" size={size} color={color} />
             ),
+            headerShown: false,
           }} 
         />
         <Tabs.Screen 
-          name="books" 
+          name="(books)" 
           options={{ 
             title: 'Books',
+            headerShown: false,
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="book" size={size} color={color} />
             ),
@@ -68,9 +70,10 @@ export default function TabLayout() {
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="settings" size={size} color={color} />
             ),
+            headerShown: false,
           }} 
         />
       </Tabs>
-    </>
+    </View>
   );
 }

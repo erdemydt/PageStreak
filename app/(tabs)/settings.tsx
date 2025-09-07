@@ -1,16 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Keyboard,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { execute, queryFirst } from '../../db/db';
+import { logoutUser } from '../../utils/migration';
 
 type UserPreferences = {
   id: number;
@@ -66,6 +69,7 @@ export default function SettingsScreen() {
   };
 
   const cancelEdit = () => {
+    Keyboard.dismiss();
     if (userPreferences) {
       setEditedUsername(userPreferences.username);
       setEditedGoal(userPreferences.yearly_book_goal.toString());
@@ -73,10 +77,46 @@ export default function SettingsScreen() {
     setIsEditing(false);
   };
 
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out? This will delete all your books and reading progress. This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await logoutUser();
+              
+              // Direct redirect to intro page after logout
+              router.replace('/intro');
+            } catch (error) {
+              console.error('Logout failed:', error);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <>
-      <Stack.Screen options={{ title: 'Settings' }} />
-      <View style={styles.container}>
+    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+      <View style={{flex: 1}}>
+  
+        <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>⚙️ Settings</Text>
           <Text style={styles.subtitle}>Manage your PageStreak preferences</Text>
@@ -88,7 +128,7 @@ export default function SettingsScreen() {
             <Text style={styles.sectionTitle}>Profile</Text>
             <View style={styles.profileCard}>
               {!isEditing ? (
-                <>
+                <View style={{flex: 1}}>
                   <View style={styles.profileHeader}>
                     <View style={styles.avatar}>
                       <Text style={styles.avatarText}>
@@ -108,7 +148,7 @@ export default function SettingsScreen() {
                       <Ionicons name="pencil" size={18} color="#6C63FF" />
                     </TouchableOpacity>
                   </View>
-                </>
+                </View>
               ) : (
                 <View style={styles.editForm}>
                   <Text style={styles.editFormTitle}>Edit Profile</Text>
@@ -180,12 +220,32 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* Logout Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Account</Text>
+            <View style={styles.logoutCard}>
+              <TouchableOpacity 
+                style={styles.logoutBtn}
+                onPress={handleLogout}
+                disabled={loading}
+              >
+                <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+                <View style={styles.logoutInfo}>
+                  <Text style={styles.logoutTitle}>Log Out</Text>
+                  <Text style={styles.logoutSubtitle}>Clear all data and start fresh</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <View style={styles.footer}>
             <Text style={styles.copyright}>Made with ❤️ for book lovers</Text>
           </View>
         </ScrollView>
       </View>
-    </>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -196,6 +256,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
+    marginTop: 40,
     paddingTop: 20,
     paddingBottom: 16,
     alignItems: 'center',
@@ -365,6 +426,34 @@ const styles = StyleSheet.create({
   },
   copyright: {
     fontSize: 12,
+    color: '#9CA3AF',
+  },
+  logoutCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  logoutInfo: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  logoutTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#EF4444',
+    marginBottom: 2,
+  },
+  logoutSubtitle: {
+    fontSize: 14,
     color: '#9CA3AF',
   },
 });

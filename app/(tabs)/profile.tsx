@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -9,8 +8,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+  View
 } from 'react-native';
 import { execute, queryFirst } from '../../db/db';
 
@@ -38,14 +36,14 @@ const genres = [
 export default function ProfileScreen() {
   const [userPreferences, setUserPreferences] = useState<FullUserPreferences | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  
+
   // Editable fields
   const [editedUsername, setEditedUsername] = useState('');
   const [editedYearlyGoal, setEditedYearlyGoal] = useState('');
   const [editedDailyGoal, setEditedDailyGoal] = useState('');
   const [editedTargetGoal, setEditedTargetGoal] = useState('');
   const [editedGenres, setEditedGenres] = useState<string[]>([]);
-  
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -73,24 +71,24 @@ export default function ProfileScreen() {
   };
 
   const toggleGenre = (genre: string) => {
-    setEditedGenres(prev => 
-      prev.includes(genre) 
+    setEditedGenres(prev =>
+      prev.includes(genre)
         ? prev.filter(g => g !== genre)
         : [...prev, genre]
     );
   };
 
   const savePreferences = async () => {
-    if (!editedUsername.trim() || 
-        !editedYearlyGoal.trim() || 
-        !editedDailyGoal.trim() || 
-        !editedTargetGoal.trim() ||
-        isNaN(Number(editedYearlyGoal)) || 
-        isNaN(Number(editedDailyGoal)) || 
-        isNaN(Number(editedTargetGoal)) ||
-        Number(editedYearlyGoal) <= 0 ||
-        Number(editedDailyGoal) <= 0 ||
-        Number(editedTargetGoal) <= 0) {
+    if (!editedUsername.trim() ||
+      !editedYearlyGoal.trim() ||
+      !editedDailyGoal.trim() ||
+      !editedTargetGoal.trim() ||
+      isNaN(Number(editedYearlyGoal)) ||
+      isNaN(Number(editedDailyGoal)) ||
+      isNaN(Number(editedTargetGoal)) ||
+      Number(editedYearlyGoal) <= 0 ||
+      Number(editedDailyGoal) <= 0 ||
+      Number(editedTargetGoal) <= 0) {
       Alert.alert('Invalid Input', 'Please fill in all fields with valid positive numbers');
       return;
     }
@@ -101,16 +99,16 @@ export default function ProfileScreen() {
       const initialRate = Number(editedDailyGoal);
       const targetRate = Number(editedTargetGoal);
       const weeklyGoal = initialRate * 7;
-      
+
       // Calculate weekly increase needed over 52 weeks
       const totalIncrease = targetRate - initialRate;
       const weeklyIncrease = totalIncrease > 0 ? Math.ceil(totalIncrease / 52) : 0;
       const weeklyIncreasePercentage = initialRate > 0 ? (weeklyIncrease / initialRate) * 100 : 0;
-      
+
       // Set end goal date to end of current year
       const currentYear = new Date().getFullYear();
       const endGoalDate = new Date(currentYear, 11, 31).toISOString();
-      
+
       await execute(
         `UPDATE user_preferences SET 
           username = ?, 
@@ -140,7 +138,7 @@ export default function ProfileScreen() {
           weeklyIncreasePercentage
         ]
       );
-      
+
       await loadUserPreferences();
       setIsEditing(false);
       Alert.alert('Success', 'Your profile has been updated!');
@@ -186,7 +184,7 @@ export default function ProfileScreen() {
           <Text style={styles.profileName}>{userPreferences?.username || 'Loading...'}</Text>
           <Text style={styles.profileSubtitle}>PageStreak Reader</Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.editButton}
           onPress={() => setIsEditing(true)}
         >
@@ -208,9 +206,9 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>{userPreferences?.yearly_book_goal || 0} books</Text>
             </View>
           </View>
-          
+
           <View style={styles.divider} />
-          
+
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="time" size={20} color="#10B981" />
@@ -220,9 +218,9 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>{userPreferences?.daily_reading_goal || 0} minutes</Text>
             </View>
           </View>
-          
+
           <View style={styles.divider} />
-          
+
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="trending-up" size={20} color="#F59E0B" />
@@ -232,9 +230,9 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>{userPreferences?.end_reading_rate_goal_minutes_per_day || 0} minutes</Text>
             </View>
           </View>
-          
+
           <View style={styles.divider} />
-          
+
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="calendar" size={20} color="#EF4444" />
@@ -260,9 +258,9 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>{userPreferences?.current_reading_rate_minutes_per_day || 0} min/day</Text>
             </View>
           </View>
-          
+
           <View style={styles.divider} />
-          
+
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="stats-chart" size={20} color="#06B6D4" />
@@ -272,9 +270,9 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>{userPreferences?.initial_reading_rate_minutes_per_day || 0} min/day</Text>
             </View>
           </View>
-          
+
           <View style={styles.divider} />
-          
+
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="flag" size={20} color="#EC4899" />
@@ -318,9 +316,9 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>{formatDate(userPreferences?.created_at)}</Text>
             </View>
           </View>
-          
+
           <View style={styles.divider} />
-          
+
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="refresh-outline" size={20} color="#64748B" />
@@ -337,8 +335,18 @@ export default function ProfileScreen() {
 
   const renderEditMode = () => (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={cancelEdit}
+        disabled={loading}
+      >
+        <Ionicons name="close" size={25} color="#3b4553ff" />
+      </TouchableOpacity>
       <View style={styles.editHeader}>
+
+
         <Text style={styles.editTitle}>✏️ Edit Profile</Text>
+
         <Text style={styles.editSubtitle}>Update your reading preferences</Text>
       </View>
 
@@ -358,7 +366,7 @@ export default function ProfileScreen() {
               editable={!loading}
             />
           </View>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
               <Ionicons name="library" size={16} color="#6C63FF" /> Yearly Book Goal
@@ -392,7 +400,7 @@ export default function ProfileScreen() {
               editable={!loading}
             />
           </View>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
               <Ionicons name="trending-up" size={16} color="#F59E0B" /> Target Daily Reading (minutes)
@@ -438,7 +446,7 @@ export default function ProfileScreen() {
 
       {/* Action Buttons */}
       <View style={styles.editActions}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.cancelButton}
           onPress={cancelEdit}
           disabled={loading}
@@ -446,7 +454,7 @@ export default function ProfileScreen() {
           <Ionicons name="close" size={18} color="#64748B" />
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.saveButton}
           onPress={savePreferences}
           disabled={loading}
@@ -463,24 +471,15 @@ export default function ProfileScreen() {
   );
 
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="chevron-back" size={24} color="#6C63FF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {isEditing ? 'Edit Profile' : 'My Profile'}
-          </Text>
-          <View style={styles.headerSpacer} />
-        </View>
 
-        {isEditing ? renderEditMode() : renderViewMode()}
+    <View style={{ flex: 1 }}>
+      <View style={styles.header}>
+        <View style={styles.headerSpacer} />
       </View>
-    </TouchableWithoutFeedback>
+
+      {isEditing ? renderEditMode() : renderViewMode()}
+    </View>
+
   );
 }
 
@@ -490,17 +489,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#6C63FF',
+    elevation: 0,
+    shadowOpacity: 0,
+    borderBottomWidth: 0,
   },
   backButton: {
+    position: 'absolute',
+    top: 16,
+    left: 5,
     padding: 8,
   },
   headerTitle: {
@@ -509,6 +506,7 @@ const styles = StyleSheet.create({
     color: '#1E293B',
   },
   headerSpacer: {
+    height: 40,
     width: 40,
   },
   content: {

@@ -7,25 +7,24 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from 'react-native';
-import { execute, queryFirst } from '../../db/db';
+import { queryFirst } from '../../db/db';
 import { logoutUser } from '../../utils/migration';
 
 type UserPreferences = {
   id: number;
   username: string;
   yearly_book_goal: number;
+  preferred_genres?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export default function SettingsScreen() {
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedUsername, setEditedUsername] = useState('');
-  const [editedGoal, setEditedGoal] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -37,44 +36,10 @@ export default function SettingsScreen() {
       const user = await queryFirst<UserPreferences>('SELECT * FROM user_preferences WHERE id = 1');
       if (user) {
         setUserPreferences(user);
-        setEditedUsername(user.username);
-        setEditedGoal(user.yearly_book_goal.toString());
       }
     } catch (e) {
       console.error('Failed to load user preferences:', e);
     }
-  };
-
-  const savePreferences = async () => {
-    if (!editedUsername.trim() || !editedGoal.trim() || isNaN(Number(editedGoal)) || Number(editedGoal) <= 0) {
-      Alert.alert('Invalid Input', 'Please enter a valid username and yearly book goal');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await execute(
-        'UPDATE user_preferences SET username = ?, yearly_book_goal = ? WHERE id = 1',
-        [editedUsername.trim(), Number(editedGoal)]
-      );
-      
-      await loadUserPreferences();
-      setIsEditing(false);
-      Alert.alert('Success', 'Your preferences have been updated!');
-    } catch (e) {
-      Alert.alert('Error', 'Failed to save preferences. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const cancelEdit = () => {
-    Keyboard.dismiss();
-    if (userPreferences) {
-      setEditedUsername(userPreferences.username);
-      setEditedGoal(userPreferences.yearly_book_goal.toString());
-    }
-    setIsEditing(false);
   };
 
   const dismissKeyboard = () => {
@@ -123,79 +88,30 @@ export default function SettingsScreen() {
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* User Profile Section */}
+          {/* Profile Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Profile</Text>
             <View style={styles.profileCard}>
-              {!isEditing ? (
-                <View style={{flex: 1}}>
-                  <View style={styles.profileHeader}>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>
-                        {userPreferences?.username.charAt(0).toUpperCase() || '?'}
-                      </Text>
-                    </View>
-                    <View style={styles.profileInfo}>
-                      <Text style={styles.profileName}>{userPreferences?.username || 'Loading...'}</Text>
-                      <Text style={styles.profileGoal}>
-                        📖 Goal: {userPreferences?.yearly_book_goal || 0} books this year
-                      </Text>
-                    </View>
-                    <TouchableOpacity 
-                      style={styles.editBtn}
-                      onPress={() => setIsEditing(true)}
-                    >
-                      <Ionicons name="pencil" size={18} color="#6C63FF" />
-                    </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.profileNavigationButton}
+                onPress={() => router.push('/(tabs)/profile')}
+              >
+                <View style={styles.profileHeader}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {userPreferences?.username.charAt(0).toUpperCase() || '?'}
+                    </Text>
                   </View>
+                  <View style={styles.profileInfo}>
+                    <Text style={styles.profileName}>{userPreferences?.username || 'Loading...'}</Text>
+                    <Text style={styles.profileGoal}>
+                      📖 Goal: {userPreferences?.yearly_book_goal || 0} books this year
+                    </Text>
+                    <Text style={styles.profileSubtext}>Tap to view & edit full profile</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#6C63FF" />
                 </View>
-              ) : (
-                <View style={styles.editForm}>
-                  <Text style={styles.editFormTitle}>Edit Profile</Text>
-                  
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Username</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={editedUsername}
-                      onChangeText={setEditedUsername}
-                      placeholder="Enter your username"
-                      editable={!loading}
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Yearly Book Goal</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={editedGoal}
-                      onChangeText={setEditedGoal}
-                      placeholder="e.g. 12"
-                      keyboardType="numeric"
-                      editable={!loading}
-                    />
-                  </View>
-
-                  <View style={styles.editActions}>
-                    <TouchableOpacity 
-                      style={styles.cancelBtn}
-                      onPress={cancelEdit}
-                      disabled={loading}
-                    >
-                      <Text style={styles.cancelBtnText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.saveBtn}
-                      onPress={savePreferences}
-                      disabled={loading}
-                    >
-                      <Text style={styles.saveBtnText}>
-                        {loading ? 'Saving...' : 'Save'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -290,16 +206,25 @@ const styles = StyleSheet.create({
   profileCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+    overflow: 'hidden',
+  },
+  profileNavigationButton: {
+    padding: 20,
   },
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  profileSubtext: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginTop: 4,
   },
   avatar: {
     width: 60,
@@ -333,62 +258,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     padding: 12,
     borderRadius: 10,
-  },
-  editForm: {
-    gap: 20,
-  },
-  editFormTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  input: {
-    height: 48,
-    borderColor: '#E2E8F0',
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    fontSize: 16,
-    color: '#1E293B',
-  },
-  editActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelBtn: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  cancelBtnText: {
-    color: '#64748B',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  saveBtn: {
-    flex: 1,
-    backgroundColor: '#6C63FF',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  saveBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
   },
   aboutCard: {
     backgroundColor: '#FFFFFF',

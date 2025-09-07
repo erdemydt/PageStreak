@@ -5,7 +5,14 @@ import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import BookCard from '../../../components/BookCard';
 import { EnhancedBook, queryAll, queryFirst } from '../../../db/db';
 
-type UserPreferences = { id: number; username: string; yearly_book_goal: number };
+type UserPreferences = { 
+  id: number; 
+  username: string; 
+  yearly_book_goal: number;
+  preferred_genres?: string;
+  created_at?: string;
+  updated_at?: string;
+};
 
 export default function HomeScreen() {
   const [books, setBooks] = useState<EnhancedBook[]>([]);

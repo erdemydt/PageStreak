@@ -7,6 +7,9 @@ type UserPreferences = {
   id: number;
   username: string;
   yearly_book_goal: number;
+  preferred_genres?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export default function Index() {

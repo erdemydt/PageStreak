@@ -12,7 +12,7 @@ export default function BooksScreen() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [isAdding, setIsAdding] = useState(false);
   useEffect(() => {
     (async () => {
       await execute(
@@ -52,6 +52,19 @@ export default function BooksScreen() {
     }
   };
 
+  const deleteBook = async (bookId: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await execute('DELETE FROM books WHERE id = ?', [bookId]);
+      await loadBooks();
+    } catch (e) {
+      setError('Failed to delete book');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <Stack.Screen options={{ title: 'Books' }} />
@@ -60,13 +73,14 @@ export default function BooksScreen() {
           <Text style={styles.title}>📖 Book Library</Text>
           <Text style={styles.subtitle}>Keep track of your reading collection</Text>
         </View>
-        
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Add New Book</Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Book Name"
+
+        {isAdding && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Add New Book</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Book Name"
               placeholderTextColor="#9CA3AF"
               value={name}
               onChangeText={setName}
@@ -104,8 +118,16 @@ export default function BooksScreen() {
             </TouchableOpacity>
           </View>
           {error ? <Text style={styles.error}>{error}</Text> : null}
+        </View> )}
+        <View style={styles.addBtnContainer}>
+          <TouchableOpacity
+            style={[styles.addBttn, isAdding && styles.saveBtnDisabled]}
+            onPress={() => setIsAdding(!isAdding)}
+            disabled={loading}
+          >
+            <Text style={styles.addBttnText}>{isAdding ? 'Cancel  ➖' : 'Add ➕'}</Text>
+          </TouchableOpacity>
         </View>
-
         <View style={styles.listSection}>
           <Text style={styles.sectionTitle}>📚 My Books ({books.length})</Text>
           <FlatList
@@ -121,6 +143,13 @@ export default function BooksScreen() {
                   <Text style={styles.bookAuthor}>by {item.author}</Text>
                   <Text style={styles.bookPages}>{item.page} pages</Text>
                 </View>
+                <TouchableOpacity 
+                  style={styles.deleteBtn}
+                  onPress={() => deleteBook(item.id)}
+                  disabled={loading}
+                >
+                  <Text style={styles.deleteBtnText}>🗑️</Text>
+                </TouchableOpacity>
               </View>
             )}
             ListEmptyComponent={
@@ -301,5 +330,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
     textAlign: 'center',
+  },
+  deleteBtn: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: 8,
+    padding: 8,
+    marginLeft: 12,
+    minWidth: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnText: {
+    fontSize: 16,
+  },
+  // Add button should not fill the entire width
+  addBtnContainer: {
+    alignItems: 'flex-start',
+    marginVertical: 16,
+  },
+  addBttn: {
+    backgroundColor: '#6C63FF',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    shadowColor: '#6C63FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  addBttnText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

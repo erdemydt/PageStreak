@@ -1,60 +1,50 @@
 
-import { Link, Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { execute, queryAll } from '../../../db/db';
+import { Link, Stack, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { queryAll, queryFirst } from '../../../db/db';
 
-
-type User = { id: number; username: string };
+type Book = { id: number; name: string; author: string; page: number };
+type UserPreferences = { id: number; username: string; yearly_book_goal: number };
 
 export default function HomeScreen() {
-  const [username, setUsername] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Create table if not exists
+  // Load data on mount and when screen comes into focus
   useEffect(() => {
-    (async () => {
-      await execute(
-        'CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE)'
-      );
-      await loadUsers();
-    })();
+    loadData();
   }, []);
 
-  const loadUsers = async () => {
+  // Refresh data when screen comes into focus (e.g., when returning from books tab)
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
+
+  const loadData = async () => {
     setLoading(true);
     try {
-      const res = await queryAll<User>('SELECT * FROM users ORDER BY id DESC');
-      console.log('Loaded users:', res);
-      setUsers(res);
+      // Load user preferences
+      const user = await queryFirst<UserPreferences>('SELECT * FROM user_preferences WHERE id = 1');
+      setUserPreferences(user);
+
+      // Load books
+      const booksResult = await queryAll<Book>('SELECT * FROM books ORDER BY id DESC');
+      setBooks(booksResult);
     } catch (e) {
-      setError('Failed to load users');
+      console.error('Failed to load data:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveUser = async () => {
-    if (!username.trim()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await execute('INSERT INTO users (username) VALUES (?)', [username.trim()]);
-      setUsername('');
-      Keyboard.dismiss();
-      await loadUsers();
-    } catch (e: any) {
-      if (e?.message?.includes('UNIQUE')) {
-        setError('Username already exists');
-      } else {
-        setError('Failed to save user');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Calculate reading progress
+  const booksRead = books.length;
+  const yearlyGoal = userPreferences?.yearly_book_goal || 0;
+  const progressPercentage = yearlyGoal > 0 ? Math.min((booksRead / yearlyGoal) * 100, 100) : 0;
 
   return (
     <>
@@ -62,67 +52,92 @@ export default function HomeScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>📚 PageStreak</Text>
-          <Text style={styles.subtitle}>Track your reading journey</Text>
+          {userPreferences && (
+            <Text style={styles.subtitle}>Welcome back, {userPreferences.username}!</Text>
+          )}
         </View>
         
+        {/* Reading Progress Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Add New User</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter username"
-              placeholderTextColor="#9CA3AF"
-              value={username}
-              onChangeText={setUsername}
-              editable={!loading}
-              autoCapitalize="none"
-              autoCorrect={false}
-              onSubmitEditing={saveUser}
-              returnKeyType="done"
-            />
-            <TouchableOpacity 
-              style={[styles.saveBtn, (!username.trim() || loading) && styles.saveBtnDisabled]} 
-              onPress={saveUser} 
-              disabled={loading || !username.trim()}
-            >
-              <Text style={styles.saveBtnText}>{loading ? 'Saving...' : 'Save'}</Text>
-            </TouchableOpacity>
+          <Text style={styles.cardTitle}>📊 Your Reading Progress</Text>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressStats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{booksRead}</Text>
+                <Text style={styles.statLabel}>Books Read</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{yearlyGoal}</Text>
+                <Text style={styles.statLabel}>Yearly Goal</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{Math.round(progressPercentage)}%</Text>
+                <Text style={styles.statLabel}>Progress</Text>
+              </View>
+            </View>
+            
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBarBackground}>
+                <View 
+                  style={[
+                    styles.progressBarFill, 
+                    { width: `${progressPercentage}%` }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.progressText}>
+                {booksRead >= yearlyGoal 
+                  ? "🎉 Goal achieved! Amazing work!" 
+                  : `${yearlyGoal - booksRead} more books to reach your goal`
+                }
+              </Text>
+            </View>
           </View>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
         </View>
 
+        {/* Recent Books Section */}
         <View style={styles.listSection}>
-          <Text style={styles.sectionTitle}>👥 Registered Users ({users.length})</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>📖 Recent Books ({books.length})</Text>
+            <Link href="/books" asChild>
+              <TouchableOpacity style={styles.seeAllBtn}>
+                <Text style={styles.seeAllText}>See All →</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+          
           <FlatList
-            data={users}
+            data={books.slice(0, 3)} // Show only recent 3 books
             keyExtractor={item => item.id.toString()}
             renderItem={({ item }) => (
-              <View style={styles.userItem}>
-                <View style={styles.userAvatar}>
-                  <Text style={styles.userAvatarText}>{item.username.charAt(0).toUpperCase()}</Text>
+              <View style={styles.bookItem}>
+                <View style={styles.bookIcon}>
+                  <Text style={styles.bookIconText}>📖</Text>
                 </View>
-                <Text style={styles.userText}>{item.username}</Text>
+                <View style={styles.bookInfo}>
+                  <Text style={styles.bookTitle}>{item.name}</Text>
+                  <Text style={styles.bookAuthor}>by {item.author}</Text>
+                  <Text style={styles.bookPages}>{item.page} pages</Text>
+                </View>
               </View>
             )}
             ListEmptyComponent={
               <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>👤</Text>
-                <Text style={styles.emptyTitle}>No users yet</Text>
-                <Text style={styles.emptySubtitle}>Add your first user above!</Text>
+                <Text style={styles.emptyIcon}>📚</Text>
+                <Text style={styles.emptyTitle}>No books yet</Text>
+                <Text style={styles.emptySubtitle}>Start by adding your first book!</Text>
+                <Link href="/books" asChild>
+                  <TouchableOpacity style={styles.addFirstBookBtn}>
+                    <Text style={styles.addFirstBookText}>Add Your First Book</Text>
+                  </TouchableOpacity>
+                </Link>
               </View>
             }
             style={styles.list}
             showsVerticalScrollIndicator={false}
           />
-        </View>
-        
-        <View style={styles.linkContainer}>
-          <Link
-            href={{ pathname: '/details/[id]', params: { id: 'bacon' } }}
-            style={styles.link}
-          >
-            <Text style={styles.linkText}>View user details →</Text>
-          </Link>
         </View>
       </View>
     </>
@@ -170,50 +185,51 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: 16,
   },
-  inputRow: {
+  progressContainer: {
+    gap: 16,
+  },
+  progressStats: {
     flexDirection: 'row',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    gap: 12,
   },
-  input: {
-    flex: 1,
-    height: 48,
-    borderColor: '#E2E8F0',
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    fontSize: 16,
-    color: '#1E293B',
-  },
-  saveBtn: {
-    backgroundColor: '#6C63FF',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    justifyContent: 'center',
+  statItem: {
     alignItems: 'center',
-    minWidth: 80,
-    shadowColor: '#6C63FF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  saveBtnDisabled: {
-    backgroundColor: '#CBD5E1',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  saveBtnText: {
-    color: '#FFFFFF',
+  statNumber: {
+    fontSize: 24,
     fontWeight: 'bold',
-    fontSize: 16,
+    color: '#6C63FF',
+    marginBottom: 4,
   },
-  error: {
-    color: '#EF4444',
-    marginTop: 12,
+  statLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#E2E8F0',
+  },
+  progressBarContainer: {
+    gap: 8,
+  },
+  progressBarBackground: {
+    height: 8,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#6C63FF',
+    borderRadius: 4,
+  },
+  progressText: {
     fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
     fontWeight: '500',
   },
   listSection: {
@@ -221,19 +237,34 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 20,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#1E293B',
-    marginBottom: 16,
+  },
+  seeAllBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#6C63FF',
+    fontWeight: '600',
   },
   list: {
     flex: 1,
   },
-  userItem: {
+  bookItem: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    padding: 16,
     borderRadius: 12,
     marginBottom: 8,
     shadowColor: '#000',
@@ -244,29 +275,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#6C63FF',
+  bookIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
-  userAvatarText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
+  bookIconText: {
+    fontSize: 20,
   },
-  userText: {
+  bookInfo: {
+    flex: 1,
+  },
+  bookTitle: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#1E293B',
+    marginBottom: 4,
+  },
+  bookAuthor: {
+    fontSize: 14,
+    color: '#6C63FF',
     fontWeight: '500',
+    marginBottom: 2,
+  },
+  bookPages: {
+    fontSize: 12,
+    color: '#64748B',
+    fontStyle: 'italic',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: 40,
   },
   emptyIcon: {
     fontSize: 48,
@@ -282,21 +326,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
     textAlign: 'center',
+    marginBottom: 20,
   },
-  linkContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 16,
-  },
-  link: {
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+  addFirstBookBtn: {
+    backgroundColor: '#6C63FF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 12,
-    alignItems: 'center',
   },
-  linkText: {
-    color: '#6C63FF',
+  addFirstBookText: {
+    color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
   },

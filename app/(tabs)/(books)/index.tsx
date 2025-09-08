@@ -2,8 +2,10 @@ import { Link, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Animated, FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import BookCard from '../../../components/BookCard';
+import BookDetailModal from '../../../components/BookDetailModal';
 import BookStatusModal, { BookStatus } from '../../../components/BookStatusModal';
 import { EnhancedBook, execute, queryAll } from '../../../db/db';
+import { getBookReadingTime, initializeReadingSessions } from '../../../utils/readingProgress';
 
 type BooksearchProps = {
   name: string;
@@ -120,7 +122,13 @@ export default function HomeScreen() {
   const [name, setName] = useState('');
   const [author, setAuthor] = useState('');
   const [page, setPage] = useState('');
-  const [books, setBooks] = useState<EnhancedBook[]>([]);
+  const [books, setBooks] = useState<(EnhancedBook & { reading_time?: number })[]>([]);
+  const [allBooksCount, setAllBooksCount] = useState(0);
+  const [statusCounts, setStatusCounts] = useState({
+    want_to_read: 0,
+    currently_reading: 0,
+    read: 0
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAddingManually, setIsAddingManually] = useState(false);
@@ -130,6 +138,10 @@ export default function HomeScreen() {
   const [selectedBook, setSelectedBook] = useState<EnhancedBook | null>(null);
   const [statusModalFadeAnim] = useState(new Animated.Value(0));
   const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [detailModalFadeAnim] = useState(new Animated.Value(0));
+  const [detailModalScaleAnim] = useState(new Animated.Value(0.8));
+  const [selectedBookForDetail, setSelectedBookForDetail] = useState<(EnhancedBook & { reading_time?: number }) | null>(null);
   const [manualBookStatus, setManualBookStatus] = useState<BookStatus>('currently_reading');
   const [filterStatus, setFilterStatus] = useState<BookStatus | 'all'>('all');
 
@@ -145,6 +157,9 @@ export default function HomeScreen() {
 
   const initializeDatabase = async () => {
     try {
+      // Initialize reading sessions table
+      await initializeReadingSessions();
+      
       // Create enhanced books table with new fields
       await execute(`
         CREATE TABLE IF NOT EXISTS enhanced_books (
@@ -213,8 +228,47 @@ export default function HomeScreen() {
   const loadBooks = async () => {
     setLoading(true);
     try {
-      const res = await queryAll<EnhancedBook>('SELECT * FROM enhanced_books ORDER BY date_added DESC');
-      setBooks(res);
+      // Get total counts first
+      const totalResult = await queryAll<{total: number}>('SELECT COUNT(*) as total FROM enhanced_books');
+      const totalCount = totalResult[0]?.total || 0;
+      setAllBooksCount(totalCount);
+
+      // Get status counts
+      const statusCountsResult = await queryAll<{reading_status: string, count: number}>(`
+        SELECT reading_status, COUNT(*) as count 
+        FROM enhanced_books 
+        GROUP BY reading_status
+      `);
+      
+      const counts = { want_to_read: 0, currently_reading: 0, read: 0 };
+      statusCountsResult.forEach(row => {
+        if (row.reading_status in counts) {
+          counts[row.reading_status as keyof typeof counts] = row.count;
+        }
+      });
+      setStatusCounts(counts);
+
+      // Get books with default sorting (currently reading -> want to read -> read)
+      const res = await queryAll<EnhancedBook>(`
+        SELECT * FROM enhanced_books 
+        ORDER BY 
+          CASE WHEN reading_status = 'currently_reading' THEN 1 
+               WHEN reading_status = 'want_to_read' THEN 2 
+               WHEN reading_status = 'read' THEN 3 
+               ELSE 4 END,
+          date_added DESC
+        LIMIT 10
+      `);
+      
+      // Fetch reading time for each book (only for preview)
+      const booksWithReadingTime = await Promise.all(
+        res.map(async (book) => {
+          const readingTime = await getBookReadingTime(book.id);
+          return { ...book, reading_time: readingTime };
+        })
+      );
+      
+      setBooks(booksWithReadingTime);
     } catch (e) {
       setError('Failed to load books');
       console.error('Load books error:', e);
@@ -231,7 +285,7 @@ export default function HomeScreen() {
   };
 
   const getStatusCount = (status: BookStatus) => {
-    return books.filter(book => book.reading_status === status).length;
+    return statusCounts[status] || 0;
   };
 
   const saveManualBook = async () => {
@@ -421,11 +475,50 @@ export default function HomeScreen() {
     }
   };
 
-  const renderBook = ({ item }: { item: EnhancedBook }) => (
+  const openDetailModal = (book: EnhancedBook & { reading_time?: number }) => {
+    setSelectedBookForDetail(book);
+    setDetailModalVisible(true);
+    Animated.parallel([
+      Animated.timing(detailModalFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(detailModalScaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeDetailModal = () => {
+    Animated.parallel([
+      Animated.timing(detailModalFadeAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(detailModalScaleAnim, {
+        toValue: 0.8,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setDetailModalVisible(false);
+      setSelectedBookForDetail(null);
+    });
+  };
+
+  const renderBook = ({ item }: { item: EnhancedBook & { reading_time?: number } }) => (
     <BookCard
       book={item}
       showDeleteButton={true}
       showStatusButton={true}
+      showReadingTime={true}
+      readingTimeMinutes={item.reading_time || 0}
+      onPress={() => openDetailModal(item)}
       onDelete={() => deleteBook(item.id, item.name)}
       onStatusChange={() => openStatusModal(item)}
     />
@@ -476,6 +569,15 @@ export default function HomeScreen() {
           scaleAnim={statusModalScaleAnim}
         />
 
+        <BookDetailModal
+          visible={detailModalVisible}
+          book={selectedBookForDetail}
+          readingTimeMinutes={selectedBookForDetail?.reading_time || 0}
+          onClose={closeDetailModal}
+          fadeAnim={detailModalFadeAnim}
+          scaleAnim={detailModalScaleAnim}
+        />
+
         <View style={styles.actionButtons}>
           <Link href="./search" asChild style={styles.actionBtn}>
             <TouchableOpacity 
@@ -509,7 +611,7 @@ export default function HomeScreen() {
                 styles.filterBtnText,
                 filterStatus === 'all' && styles.filterBtnTextActive
               ]}>
-                All ({books.length})
+                All ({allBooksCount})
               </Text>
             </TouchableOpacity>
             
@@ -561,9 +663,16 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.listSection}>
-          <Text style={styles.sectionTitle}>
-            📚 My Books ({filteredBooks.length}{filterStatus !== 'all' ? ` of ${books.length}` : ''})
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              📚 My Books (showing {filteredBooks.length} of {allBooksCount})
+            </Text>
+            <Link href="./my-books" asChild>
+              <TouchableOpacity style={styles.viewAllButton}>
+                <Text style={styles.viewAllButtonText}>View All</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
           <FlatList
             data={filteredBooks}
             keyExtractor={item => item.id.toString()}
@@ -706,14 +815,32 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   listSection: {
+    marginTop: 8,
     flex: 1,
     paddingHorizontal: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#1E293B',
-    marginBottom: 16,
+    flex: 1,
+  },
+  viewAllButton: {
+    backgroundColor: '#6C63FF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  viewAllButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   list: {
     flex: 1,

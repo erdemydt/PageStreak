@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -28,7 +28,12 @@ export default function BookSearchScreen() {
   const [selectedBook, setSelectedBook] = useState<SearchBookResult | null>(null);
   const [statusModalFadeAnim] = useState(new Animated.Value(0));
   const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
+  const [clickedSearch, setClickedSearch] = useState(false);
 
+  useEffect(() => {
+    // Reset search results when search type changes
+    setClickedSearch(false);
+  }, []);
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       Alert.alert('Search Error', 'Please enter a search term');
@@ -37,6 +42,7 @@ export default function BookSearchScreen() {
 
     Keyboard.dismiss();
     setLoading(true);
+    setClickedSearch(true);
     try {
       let results: SearchBookResult[] = [];
       
@@ -354,7 +360,7 @@ export default function BookSearchScreen() {
             contentContainerStyle={styles.resultsListContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              !loading &&
+              !loading && clickedSearch &&
               searchQuery.trim() !== '' &&
               searchResults.length === 0 ? (
                 <View style={styles.emptyResults}>
@@ -364,7 +370,7 @@ export default function BookSearchScreen() {
                     Try different search terms or check your spelling
                   </Text>
                 </View>
-              ) : searchResults.length === 0 && searchQuery.trim() === '' ? (
+              ) : searchResults.length === 0 && !clickedSearch ? (
                 <View style={styles.emptyResults}>
                   <Text style={styles.emptyResultsIcon}>🔍</Text>
                   <Text style={styles.emptyResultsText}>Start searching</Text>

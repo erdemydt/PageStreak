@@ -9,7 +9,10 @@ interface BookCardProps {
   onStatusChange?: () => void;
   showDeleteButton?: boolean;
   showStatusButton?: boolean;
+  showReadingTime?: boolean;
+  readingTimeMinutes?: number;
   compact?: boolean;
+  smaller?: boolean;
 }
 
 export default function BookCard({ 
@@ -19,8 +22,21 @@ export default function BookCard({
   onStatusChange,
   showDeleteButton = false,
   showStatusButton = false,
-  compact = false 
+  showReadingTime = false,
+  readingTimeMinutes = 0,
+  compact = false,
+  smaller = false 
 }: BookCardProps) {
+  const formatReadingTime = (minutes: number) => {
+    if (minutes < 60) {
+      return `${minutes}m`;
+    } else {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    }
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return null;
     const date = new Date(dateString);
@@ -92,6 +108,61 @@ export default function BookCard({
     );
   }
 
+  if (smaller) {
+    return (
+      <TouchableOpacity style={styles.smallerCard} onPress={onPress}>
+        <View style={styles.smallerCoverContainer}>
+          {book.cover_url ? (
+            <Image
+              source={{ uri: book.cover_url }}
+              style={styles.smallerCover}
+              defaultSource={require('../assets/images/icon.png')}
+            />
+          ) : (
+            <View style={styles.smallerCoverPlaceholder}>
+              <Text style={styles.smallerCoverPlaceholderText}>📖</Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={styles.smallerInfo}>
+          <Text style={styles.smallerTitle} numberOfLines={1}>
+            {book.name}
+          </Text>
+          <Text style={styles.smallerAuthor} numberOfLines={1}>
+            by {book.author}
+          </Text>
+          
+          <View style={styles.smallerMetadata}>
+            <Text style={styles.smallerPages}>📄 {book.page}p</Text>
+            {showReadingTime && readingTimeMinutes > 0 && (
+              <Text style={styles.smallerReadingTime}>
+                ⏱️ {formatReadingTime(readingTimeMinutes)}
+              </Text>
+            )}
+          </View>
+          
+          {book.reading_status && (
+            <View style={[
+              styles.smallerStatusBadge, 
+              { backgroundColor: getStatusColor(book.reading_status) }
+            ]}>
+              <Text style={styles.smallerStatusText}>
+                {getStatusText(book.reading_status)}
+              </Text>
+            </View>
+          )}
+        </View>
+        
+        {showDeleteButton && onDelete && (
+          <TouchableOpacity style={styles.smallerDeleteButton} onPress={onDelete}>
+            <Text style={styles.smallerDeleteButtonText}>🗑️</Text>
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.cardContent}>
@@ -148,6 +219,14 @@ export default function BookCard({
                   <Text style={styles.statusChangeIcon}> ⏷</Text>
                 )}
               </TouchableOpacity>
+            </View>
+          )}
+          
+          {showReadingTime && readingTimeMinutes > 0 && (
+            <View style={styles.readingTimeContainer}>
+              <Text style={styles.readingTimeText}>
+                ⏱️ {formatReadingTime(readingTimeMinutes)} reading time
+              </Text>
             </View>
           )}
           
@@ -309,6 +388,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#F59E0B',
   },
+  readingTimeContainer: {
+    marginBottom: 8,
+  },
+  readingTimeText: {
+    fontSize: 12,
+    color: '#8B5CF6',
+    fontWeight: '500',
+  },
   dateFinished: {
     fontSize: 12,
     color: '#10B981',
@@ -378,5 +465,92 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     fontStyle: 'italic',
+  },
+  // Smaller styles
+  smallerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
+    flexDirection: 'row',
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  smallerCoverContainer: {
+    marginRight: 10,
+  },
+  smallerCover: {
+    width: 40,
+    height: 60,
+    borderRadius: 4,
+  },
+  smallerCoverPlaceholder: {
+    width: 40,
+    height: 60,
+    borderRadius: 4,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  smallerCoverPlaceholderText: {
+    fontSize: 16,
+  },
+  smallerInfo: {
+    flex: 1,
+  },
+  smallerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  smallerAuthor: {
+    fontSize: 12,
+    color: '#6C63FF',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  smallerMetadata: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 4,
+  },
+  smallerPages: {
+    fontSize: 10,
+    color: '#64748B',
+  },
+  smallerReadingTime: {
+    fontSize: 10,
+    color: '#8B5CF6',
+    fontWeight: '500',
+  },
+  smallerStatusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  smallerStatusText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  smallerDeleteButton: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: 6,
+    padding: 6,
+    alignSelf: 'flex-start',
+    minWidth: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallerDeleteButtonText: {
+    fontSize: 12,
   },
 });

@@ -26,6 +26,13 @@ export default function BooksLayout() {
           presentation: 'card',
         }}
       />
+      <Stack.Screen
+        name="my-books"
+        options={{
+          title: 'My Books',
+          presentation: 'card',
+        }}
+      />
     </Stack>
   );
 }

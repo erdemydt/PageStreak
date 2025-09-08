@@ -17,7 +17,7 @@ type UserPreferences = {
   preferred_genres?: string;
   created_at?: string;
   updated_at?: string;
-  daily_reading_goal?: number;
+  current_reading_rate_minutes_per_day?: number;
 };
 
 type ReadingSession = {
@@ -106,8 +106,8 @@ export default function HomeScreen() {
   const loadReadingStreak = async () => {
     try {
       // Get the user's daily goal
-      const user = await queryFirst<UserPreferences>('SELECT daily_reading_goal FROM user_preferences WHERE id = 1');
-      const dailyGoal = user?.daily_reading_goal || 30;
+      const user = await queryFirst<UserPreferences>('SELECT current_reading_rate_minutes_per_day FROM user_preferences WHERE id = 1');
+      const dailyGoal = user?.current_reading_rate_minutes_per_day || 30;
 
       const streak = await getReadingStreak(dailyGoal);
       setReadingStreak(streak);
@@ -147,7 +147,7 @@ export default function HomeScreen() {
         {/* Daily Reading Progress Card */}
         <DailyProgressCard
           todayMinutes={todayMinutes}
-          goalMinutes={userPreferences?.daily_reading_goal || 30}
+          goalMinutes={userPreferences?.current_reading_rate_minutes_per_day || 30}
           streakDays={readingStreak}
         />
 

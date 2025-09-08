@@ -65,7 +65,7 @@ export default function ProfileScreen() {
   const populateEditFields = (user: FullUserPreferences) => {
     setEditedUsername(user.username);
     setEditedYearlyGoal(user.yearly_book_goal.toString());
-    setEditedDailyGoal(user.daily_reading_goal?.toString() || '30');
+    setEditedDailyGoal(user.current_reading_rate_minutes_per_day?.toString() || '30');
     setEditedTargetGoal(user.end_reading_rate_goal_minutes_per_day?.toString() || '60');
     setEditedGenres(user.preferred_genres ? user.preferred_genres.split(',').filter(g => g.trim()) : []);
   };
@@ -116,7 +116,6 @@ export default function ProfileScreen() {
           preferred_genres = ?,
           weekly_reading_goal = ?,
           daily_reading_goal = ?,
-          initial_reading_rate_minutes_per_day = ?,
           end_reading_rate_goal_minutes_per_day = ?,
           end_reading_rate_goal_date = ?,
           current_reading_rate_minutes_per_day = ?,
@@ -130,7 +129,6 @@ export default function ProfileScreen() {
           editedGenres.join(','),
           weeklyGoal,
           Number(editedDailyGoal),
-          initialRate,
           targetRate,
           endGoalDate,
           initialRate, // reset current rate to initial
@@ -215,7 +213,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Daily Reading Goal</Text>
-              <Text style={styles.infoValue}>{userPreferences?.daily_reading_goal || 0} minutes</Text>
+              <Text style={styles.infoValue}>{userPreferences?.current_reading_rate_minutes_per_day || 0} minutes</Text>
             </View>
           </View>
 
@@ -249,6 +247,20 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📈 Progress Tracking</Text>
         <View style={styles.card}>
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Ionicons name="trending-up" size={20} color="#8B5CF6" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Total Increase From The Initial Rate</Text>
+              <Text style={styles.infoValue}>
+                {(userPreferences?.current_reading_rate_minutes_per_day != null && userPreferences?.initial_reading_rate_minutes_per_day != null)
+                  ? ((userPreferences.current_reading_rate_minutes_per_day - userPreferences.initial_reading_rate_minutes_per_day) / userPreferences.initial_reading_rate_minutes_per_day * 100).toFixed(2)
+                  : 0}%
+              </Text>
+            </View>
+          </View>
+          <View style={styles.divider} />
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="speedometer" size={20} color="#8B5CF6" />

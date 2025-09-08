@@ -89,6 +89,7 @@ export default function IntroScreen() {
     })();
   }, []);
 
+
   const animateStepTransition = (nextStep: Step) => {
     // First, fade out the current step
     Animated.parallel([
@@ -200,7 +201,7 @@ export default function IntroScreen() {
       await execute(
         `INSERT OR REPLACE INTO user_preferences (
           id, username, yearly_book_goal, preferred_genres, updated_at,
-          weekly_reading_goal, daily_reading_goal, 
+          weekly_reading_goal, 
           initial_reading_rate_minutes_per_day, end_reading_rate_goal_minutes_per_day,
           end_reading_rate_goal_date, current_reading_rate_minutes_per_day,
           current_reading_rate_last_updated, weekly_reading_rate_increase_minutes,
@@ -211,7 +212,6 @@ export default function IntroScreen() {
           Number(yearlyGoal),
           preferredGenres.join(','),
           weeklyReadingGoal,
-          dailyGoal,
           initialReadingRateMinutesPerDay,
           endReadingRateGoalMinutesPerDay,
           endGoalDate,

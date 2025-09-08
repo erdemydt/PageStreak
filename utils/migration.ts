@@ -112,6 +112,7 @@ export const resetDatabase = async () => {
     await execute('DROP TABLE IF EXISTS enhanced_books');
     await execute('DROP TABLE IF EXISTS books');
     await execute('DROP TABLE IF EXISTS user_preferences');
+    await execute('DROP TABLE IF EXISTS reading_sessions');
     
     console.log('🗑️  All tables dropped');
     

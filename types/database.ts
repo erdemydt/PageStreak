@@ -6,7 +6,6 @@ export type UserPreferences = {
   created_at?: string;
   updated_at?: string;
   weekly_reading_goal?: number;
-  daily_reading_goal?: number;
   initial_reading_rate_minutes_per_day?: number;
   end_reading_rate_goal_minutes_per_day?: number;
   end_reading_rate_goal_date?: string;

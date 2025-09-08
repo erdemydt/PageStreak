@@ -3,15 +3,16 @@ import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+
 import BookCard from '../../../components/BookCard';
 import DailyProgressCard from '../../../components/DailyProgressCard';
 import ReadingTimeLogger from '../../../components/ReadingTimeLogger';
 import { EnhancedBook, queryAll, queryFirst } from '../../../db/db';
 import { getReadingStreak, getTodayReadingMinutes, initializeReadingSessions } from '../../../utils/readingProgress';
 
-type UserPreferences = { 
-  id: number; 
-  username: string; 
+type UserPreferences = {
+  id: number;
+  username: string;
   yearly_book_goal: number;
   preferred_genres?: string;
   created_at?: string;
@@ -72,7 +73,7 @@ export default function HomeScreen() {
       } catch (e) {
         // Fallback to regular books table
         try {
-          const regularBooks = await queryAll<{id: number, name: string, author: string, page: number}>('SELECT * FROM books ORDER BY id DESC');
+          const regularBooks = await queryAll<{ id: number, name: string, author: string, page: number }>('SELECT * FROM books ORDER BY id DESC');
           const mappedBooks: EnhancedBook[] = regularBooks.map(book => ({
             ...book,
             reading_status: 'read' as const,
@@ -107,7 +108,7 @@ export default function HomeScreen() {
       // Get the user's daily goal
       const user = await queryFirst<UserPreferences>('SELECT daily_reading_goal FROM user_preferences WHERE id = 1');
       const dailyGoal = user?.daily_reading_goal || 30;
-      
+
       const streak = await getReadingStreak(dailyGoal);
       setReadingStreak(streak);
     } catch (e) {
@@ -131,17 +132,18 @@ export default function HomeScreen() {
     loadTodayProgress();
     loadReadingStreak();
   };
+  const topPart = () => 
+     (
 
-  return (
-    <ScrollView style={{flex: 1}}>
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+
         <View style={styles.header}>
           <Text style={styles.title}>📚 PageStreak</Text>
           {userPreferences && (
             <Text style={styles.subtitle}>Welcome back, {userPreferences.username}!</Text>
           )}
         </View>
-        
+
         {/* Daily Reading Progress Card */}
         <DailyProgressCard
           todayMinutes={todayMinutes}
@@ -151,22 +153,22 @@ export default function HomeScreen() {
 
         {/* Log Reading Time Button */}
         <View style={styles.actionContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.logTimeButton}
             onPress={() => setShowReadingLogger(true)}
           >
             <Text style={styles.logTimeButtonText}>📖 Log Reading Time</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
-            style={{marginTop: 12, alignItems: 'center'}}>
+            style={{ marginTop: 12, alignItems: 'center' }}>
             <Link href={"/readinglogs"} >
-              <Text style={{color: '#6C63FF', fontWeight: '600'}}>View Reading Logs →</Text>
+              <Text style={{ color: '#6C63FF', fontWeight: '600' }}>View Reading Logs →</Text>
             </Link>
           </TouchableOpacity>
 
         </View>
-        
+
         {/* Reading Progress Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📊 Your Reading Journey</Text>
@@ -187,20 +189,20 @@ export default function HomeScreen() {
                 <Text style={styles.statLabel}>Want to Read</Text>
               </View>
             </View>
-            
+
             {yearlyGoal > 0 && (
               <View style={styles.progressBarContainer}>
                 <View style={styles.progressBarBackground}>
-                  <View 
+                  <View
                     style={[
-                      styles.progressBarFill, 
+                      styles.progressBarFill,
                       { width: `${progressPercentage}%` }
-                    ]} 
+                    ]}
                   />
                 </View>
                 <Text style={styles.progressText}>
-                  {booksRead >= yearlyGoal 
-                    ? "🎉 Goal achieved! Amazing work!" 
+                  {booksRead >= yearlyGoal
+                    ? "🎉 Goal achieved! Amazing work!"
                     : `${yearlyGoal - booksRead} more books to reach your yearly goal of ${yearlyGoal}`
                   }
                 </Text>
@@ -219,36 +221,41 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </Link>
           </View>
-          
-          <FlatList
-            data={books.slice(0, 4)} // Show only recent 4 books
-            keyExtractor={item => item.id.toString()}
-            renderItem={renderBook}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>📚</Text>
-                <Text style={styles.emptyTitle}>No books yet</Text>
-                <Text style={styles.emptySubtitle}>Start by discovering and adding books!</Text>
-                <Link href={"/(books)" as any} asChild>
-                  <TouchableOpacity style={styles.addFirstBookBtn}>
-                    <Text style={styles.addFirstBookText}>🔍 Discover Books</Text>
-                  </TouchableOpacity>
-                </Link>
-              </View>
-            }
-            style={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
         </View>
-      </View>
+      </ScrollView>
+    )
+  const TopPart = topPart;
 
+  return (
+
+    <View style={styles.container}>
+      <FlatList
+        data={books.slice(0, 4)} // Show only recent 4 books
+        keyExtractor={item => item.id.toString()}
+        renderItem={renderBook}
+        ListHeaderComponent={<TopPart />}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>📚</Text>
+            <Text style={styles.emptyTitle}>No books yet</Text>
+            <Text style={styles.emptySubtitle}>Start by discovering and adding books!</Text>
+            <Link href={"/(books)" as any} asChild>
+              <TouchableOpacity style={styles.addFirstBookBtn}>
+                <Text style={styles.addFirstBookText}>🔍 Discover Books</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+        }
+        style={styles.list}
+        showsVerticalScrollIndicator={false}
+      />
       {/* Reading Time Logger Modal */}
       <ReadingTimeLogger
         visible={showReadingLogger}
         onClose={() => setShowReadingLogger(false)}
         onSuccess={handleReadingLoggerSuccess}
       />
-    </ScrollView>
+    </View>
   );
 }
 

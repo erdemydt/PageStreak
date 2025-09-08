@@ -1,9 +1,13 @@
 
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
 import BookCard from '../../../components/BookCard';
+import DailyProgressCard from '../../../components/DailyProgressCard';
+import ReadingTimeLogger from '../../../components/ReadingTimeLogger';
 import { EnhancedBook, queryAll, queryFirst } from '../../../db/db';
+import { getReadingStreak, getTodayReadingMinutes, initializeReadingSessions } from '../../../utils/readingProgress';
 
 type UserPreferences = { 
   id: number; 
@@ -12,16 +16,28 @@ type UserPreferences = {
   preferred_genres?: string;
   created_at?: string;
   updated_at?: string;
+  daily_reading_goal?: number;
+};
+
+type ReadingSession = {
+  id: number;
+  book_id: number;
+  minutes_read: number;
+  date: string;
+  created_at: string;
 };
 
 export default function HomeScreen() {
   const [books, setBooks] = useState<EnhancedBook[]>([]);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showReadingLogger, setShowReadingLogger] = useState(false);
+  const [todayMinutes, setTodayMinutes] = useState(0);
+  const [readingStreak, setReadingStreak] = useState(0);
 
   // Load data on mount and when screen comes into focus
   useEffect(() => {
-    loadData();
+    initializeApp();
   }, []);
 
   // Refresh data when screen comes into focus (e.g., when returning from books tab)
@@ -31,12 +47,23 @@ export default function HomeScreen() {
     }, [])
   );
 
+  const initializeApp = async () => {
+    await initializeReadingSessions();
+    loadData();
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
       // Load user preferences
       const user = await queryFirst<UserPreferences>('SELECT * FROM user_preferences WHERE id = 1');
       setUserPreferences(user);
+
+      // Load today's reading progress
+      await loadTodayProgress();
+
+      // Load reading streak
+      await loadReadingStreak();
 
       // Load books - try enhanced books first, fallback to regular books
       try {
@@ -65,6 +92,30 @@ export default function HomeScreen() {
     }
   };
 
+  const loadTodayProgress = async () => {
+    try {
+      const minutes = await getTodayReadingMinutes();
+      setTodayMinutes(minutes);
+    } catch (e) {
+      console.error('Error loading today progress:', e);
+      setTodayMinutes(0);
+    }
+  };
+
+  const loadReadingStreak = async () => {
+    try {
+      // Get the user's daily goal
+      const user = await queryFirst<UserPreferences>('SELECT daily_reading_goal FROM user_preferences WHERE id = 1');
+      const dailyGoal = user?.daily_reading_goal || 30;
+      
+      const streak = await getReadingStreak(dailyGoal);
+      setReadingStreak(streak);
+    } catch (e) {
+      console.error('Error calculating reading streak:', e);
+      setReadingStreak(0);
+    }
+  };
+
   // Calculate reading progress - only count 'read' books
   const booksRead = books.filter(book => book.reading_status === 'read').length;
   const currentlyReading = books.filter(book => book.reading_status === 'currently_reading').length;
@@ -76,15 +127,36 @@ export default function HomeScreen() {
     <BookCard book={item} compact={true} />
   );
 
+  const handleReadingLoggerSuccess = () => {
+    loadTodayProgress();
+    loadReadingStreak();
+  };
+
   return (
-    <View style={{flex: 1}}>
-     
+    <ScrollView style={{flex: 1}}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>📚 PageStreak</Text>
           {userPreferences && (
             <Text style={styles.subtitle}>Welcome back, {userPreferences.username}!</Text>
           )}
+        </View>
+        
+        {/* Daily Reading Progress Card */}
+        <DailyProgressCard
+          todayMinutes={todayMinutes}
+          goalMinutes={userPreferences?.daily_reading_goal || 30}
+          streakDays={readingStreak}
+        />
+
+        {/* Log Reading Time Button */}
+        <View style={styles.actionContainer}>
+          <TouchableOpacity 
+            style={styles.logTimeButton}
+            onPress={() => setShowReadingLogger(true)}
+          >
+            <Text style={styles.logTimeButtonText}>📖 Log Reading Time</Text>
+          </TouchableOpacity>
         </View>
         
         {/* Reading Progress Card */}
@@ -161,7 +233,14 @@ export default function HomeScreen() {
           />
         </View>
       </View>
-    </View>
+
+      {/* Reading Time Logger Modal */}
+      <ReadingTimeLogger
+        visible={showReadingLogger}
+        onClose={() => setShowReadingLogger(false)}
+        onSuccess={handleReadingLoggerSuccess}
+      />
+    </ScrollView>
   );
 }
 
@@ -314,5 +393,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  actionContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  logTimeButton: {
+    backgroundColor: '#6C63FF',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#6C63FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  logTimeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

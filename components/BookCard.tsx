@@ -6,7 +6,9 @@ interface BookCardProps {
   book: EnhancedBook;
   onPress?: () => void;
   onDelete?: () => void;
+  onStatusChange?: () => void;
   showDeleteButton?: boolean;
+  showStatusButton?: boolean;
   compact?: boolean;
 }
 
@@ -14,7 +16,9 @@ export default function BookCard({
   book, 
   onPress, 
   onDelete, 
+  onStatusChange,
   showDeleteButton = false,
+  showStatusButton = false,
   compact = false 
 }: BookCardProps) {
   const formatDate = (dateString?: string) => {
@@ -128,16 +132,22 @@ export default function BookCard({
           
           {book.reading_status && (
             <View style={styles.statusContainer}>
-              <View 
+              <TouchableOpacity
                 style={[
                   styles.statusBadge, 
-                  { backgroundColor: getStatusColor(book.reading_status) }
+                  { backgroundColor: getStatusColor(book.reading_status) },
+                  showStatusButton && styles.statusBadgeClickable
                 ]}
+                onPress={showStatusButton ? onStatusChange : undefined}
+                disabled={!showStatusButton}
               >
                 <Text style={styles.statusText}>
                   {getStatusText(book.reading_status)}
                 </Text>
-              </View>
+                {showStatusButton && (
+                  <Text style={styles.statusChangeIcon}> ⏷</Text>
+                )}
+              </TouchableOpacity>
             </View>
           )}
           
@@ -255,11 +265,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusBadgeClickable: {
+    paddingHorizontal: 10,
   },
   statusText: {
     fontSize: 12,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  statusChangeIcon: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    opacity: 0.8,
   },
   progressContainer: {
     marginBottom: 8,

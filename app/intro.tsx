@@ -1,3 +1,4 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -11,8 +12,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+  View
 } from 'react-native';
 import { execute, queryAll } from '../db/db';
 
@@ -27,9 +27,9 @@ export default function IntroScreen() {
   const [preferredGenres, setPreferredGenres] = useState<string[]>([]);
   const [dailyReadingGoal, setDailyReadingGoal] = useState('');
   const [targetDailyGoal, setTargetDailyGoal] = useState('');
+  const [goalDate, setGoalDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
   const slideAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(1)).current;
 
@@ -105,10 +105,10 @@ export default function IntroScreen() {
     ]).start(() => {
       // Change the step after fade out is complete
       setCurrentStep(nextStep);
-      
+
       // Reset position for slide in
       slideAnimation.setValue(50);
-      
+
       // Use requestAnimationFrame to ensure the state change has been applied
       requestAnimationFrame(() => {
         // Animate in the new step
@@ -129,8 +129,8 @@ export default function IntroScreen() {
   };
 
   const toggleGenre = (genre: string) => {
-    setPreferredGenres(prev => 
-      prev.includes(genre) 
+    setPreferredGenres(prev =>
+      prev.includes(genre)
         ? prev.filter(g => g !== genre)
         : [...prev, genre]
     );
@@ -138,7 +138,7 @@ export default function IntroScreen() {
 
   const handleNext = () => {
     setError(null);
-    
+
     if (currentStep === 1) {
       if (!username.trim()) {
         setError('Please enter your name');
@@ -185,17 +185,17 @@ export default function IntroScreen() {
       const endReadingRateGoalMinutesPerDay = Number(targetDailyGoal);
       const weeklyReadingGoal = initialReadingRateMinutesPerDay * 7;
       const dailyGoal = initialReadingRateMinutesPerDay;
-      
+
       // Calculate weekly increase needed to reach the goal over 52 weeks
       const totalIncreaseNeeded = endReadingRateGoalMinutesPerDay - initialReadingRateMinutesPerDay;
       const weeklyReadingRateIncreaseMinutes = totalIncreaseNeeded > 0 ? Math.ceil(totalIncreaseNeeded / 52) : 0;
-      const weeklyReadingRateIncreasePercentage = initialReadingRateMinutesPerDay > 0 ? 
+      const weeklyReadingRateIncreasePercentage = initialReadingRateMinutesPerDay > 0 ?
         (weeklyReadingRateIncreaseMinutes / initialReadingRateMinutesPerDay) * 100 : 0;
-      
+
       // Set end goal date to end of current year
       const currentYear = new Date().getFullYear();
       const endGoalDate = new Date(currentYear, 11, 31).toISOString(); // December 31st
-      
+
       // Insert or replace the single user preferences record
       await execute(
         `INSERT OR REPLACE INTO user_preferences (
@@ -207,8 +207,8 @@ export default function IntroScreen() {
           weekly_reading_rate_increase_minutes_percentage
         ) VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
         [
-          username.trim(), 
-          Number(yearlyGoal), 
+          username.trim(),
+          Number(yearlyGoal),
           preferredGenres.join(','),
           weeklyReadingGoal,
           dailyGoal,
@@ -222,7 +222,7 @@ export default function IntroScreen() {
       );
 
       Keyboard.dismiss();
-      
+
       // Navigate to the main app
       router.replace('/(tabs)/(home)');
     } catch (e) {
@@ -241,12 +241,12 @@ export default function IntroScreen() {
     <View style={styles.progressContainer}>
       {[1, 2, 3, 4, 5].map((step) => (
         <View key={step} style={styles.progressBarContainer}>
-          <View 
+          <View
             style={[
               styles.progressDot,
               currentStep >= step && styles.progressDotActive,
               currentStep === step && styles.progressDotCurrent
-            ]} 
+            ]}
           />
           {step < 5 && (
             <View style={[
@@ -311,7 +311,7 @@ export default function IntroScreen() {
         />
         <Text style={styles.goalLabel}>books</Text>
       </View>
-      
+
       <Text style={styles.goalHint}>
         💡 Start with a realistic goal - you can always adjust it later!
       </Text>
@@ -378,7 +378,7 @@ export default function IntroScreen() {
         />
         <Text style={styles.goalLabel}>minutes</Text>
       </View>
-      
+
       <Text style={styles.goalHint}>
         💡 Be honest about your current habits - this helps us track your progress!
       </Text>
@@ -386,7 +386,7 @@ export default function IntroScreen() {
   );
 
   const renderStep5 = () => (
-    <>
+    <View style={{ flex: 1, gap: 0, width: '100%' , justifyContent: 'center', alignItems: 'center' }}>
       <View style={styles.stepHeader}>
         <Text style={styles.stepEmoji}>🚀</Text>
         <Text style={styles.stepTitle}>What's your reading goal?</Text>
@@ -405,16 +405,37 @@ export default function IntroScreen() {
           editable={!loading}
           keyboardType="numeric"
           returnKeyType="done"
-          onSubmitEditing={handleGetStarted}
           autoFocus
         />
         <Text style={styles.goalLabel}>minutes</Text>
       </View>
-      
+
+      <View style={styles.stepHeader }>
+        <Text style={styles.stepEmoji}></Text>
+        <Text style={styles.stepTitle}>When Would You Like To Reach This Goal?</Text>
+      </View>
+
+
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <DateTimePicker
+          value={goalDate}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            if (date) {
+              setGoalDate(date);
+            }
+          }}
+        />
+        <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 16, color: '#64748B' }}>
+          Current Weekly Increase Needed: {calculateNeededWeeklyPercentageIncrease()}% ({classifyPercentageIncrease(Number(calculateNeededWeeklyPercentageIncrease()))})
+        </Text>
+      </View>
+
       <Text style={styles.goalHint}>
         🎯 We'll help you gradually increase your reading time to reach this goal!
       </Text>
-    </>
+    </View>
   );
 
   const renderButtons = () => (
@@ -428,7 +449,7 @@ export default function IntroScreen() {
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
       )}
-      
+
       <TouchableOpacity
         style={[
           styles.nextButton,
@@ -448,26 +469,49 @@ export default function IntroScreen() {
         }
       >
         <Text style={styles.nextButtonText}>
-          {loading ? 'Setting up...' : 
-           currentStep === 5 ? 'Get Started! 🚀' : 
-           'Continue →'}
+          {loading ? 'Setting up...' :
+            currentStep === 5 ? 'Get Started! 🚀' :
+              'Continue →'}
         </Text>
       </TouchableOpacity>
     </View>
   );
+  const calculateNeededWeeklyPercentageIncrease  = () => {
+    const initial = Number(dailyReadingGoal);
+    const target = Number(targetDailyGoal);
+    if (isNaN(initial) || isNaN(target)) return 0;
+
+    // percentage^weeks = target/initial
+    // weeks * log(percentage) = log(target/initial)
+    // log(percentage) = log(target/initial) / weeks
+    // percentage = 10^(log(target/initial) / weeks)
+    // percentage increase = (percentage - 1) * 100
+    const weeks = Math.max(1, Math.ceil((goalDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 7)));
+    const percentage = Math.pow(10, Math.log10(target / initial) / weeks);
+    const weeklyIncrease = (percentage - 1) * 100;
+    let unformatted = Math.max(0, weeklyIncrease);
+    return unformatted.toFixed(2);
+  };
+
+  const classifyPercentageIncrease = (percentage: number) => {
+    // Classify the percentage increase into categories, Easy, Moderate, Challenging
+    if (percentage <= 15) return 'Easy';
+    if (percentage <= 40) return 'Moderate';
+    return 'Challenging';
+  };
 
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
-      <KeyboardAvoidingView 
-        style={styles.container} 
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.headerContainer}>
-  
+
             <Text style={styles.welcomeTitle}>Welcome to PageStreak!</Text>
             <Text style={styles.welcomeSubtitle}>
               Let's set up your reading journey in just a few steps
@@ -477,7 +521,7 @@ export default function IntroScreen() {
           {renderProgressBar()}
 
           <View style={styles.card}>
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.stepContainer,
                 {
@@ -519,7 +563,7 @@ export default function IntroScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+    </>
   );
 }
 
@@ -595,7 +639,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    padding: 32,
+    padding: 15,
     borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -604,6 +648,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     marginBottom: 24,
     minHeight: 300,
+
   },
   stepContainer: {
     flex: 1,
@@ -612,7 +657,7 @@ const styles = StyleSheet.create({
   },
   stepHeader: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 5,
   },
   stepEmoji: {
     fontSize: 48,
@@ -653,10 +698,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 2,
   },
   goalInput: {
-    width: 80,
+    width: 'auto',
     height: 56,
     borderColor: '#E2E8F0',
     borderWidth: 2,
@@ -679,7 +724,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     fontStyle: 'italic',
-    marginTop: 16,
+    marginTop: 2,
   },
   genresContainer: {
     maxHeight: 200,
@@ -724,7 +769,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 10,
     gap: 16,
   },
   backButton: {

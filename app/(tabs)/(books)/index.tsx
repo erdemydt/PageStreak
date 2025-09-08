@@ -2,6 +2,7 @@ import { Link, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Animated, FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import BookCard from '../../../components/BookCard';
+import BookStatusModal, { BookStatus } from '../../../components/BookStatusModal';
 import { EnhancedBook, execute, queryAll } from '../../../db/db';
 
 type BooksearchProps = {
@@ -11,6 +12,8 @@ type BooksearchProps = {
   setAuthor: (author: string) => void;
   page: string;
   setPage: (page: string) => void;
+  selectedStatus: BookStatus;
+  onStatusChange: (status: BookStatus) => void;
   loading: boolean;
   error: string | null;
   saveBook: () => void;
@@ -20,6 +23,32 @@ type BooksearchProps = {
 };
 
 function ManualBookEntry(props: BooksearchProps) {
+  const getStatusColor = (status: BookStatus) => {
+    switch (status) {
+      case 'currently_reading':
+        return '#3B82F6';
+      case 'read':
+        return '#10B981';
+      case 'want_to_read':
+        return '#F59E0B';
+      default:
+        return '#64748B';
+    }
+  };
+
+  const getStatusText = (status: BookStatus) => {
+    switch (status) {
+      case 'currently_reading':
+        return 'Currently Reading';
+      case 'read':
+        return 'Read';
+      case 'want_to_read':
+        return 'Want to Read';
+      default:
+        return 'Unknown';
+    }
+  };
+
   return (
     <View style={styles.modalOverlay}>
       <Animated.View 
@@ -45,6 +74,37 @@ function ManualBookEntry(props: BooksearchProps) {
           <TextInput style={styles.input} placeholder="Book Name" placeholderTextColor="#9CA3AF" value={props.name} onChangeText={props.setName} editable={!props.loading} autoCapitalize="words" returnKeyType="next" />
           <TextInput style={styles.input} placeholder="Author" placeholderTextColor="#9CA3AF" value={props.author} onChangeText={props.setAuthor} editable={!props.loading} autoCapitalize="words" returnKeyType="next" />
           <TextInput style={styles.input} placeholder="Page Count" placeholderTextColor="#9CA3AF" value={props.page} onChangeText={props.setPage} editable={!props.loading} keyboardType="numeric" returnKeyType="done" onSubmitEditing={props.saveBook} />
+          
+          <View style={styles.statusSelectionContainer}>
+            <Text style={styles.statusSelectionLabel}>Reading Status:</Text>
+            <View style={styles.statusButtons}>
+              {(['want_to_read', 'currently_reading', 'read'] as BookStatus[]).map((status) => (
+                <TouchableOpacity
+                  key={status}
+                  style={[
+                    styles.statusButton,
+                    props.selectedStatus === status && [
+                      styles.statusButtonActive,
+                      { borderColor: getStatusColor(status) }
+                    ]
+                  ]}
+                  onPress={() => props.onStatusChange(status)}
+                  disabled={props.loading}
+                >
+                  <Text style={[
+                    styles.statusButtonText,
+                    props.selectedStatus === status && [
+                      styles.statusButtonTextActive,
+                      { color: getStatusColor(status) }
+                    ]
+                  ]}>
+                    {getStatusText(status)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           <TouchableOpacity style={[styles.saveBtn, (!props.name.trim() || !props.author.trim() || !props.page.trim() || props.loading) && styles.saveBtnDisabled]} onPress={props.saveBook} disabled={props.loading || !props.name.trim() || !props.author.trim() || !props.page.trim()}>
             <Text style={styles.saveBtnText}>{props.loading ? 'Saving...' : 'Add Book'}</Text>
           </TouchableOpacity>
@@ -66,6 +126,12 @@ export default function HomeScreen() {
   const [isAddingManually, setIsAddingManually] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0.8));
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<EnhancedBook | null>(null);
+  const [statusModalFadeAnim] = useState(new Animated.Value(0));
+  const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
+  const [manualBookStatus, setManualBookStatus] = useState<BookStatus>('currently_reading');
+  const [filterStatus, setFilterStatus] = useState<BookStatus | 'all'>('all');
 
   useEffect(() => {
     initializeDatabase();
@@ -101,7 +167,7 @@ export default function HomeScreen() {
           date_started TEXT,
           date_finished TEXT,
           current_page INTEGER DEFAULT 0,
-          reading_status TEXT DEFAULT 'want_to_read',
+          reading_status TEXT DEFAULT 'currently_reading',
           notes TEXT
         )
       `);
@@ -127,13 +193,20 @@ export default function HomeScreen() {
         if (existing.length === 0) {
           await execute(`
             INSERT INTO enhanced_books (name, author, page, reading_status, date_added)
-            VALUES (?, ?, ?, 'read', datetime('now'))
+            VALUES (?, ?, ?, 'currently_reading', datetime('now'))
           `, [book.name, book.author, book.page]);
         }
       }
+
+      // Ensure all existing enhanced_books have a reading_status
+      await execute(`
+        UPDATE enhanced_books 
+        SET reading_status = 'currently_reading' 
+        WHERE reading_status IS NULL OR reading_status = ''
+      `);
     } catch (e) {
-      // Old books table doesn't exist, which is fine
-      console.log('No old books to migrate');
+      // Old books table doesn't exist or other error, which is fine
+      console.log('Migration completed or no migration needed:', e);
     }
   };
 
@@ -150,19 +223,50 @@ export default function HomeScreen() {
     }
   };
 
+  const getFilteredBooks = () => {
+    if (filterStatus === 'all') {
+      return books;
+    }
+    return books.filter(book => book.reading_status === filterStatus);
+  };
+
+  const getStatusCount = (status: BookStatus) => {
+    return books.filter(book => book.reading_status === status).length;
+  };
+
   const saveManualBook = async () => {
     if (!name.trim() || !author.trim() || !page.trim() || isNaN(Number(page))) return;
     setLoading(true);
     setError(null);
     try {
-      await execute(`
-        INSERT INTO enhanced_books (name, author, page, reading_status, date_added)
-        VALUES (?, ?, ?, 'read', datetime('now'))
-      `, [name.trim(), author.trim(), Number(page)]);
+      let dateField = '';
+      let dateValue = null;
+
+      // Set appropriate date fields based on status
+      if (manualBookStatus === 'currently_reading') {
+        dateField = ', date_started';
+        dateValue = new Date().toISOString();
+      } else if (manualBookStatus === 'read') {
+        dateField = ', date_finished';
+        dateValue = new Date().toISOString();
+      }
+
+      const query = `
+        INSERT INTO enhanced_books (name, author, page, reading_status, date_added${dateField})
+        VALUES (?, ?, ?, ?, datetime('now')${dateValue ? ', ?' : ''})
+      `;
+
+      const params = [name.trim(), author.trim(), Number(page), manualBookStatus];
+      if (dateValue) {
+        params.push(dateValue);
+      }
+
+      await execute(query, params);
       
       setName('');
       setAuthor('');
       setPage('');
+      setManualBookStatus('currently_reading');
       Keyboard.dismiss();
       await loadBooks();
       toggleManualForm();
@@ -234,8 +338,86 @@ export default function HomeScreen() {
         setName('');
         setAuthor('');
         setPage('');
+        setManualBookStatus('currently_reading');
         setError(null);
       });
+    }
+  };
+
+  const openStatusModal = (book: EnhancedBook) => {
+    setSelectedBook(book);
+    setStatusModalVisible(true);
+    Animated.parallel([
+      Animated.timing(statusModalFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(statusModalScaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeStatusModal = () => {
+    Animated.parallel([
+      Animated.timing(statusModalFadeAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(statusModalScaleAnim, {
+        toValue: 0.8,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setStatusModalVisible(false);
+      setSelectedBook(null);
+    });
+  };
+
+  const handleStatusChange = async (newStatus: BookStatus) => {
+    if (!selectedBook) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let dateField = '';
+      let dateValue = null;
+
+      // Set appropriate date fields based on status
+      if (newStatus === 'currently_reading') {
+        dateField = ', date_started = ?';
+        dateValue = new Date().toISOString();
+      } else if (newStatus === 'read') {
+        dateField = ', date_finished = ?';
+        dateValue = new Date().toISOString();
+      }
+
+      const query = `UPDATE enhanced_books SET reading_status = ?${dateField} WHERE id = ?`;
+      const params = dateValue 
+        ? [newStatus, dateValue, selectedBook.id]
+        : [newStatus, selectedBook.id];
+
+      await execute(query, params);
+      await loadBooks();
+
+      // Show success message
+      const statusText = newStatus === 'want_to_read' ? 'Want to Read' : 
+                        newStatus === 'currently_reading' ? 'Currently Reading' : 'Read';
+      
+      Alert.alert('Status Updated', `"${selectedBook.name}" has been marked as ${statusText}.`);
+    } catch (e) {
+      setError('Failed to update book status');
+      console.error('Update status error:', e);
+      Alert.alert('Error', 'Failed to update book status. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -243,9 +425,13 @@ export default function HomeScreen() {
     <BookCard
       book={item}
       showDeleteButton={true}
+      showStatusButton={true}
       onDelete={() => deleteBook(item.id, item.name)}
+      onStatusChange={() => openStatusModal(item)}
     />
   );
+
+  const filteredBooks = getFilteredBooks();
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
@@ -269,6 +455,8 @@ export default function HomeScreen() {
             setAuthor={setAuthor} 
             page={page} 
             setPage={setPage} 
+            selectedStatus={manualBookStatus}
+            onStatusChange={setManualBookStatus}
             loading={loading} 
             error={error} 
             saveBook={saveManualBook}
@@ -277,6 +465,16 @@ export default function HomeScreen() {
             scaleAnim={scaleAnim}
           />
         )}
+
+        <BookStatusModal
+          visible={statusModalVisible}
+          bookTitle={selectedBook?.name || ''}
+          currentStatus={(selectedBook?.reading_status || 'currently_reading') as BookStatus}
+          onStatusChange={handleStatusChange}
+          onClose={closeStatusModal}
+          fadeAnim={statusModalFadeAnim}
+          scaleAnim={statusModalScaleAnim}
+        />
 
         <View style={styles.actionButtons}>
           <Link href="./search" asChild>
@@ -297,17 +495,91 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Filter by Status:</Text>
+          <View style={styles.filterButtons}>
+            <TouchableOpacity
+              style={[
+                styles.filterBtn,
+                filterStatus === 'all' && styles.filterBtnActive
+              ]}
+              onPress={() => setFilterStatus('all')}
+            >
+              <Text style={[
+                styles.filterBtnText,
+                filterStatus === 'all' && styles.filterBtnTextActive
+              ]}>
+                All ({books.length})
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.filterBtn,
+                filterStatus === 'want_to_read' && styles.filterBtnActive
+              ]}
+              onPress={() => setFilterStatus('want_to_read')}
+            >
+              <Text style={[
+                styles.filterBtnText,
+                filterStatus === 'want_to_read' && styles.filterBtnTextActive
+              ]}>
+                Want to Read ({getStatusCount('want_to_read')})
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.filterBtn,
+                filterStatus === 'currently_reading' && styles.filterBtnActive
+              ]}
+              onPress={() => setFilterStatus('currently_reading')}
+            >
+              <Text style={[
+                styles.filterBtnText,
+                filterStatus === 'currently_reading' && styles.filterBtnTextActive
+              ]}>
+                Reading ({getStatusCount('currently_reading')})
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.filterBtn,
+                filterStatus === 'read' && styles.filterBtnActive
+              ]}
+              onPress={() => setFilterStatus('read')}
+            >
+              <Text style={[
+                styles.filterBtnText,
+                filterStatus === 'read' && styles.filterBtnTextActive
+              ]}>
+                Read ({getStatusCount('read')})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={styles.listSection}>
-          <Text style={styles.sectionTitle}>📚 My Books ({books.length})</Text>
+          <Text style={styles.sectionTitle}>
+            📚 My Books ({filteredBooks.length}{filterStatus !== 'all' ? ` of ${books.length}` : ''})
+          </Text>
           <FlatList
-            data={books}
+            data={filteredBooks}
             keyExtractor={item => item.id.toString()}
             renderItem={renderBook}
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Text style={styles.emptyIcon}>📚</Text>
-                <Text style={styles.emptyTitle}>No books yet</Text>
-                <Text style={styles.emptySubtitle}>Search for books online or add them manually!</Text>
+                <Text style={styles.emptyTitle}>
+                  {filterStatus === 'all' ? 'No books yet' : `No ${filterStatus.replace('_', ' ')} books`}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  {filterStatus === 'all' 
+                    ? 'Search for books online or add them manually!' 
+                    : 'Try changing the filter or add some books!'
+                  }
+                </Text>
               </View>
             }
             style={styles.list}
@@ -512,5 +784,78 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#64748B',
+  },
+  statusSelectionContainer: {
+    marginBottom: 16,
+  },
+  statusSelectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 12,
+  },
+  statusButtons: {
+    gap: 8,
+  },
+  statusButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  statusButtonActive: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 2,
+  },
+  statusButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  statusButtonTextActive: {
+    fontWeight: '600',
+  },
+  filterSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  filterTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 12,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  filterBtnActive: {
+    backgroundColor: '#6C63FF',
+    borderColor: '#6C63FF',
+  },
+  filterBtnText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  filterBtnTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

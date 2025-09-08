@@ -32,6 +32,25 @@ export type EnhancedBook = {
   notes?: string;
 };
 
+// Reading Session type for tracking daily reading progress
+export type ReadingSession = {
+  id: number;
+  book_id: number;
+  minutes_read: number;
+  date: string; // YYYY-MM-DD format
+  created_at: string;
+  notes?: string;
+};
+
+// Daily reading progress summary
+export type DailyProgress = {
+  date: string;
+  total_minutes: number;
+  goal_minutes: number;
+  percentage: number;
+  sessions_count: number;
+};
+
 /**
  * Helper to run a SQL query with parameters and get all results as array.
  * @param sql SQL query string

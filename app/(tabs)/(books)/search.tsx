@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
   Image,
   Keyboard,
@@ -13,6 +14,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import BookStatusModal, { BookStatus } from '../../../components/BookStatusModal';
 import { execute } from '../../../db/db';
 import { OpenLibraryService, SearchBookResult } from '../../../services/openLibrary';
 
@@ -22,6 +24,10 @@ export default function BookSearchScreen() {
   const [searchResults, setSearchResults] = useState<SearchBookResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchType, setSearchType] = useState<'general' | 'title' | 'author'>('general');
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<SearchBookResult | null>(null);
+  const [statusModalFadeAnim] = useState(new Animated.Value(0));
+  const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -60,53 +66,107 @@ export default function BookSearchScreen() {
   };
 
   const handleSelectBook = async (book: SearchBookResult) => {
-    Alert.alert(
-      'Add Book',
-      `Do you want to add "${book.title}" by ${book.authors.join(', ')} to your library?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
+    setSelectedBook(book);
+    openStatusModal();
+  };
+
+  const openStatusModal = () => {
+    setStatusModalVisible(true);
+    Animated.parallel([
+      Animated.timing(statusModalFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(statusModalScaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeStatusModal = () => {
+    Animated.parallel([
+      Animated.timing(statusModalFadeAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(statusModalScaleAnim, {
+        toValue: 0.8,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setStatusModalVisible(false);
+      setSelectedBook(null);
+    });
+  };
+
+  const handleStatusChange = async (status: BookStatus) => {
+    if (!selectedBook) return;
+
+    try {
+      const subjects = selectedBook.subjects ? JSON.stringify(selectedBook.subjects) : null;
+      
+      let dateField = '';
+      let dateValue = null;
+
+      // Set appropriate date fields based on status
+      if (status === 'currently_reading') {
+        dateField = ', date_started';
+        dateValue = new Date().toISOString();
+      } else if (status === 'read') {
+        dateField = ', date_finished';
+        dateValue = new Date().toISOString();
+      }
+
+      const query = `
+        INSERT INTO enhanced_books (
+          name, author, page, isbn, cover_id, cover_url,
+          first_publish_year, publisher, language, subjects,
+          open_library_key, author_key, rating, reading_status, date_added${dateField}
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')${dateValue ? ', ?' : ''})
+      `;
+
+      const params = [
+        selectedBook.title,
+        selectedBook.authors.join(', '),
+        selectedBook.pageCount || 0,
+        selectedBook.isbn || null,
+        selectedBook.coverId || null,
+        selectedBook.coverUrl || null,
+        selectedBook.firstPublishYear || null,
+        selectedBook.publisher || null,
+        selectedBook.language || 'eng',
+        subjects,
+        selectedBook.key,
+        null, // author_key - would need additional processing
+        selectedBook.rating || null,
+        status,
+      ];
+
+      if (dateValue) {
+        params.push(dateValue);
+      }
+      
+      await execute(query, params);
+      
+      const statusText = status === 'want_to_read' ? 'Want to Read' : 
+                        status === 'currently_reading' ? 'Currently Reading' : 'Read';
+      
+      Alert.alert('Success', `"${selectedBook.title}" has been added to your library as ${statusText}!`, [
         {
-          text: 'Add Book',
-          onPress: async () => {
-            try {
-              const subjects = book.subjects ? JSON.stringify(book.subjects) : null;
-              
-              await execute(`
-                INSERT INTO enhanced_books (
-                  name, author, page, isbn, cover_id, cover_url,
-                  first_publish_year, publisher, language, subjects,
-                  open_library_key, author_key, rating, reading_status, date_added
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'want_to_read', datetime('now'))
-              `, [
-                book.title,
-                book.authors.join(', '),
-                book.pageCount || 0,
-                book.isbn || null,
-                book.coverId || null,
-                book.coverUrl || null,
-                book.firstPublishYear || null,
-                book.publisher || null,
-                book.language || 'eng',
-                subjects,
-                book.key,
-                null, // author_key - would need additional processing
-                book.rating || null,
-              ]);
-              
-              Alert.alert('Success', `"${book.title}" has been added to your library!`, [
-                {
-                  text: 'OK',
-                  onPress: () => router.back(),
-                }
-              ]);
-            } catch (error) {
-              console.error('Error adding book:', error);
-              Alert.alert('Error', 'Failed to add book to your library. Please try again.');
-            }
-          },
-        },
-      ]
-    );
+          text: 'OK',
+          onPress: () => router.back(),
+        }
+      ]);
+    } catch (error) {
+      console.error('Error adding book:', error);
+      Alert.alert('Error', 'Failed to add book to your library. Please try again.');
+    }
   };
 
   const renderBookItem = ({ item, index }: { item: SearchBookResult; index: number }) => (
@@ -323,6 +383,16 @@ export default function BookSearchScreen() {
             </View>
           )}
         </View>
+
+        <BookStatusModal
+          visible={statusModalVisible}
+          bookTitle={selectedBook?.title || ''}
+          currentStatus="currently_reading"
+          onStatusChange={handleStatusChange}
+          onClose={closeStatusModal}
+          fadeAnim={statusModalFadeAnim}
+          scaleAnim={statusModalScaleAnim}
+        />
       </View>
     </TouchableWithoutFeedback>
   );

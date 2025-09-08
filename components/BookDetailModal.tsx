@@ -44,6 +44,7 @@ export default function BookDetailModal({
         'SELECT date FROM reading_sessions WHERE book_id = ? ORDER BY date ASC LIMIT 1',
         [book.id]
       );
+      console.log(book.date_added)
       setFirstReadingDate(result?.date || "Have Not Started Reading");
     } catch (error) {
       console.error('Error loading first reading date:', error);
@@ -201,9 +202,9 @@ export default function BookDetailModal({
                     <Text style={styles.statLabel}>Time Spent</Text>
                   </View>
                 )}
-                {firstReadingDate && (
+                {book.date_started && (
                   <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{formatDate(firstReadingDate)}</Text>
+                    <Text style={styles.statValue}>{formatDate(book.date_started)}</Text>
                     <Text style={styles.statLabel}>Started Reading</Text>
                   </View>
                 )}

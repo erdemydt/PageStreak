@@ -178,9 +178,9 @@ export default function HomeScreen() {
           open_library_key TEXT,
           author_key TEXT,
           rating REAL,
-          date_added TEXT DEFAULT CURRENT_TIMESTAMP,
-          date_started TEXT,
-          date_finished TEXT,
+          date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
+          date_started DATETIME,
+          date_finished DATETIME,
           current_page INTEGER DEFAULT 0,
           reading_status TEXT DEFAULT 'currently_reading',
           notes TEXT
@@ -208,8 +208,8 @@ export default function HomeScreen() {
         if (existing.length === 0) {
           await execute(`
             INSERT INTO enhanced_books (name, author, page, reading_status, date_added)
-            VALUES (?, ?, ?, 'currently_reading', datetime('now'))
-          `, [book.name, book.author, book.page]);
+            VALUES (?, ?, ?, 'currently_reading', ?) 
+          `,  [book.name, book.author, book.page, new Date().toISOString()]); // Date added should be consistent with the timezone
         }
       }
 
@@ -307,10 +307,10 @@ export default function HomeScreen() {
 
       const query = `
         INSERT INTO enhanced_books (name, author, page, reading_status, date_added${dateField})
-        VALUES (?, ?, ?, ?, datetime('now')${dateValue ? ', ?' : ''})
+        VALUES (?, ?, ?, ?, ? ${dateValue ? ', ?' : ''})
       `;
 
-      const params = [name.trim(), author.trim(), Number(page), manualBookStatus];
+      const params = [name.trim(), author.trim(), Number(page), manualBookStatus, new Date().toISOString()];
       if (dateValue) {
         params.push(dateValue);
       }

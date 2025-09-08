@@ -134,7 +134,7 @@ export default function BookSearchScreen() {
           name, author, page, isbn, cover_id, cover_url,
           first_publish_year, publisher, language, subjects,
           open_library_key, author_key, rating, reading_status, date_added${dateField}
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')${dateValue ? ', ?' : ''})
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${dateValue ? ', ?' : ''})
       `;
 
       const params = [
@@ -152,6 +152,7 @@ export default function BookSearchScreen() {
         null, // author_key - would need additional processing
         selectedBook.rating || null,
         status,
+        new Date().toISOString(),
       ];
 
       if (dateValue) {

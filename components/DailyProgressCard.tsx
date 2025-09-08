@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 
 interface DailyProgressCardProps {
   todayMinutes: number;
@@ -16,12 +17,13 @@ export default function DailyProgressCard({
   const isGoalReached = todayMinutes >= goalMinutes;
   
   // Calculate the visual progress for the circular progress
-  const circumference = 2 * Math.PI * 45; // radius = 45
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   const formatMinutes = (minutes: number) => {
     if (minutes >= 60) {
-      const hours = Math.floor(minutes / 60);
+      const hours = Math.floor(minutes / 60); 
       const remainingMinutes = minutes % 60;
       return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
     }
@@ -51,14 +53,30 @@ export default function DailyProgressCard({
       <View style={styles.progressContainer}>
         {/* Progress Ring */}
         <View style={styles.progressRing}>
-          <View style={styles.progressRingBackground} />
-          <View style={[
-            styles.progressRingFill,
-            { 
-              backgroundColor: isGoalReached ? "#10B981" : "#6C63FF",
-              height: `${percentage}%` 
-            }
-          ]} />
+          <Svg width={90} height={90}>
+            {/* Background Circle */}
+            <Circle
+              cx={45}
+              cy={45}
+              r={40}
+              stroke="#E2E8F0"
+              strokeWidth={8}
+              fill="transparent"
+            />
+            {/* Progress Circle */}
+            <Circle
+              cx={45}
+              cy={45}
+              r={40}
+              stroke={isGoalReached ? "#10B981" : "#6C63FF"}
+              strokeWidth={8}
+              fill="transparent"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              transform="rotate(-90 45 45)"
+            />
+          </Svg>
           
           <View style={styles.progressTextContainer}>
             <Text style={styles.progressPercentage}>
@@ -138,35 +156,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  circularProgress: {
-    position: 'relative',
-    marginRight: 24,
-    width: 100,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   progressRing: {
     position: 'relative',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 90,
+    height: 90,
     marginRight: 24,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  progressRingBackground: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    borderRadius: 40,
-    backgroundColor: '#E2E8F0',
-  },
-  progressRingFill: {
-    position: 'absolute',
-    width: '100%',
-    borderRadius: 40,
-    bottom: 0,
   },
   progressTextContainer: {
     position: 'absolute',

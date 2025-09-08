@@ -35,8 +35,9 @@ export default function Index() {
           getLastWeeklyProgress().then((lastProgress) => {
             if (lastProgress) {
               // Update reading rate using percentage increase
-              let newReadingRate = info.current_reading_rate_minutes_per_day * (1 + (info.weekly_reading_rate_increase_minutes_percentage / 100)) 
+              let newReadingRate = info.current_reading_rate_minutes_per_day * (1 + (info.weekly_reading_rate_increase_minutes_percentage / 100))
               newReadingRate = Math.min(newReadingRate, info.end_reading_rate_goal_minutes_per_day);
+              newReadingRate = Math.max(newReadingRate, info.current_reading_rate_minutes_per_day+1); // Ensure it doesn't drop below initial + 1
               const newReadingRateInteger = Math.round(newReadingRate);
               execute('UPDATE user_preferences SET current_reading_rate_minutes_per_day = ?, current_reading_rate_last_updated = ? WHERE id = 1', [newReadingRateInteger, new Date().toISOString()])
                 .then(() => console.log('✅ Updated reading rate based on percentage increase'))
@@ -101,7 +102,7 @@ export default function Index() {
       throw error;
     }
   }
-  const getWeeksPassed = (startDate : Date) => {
+  const getWeeksPassed = (startDate: Date) => {
     const now = new Date();
     const diffInMs = now.getTime() - startDate.getTime();
     return Math.floor(diffInMs / (1000 * 60 * 60 * 24 * 7));

@@ -113,6 +113,7 @@ export const resetDatabase = async () => {
     await execute('DROP TABLE IF EXISTS books');
     await execute('DROP TABLE IF EXISTS user_preferences');
     await execute('DROP TABLE IF EXISTS reading_sessions');
+    await execute('DROP TABLE IF EXISTS weekly_progress');
     
     console.log('🗑️  All tables dropped');
     
@@ -138,6 +139,8 @@ export const logoutUser = async () => {
     await execute('DROP TABLE IF EXISTS enhanced_books');
     await execute('DROP TABLE IF EXISTS books');
     await execute('DROP TABLE IF EXISTS user_preferences');
+    await execute('DROP TABLE IF EXISTS reading_sessions');
+    await execute('DROP TABLE IF EXISTS weekly_progress');
     
     console.log('🗑️  All user data cleared');
     

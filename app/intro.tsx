@@ -41,7 +41,7 @@ export default function IntroScreen() {
 
   useEffect(() => {
     // Create the user_preferences table, if it doesn't exist, but add new columns as needed
-    (async () => {
+    const initializeDatabase = async () => {
       try {
         // First, create the table with basic structure if it doesn't exist
         await execute(`
@@ -58,7 +58,7 @@ export default function IntroScreen() {
         // Define all the columns we need with their types and constraints
         const requiredColumns = [
           { name: 'weekly_reading_goal', type: 'INTEGER NOT NULL', defaultValue: '210' },
-          { name: 'daily_reading_goal', type: 'INTEGER NOT NULL', defaultValue: '30' },
+          { name: 'daily_reading_goal', type: 'INTEGER', defaultValue: '30' },
           { name: 'initial_reading_rate_minutes_per_day', type: 'INTEGER NOT NULL', defaultValue: '30' },
           { name: 'end_reading_rate_goal_minutes_per_day', type: 'INTEGER NOT NULL', defaultValue: '60' },
           { name: 'end_reading_rate_goal_date', type: 'DATETIME', defaultValue: null },
@@ -85,8 +85,11 @@ export default function IntroScreen() {
 
       } catch (error) {
         console.error('Error setting up user_preferences table:', error);
+        setError('Failed to initialize the app. Please restart the application.');
       }
-    })();
+    };
+
+    initializeDatabase();
   }, []);
 
 
@@ -145,18 +148,61 @@ export default function IntroScreen() {
         setError('Please enter your name');
         return;
       }
+      if (username.trim().length < 2) {
+        setError('Name must be at least 2 characters long');
+        return;
+      }
+      if (username.trim().length > 50) {
+        setError('Name must be less than 50 characters');
+        return;
+      }
       animateStepTransition(2);
     } else if (currentStep === 2) {
-      if (!yearlyGoal.trim() || isNaN(Number(yearlyGoal)) || Number(yearlyGoal) <= 0) {
-        setError('Please enter a valid yearly book goal');
+      if (!yearlyGoal.trim()) {
+        setError('Please enter a yearly book goal');
+        return;
+      }
+      if (isNaN(Number(yearlyGoal))) {
+        setError('Please enter a valid number');
+        return;
+      }
+      const yearlyGoalNum = Number(yearlyGoal);
+      if (yearlyGoalNum <= 0) {
+        setError('Yearly goal must be greater than 0');
+        return;
+      }
+      if (yearlyGoalNum > 1000) {
+        setError('Yearly goal seems unrealistic. Please enter a number less than 1000');
+        return;
+      }
+      if (!Number.isInteger(yearlyGoalNum)) {
+        setError('Please enter a whole number of books');
         return;
       }
       animateStepTransition(3);
     } else if (currentStep === 3) {
+      // No validation needed for genres (optional step)
       animateStepTransition(4);
     } else if (currentStep === 4) {
-      if (!dailyReadingGoal.trim() || isNaN(Number(dailyReadingGoal)) || Number(dailyReadingGoal) <= 0) {
+      if (!dailyReadingGoal.trim()) {
         setError('Please enter your current daily reading time');
+        return;
+      }
+      if (isNaN(Number(dailyReadingGoal))) {
+        setError('Please enter a valid number of minutes');
+        return;
+      }
+      const dailyGoalNum = Number(dailyReadingGoal);
+      if (dailyGoalNum <= 0) {
+        setError('Daily reading time must be greater than 0 minutes');
+        return;
+      }
+      if (dailyGoalNum > 1440) {
+        setError('Daily reading time cannot exceed 24 hours (1440 minutes)');
+        return;
+      }
+      if (dailyGoalNum > 480) {
+        setError('Are you sure you read more than 8 hours a day? Please enter a realistic time.');
         return;
       }
       animateStepTransition(5);
@@ -181,21 +227,72 @@ export default function IntroScreen() {
     setError(null);
 
     try {
+      // Final validation before saving
+      if (!targetDailyGoal.trim()) {
+        setError('Please enter your target daily reading goal');
+        return;
+      }
+      if (isNaN(Number(targetDailyGoal))) {
+        setError('Please enter a valid number of minutes');
+        return;
+      }
+      const targetGoalNum = Number(targetDailyGoal);
+      if (targetGoalNum <= 0) {
+        setError('Target daily goal must be greater than 0 minutes');
+        return;
+      }
+      if (targetGoalNum > 1440) {
+        setError('Target daily goal cannot exceed 24 hours (1440 minutes)');
+        return;
+      }
+      if (targetGoalNum > 480) {
+        setError('Target goal seems unrealistic. Please enter a goal less than 8 hours.');
+        return;
+      }
+
+      const currentGoalNum = Number(dailyReadingGoal);
+      if (targetGoalNum < currentGoalNum) {
+        setError('Your target goal should be equal to or greater than your current reading time');
+        return;
+      }
+
+      // Check if the goal date is in the past
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(goalDate);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        setError('Goal date cannot be in the past');
+        return;
+      }
+
+      // Check if the goal date is too far in the future (more than 5 years)
+      const fiveYearsFromNow = new Date();
+      fiveYearsFromNow.setFullYear(fiveYearsFromNow.getFullYear() + 5);
+      
+      if (selectedDate > fiveYearsFromNow) {
+        setError('Goal date cannot be more than 5 years in the future');
+        return;
+      }
+
       // Use user's input values
-      const initialReadingRateMinutesPerDay = Number(dailyReadingGoal);
-      const endReadingRateGoalMinutesPerDay = Number(targetDailyGoal);
+      const initialReadingRateMinutesPerDay = currentGoalNum;
+      const endReadingRateGoalMinutesPerDay = targetGoalNum;
       const weeklyReadingGoal = initialReadingRateMinutesPerDay * 7;
       const dailyGoal = initialReadingRateMinutesPerDay;
 
-      // Calculate weekly increase needed to reach the goal over 52 weeks
+      // Calculate weekly increase needed based on the selected date
+      const timeDifferenceMs = goalDate.getTime() - new Date().getTime();
+      const weeks = Math.max(1, Math.ceil(timeDifferenceMs / (1000 * 60 * 60 * 24 * 7)));
+      
       const totalIncreaseNeeded = endReadingRateGoalMinutesPerDay - initialReadingRateMinutesPerDay;
-      const weeklyReadingRateIncreaseMinutes = totalIncreaseNeeded > 0 ? Math.ceil(totalIncreaseNeeded / 52) : 0;
+      const weeklyReadingRateIncreaseMinutes = totalIncreaseNeeded > 0 ? Math.ceil(totalIncreaseNeeded / weeks) : 0;
       const weeklyReadingRateIncreasePercentage = initialReadingRateMinutesPerDay > 0 ?
         (weeklyReadingRateIncreaseMinutes / initialReadingRateMinutesPerDay) * 100 : 0;
 
-      // Set end goal date to end of current year
-      const currentYear = new Date().getFullYear();
-      const endGoalDate = new Date(currentYear, 11, 31).toISOString(); // December 31st
+      // Use the selected goal date instead of end of year
+      const endGoalDate = goalDate.toISOString();
 
       // Insert or replace the single user preferences record
       await execute(
@@ -206,7 +303,7 @@ export default function IntroScreen() {
           end_reading_rate_goal_date, current_reading_rate_minutes_per_day,
           current_reading_rate_last_updated, weekly_reading_rate_increase_minutes,
           weekly_reading_rate_increase_minutes_percentage
-        ) VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
+        ) VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
         [
           username.trim(),
           Number(yearlyGoal),
@@ -226,8 +323,12 @@ export default function IntroScreen() {
       // Navigate to the main app
       router.replace('/(tabs)/(home)');
     } catch (e) {
-      setError('Failed to save your preferences. Please try again.');
-      console.error(e);
+      console.error('Error saving preferences:', e);
+      if (e instanceof Error) {
+        setError(`Failed to save preferences: ${e.message}`);
+      } else {
+        setError('Failed to save your preferences. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -275,12 +376,20 @@ export default function IntroScreen() {
           placeholder="Enter your name"
           placeholderTextColor="#9CA3AF"
           value={username}
-          onChangeText={setUsername}
+          onChangeText={(text) => {
+            // Remove any leading/trailing spaces and limit length
+            const cleanText = text.slice(0, 50);
+            setUsername(cleanText);
+            if (error && text.trim().length >= 2) {
+              setError(null);
+            }
+          }}
           editable={!loading}
           autoCapitalize="words"
           returnKeyType="next"
           onSubmitEditing={handleNext}
           autoFocus
+          maxLength={50}
         />
       </View>
     </>
@@ -302,12 +411,22 @@ export default function IntroScreen() {
           placeholder="12"
           placeholderTextColor="#9CA3AF"
           value={yearlyGoal}
-          onChangeText={setYearlyGoal}
+          onChangeText={(text) => {
+            // Only allow numbers
+            const numericText = text.replace(/[^0-9]/g, '');
+            if (numericText.length <= 4) { // Max 9999 books
+              setYearlyGoal(numericText);
+              if (error && numericText && Number(numericText) > 0 && Number(numericText) <= 1000) {
+                setError(null);
+              }
+            }
+          }}
           editable={!loading}
           keyboardType="numeric"
           returnKeyType="next"
           onSubmitEditing={handleNext}
           autoFocus
+          maxLength={4}
         />
         <Text style={styles.goalLabel}>books</Text>
       </View>
@@ -369,12 +488,22 @@ export default function IntroScreen() {
           placeholder="30"
           placeholderTextColor="#9CA3AF"
           value={dailyReadingGoal}
-          onChangeText={setDailyReadingGoal}
+          onChangeText={(text) => {
+            // Only allow numbers
+            const numericText = text.replace(/[^0-9]/g, '');
+            if (numericText.length <= 4) { // Max 9999 minutes
+              setDailyReadingGoal(numericText);
+              if (error && numericText && Number(numericText) > 0 && Number(numericText) <= 480) {
+                setError(null);
+              }
+            }
+          }}
           editable={!loading}
           keyboardType="numeric"
           returnKeyType="next"
           onSubmitEditing={handleNext}
           autoFocus
+          maxLength={4}
         />
         <Text style={styles.goalLabel}>minutes</Text>
       </View>
@@ -401,11 +530,21 @@ export default function IntroScreen() {
           placeholder="60"
           placeholderTextColor="#9CA3AF"
           value={targetDailyGoal}
-          onChangeText={setTargetDailyGoal}
+          onChangeText={(text) => {
+            // Only allow numbers
+            const numericText = text.replace(/[^0-9]/g, '');
+            if (numericText.length <= 4) { // Max 9999 minutes
+              setTargetDailyGoal(numericText);
+              if (error && numericText && Number(numericText) > 0 && Number(numericText) <= 480 && Number(numericText) >= Number(dailyReadingGoal)) {
+                setError(null);
+              }
+            }
+          }}
           editable={!loading}
           keyboardType="numeric"
           returnKeyType="done"
           autoFocus
+          maxLength={4}
         />
         <Text style={styles.goalLabel}>minutes</Text>
       </View>
@@ -421,9 +560,15 @@ export default function IntroScreen() {
           value={goalDate}
           mode="date"
           display="default"
+          minimumDate={new Date()}
+          maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
           onChange={(event, date) => {
             if (date) {
               setGoalDate(date);
+              // Clear error if date is valid
+              if (error && date >= new Date(new Date().setHours(0, 0, 0, 0))) {
+                setError(null);
+              }
             }
           }}
         />
@@ -453,19 +598,19 @@ export default function IntroScreen() {
       <TouchableOpacity
         style={[
           styles.nextButton,
-          currentStep === 1 && !username.trim() && styles.nextButtonDisabled,
-          currentStep === 2 && (!yearlyGoal.trim() || isNaN(Number(yearlyGoal)) || Number(yearlyGoal) <= 0) && styles.nextButtonDisabled,
-          currentStep === 4 && (!dailyReadingGoal.trim() || isNaN(Number(dailyReadingGoal)) || Number(dailyReadingGoal) <= 0) && styles.nextButtonDisabled,
-          currentStep === 5 && (!targetDailyGoal.trim() || isNaN(Number(targetDailyGoal)) || Number(targetDailyGoal) <= 0) && styles.nextButtonDisabled,
+          (currentStep === 1 && (!username.trim() || username.trim().length < 2 || username.trim().length > 50)) && styles.nextButtonDisabled,
+          (currentStep === 2 && (!yearlyGoal.trim() || isNaN(Number(yearlyGoal)) || Number(yearlyGoal) <= 0 || Number(yearlyGoal) > 1000 || !Number.isInteger(Number(yearlyGoal)))) && styles.nextButtonDisabled,
+          (currentStep === 4 && (!dailyReadingGoal.trim() || isNaN(Number(dailyReadingGoal)) || Number(dailyReadingGoal) <= 0 || Number(dailyReadingGoal) > 480)) && styles.nextButtonDisabled,
+          (currentStep === 5 && (!targetDailyGoal.trim() || isNaN(Number(targetDailyGoal)) || Number(targetDailyGoal) <= 0 || Number(targetDailyGoal) > 480 || Number(targetDailyGoal) < Number(dailyReadingGoal) || new Date(goalDate) < new Date(new Date().setHours(0, 0, 0, 0)))) && styles.nextButtonDisabled,
           loading && styles.nextButtonDisabled
         ]}
         onPress={currentStep === 5 ? handleGetStarted : handleNext}
         disabled={
           loading ||
-          (currentStep === 1 && !username.trim()) ||
-          (currentStep === 2 && (!yearlyGoal.trim() || isNaN(Number(yearlyGoal)) || Number(yearlyGoal) <= 0)) ||
-          (currentStep === 4 && (!dailyReadingGoal.trim() || isNaN(Number(dailyReadingGoal)) || Number(dailyReadingGoal) <= 0)) ||
-          (currentStep === 5 && (!targetDailyGoal.trim() || isNaN(Number(targetDailyGoal)) || Number(targetDailyGoal) <= 0))
+          (currentStep === 1 && (!username.trim() || username.trim().length < 2 || username.trim().length > 50)) ||
+          (currentStep === 2 && (!yearlyGoal.trim() || isNaN(Number(yearlyGoal)) || Number(yearlyGoal) <= 0 || Number(yearlyGoal) > 1000 || !Number.isInteger(Number(yearlyGoal)))) ||
+          (currentStep === 4 && (!dailyReadingGoal.trim() || isNaN(Number(dailyReadingGoal)) || Number(dailyReadingGoal) <= 0 || Number(dailyReadingGoal) > 480)) ||
+          (currentStep === 5 && (!targetDailyGoal.trim() || isNaN(Number(targetDailyGoal)) || Number(targetDailyGoal) <= 0 || Number(targetDailyGoal) > 480 || Number(targetDailyGoal) < Number(dailyReadingGoal) || new Date(goalDate) < new Date(new Date().setHours(0, 0, 0, 0))))
         }
       >
         <Text style={styles.nextButtonText}>
@@ -479,14 +624,23 @@ export default function IntroScreen() {
   const calculateNeededWeeklyPercentageIncrease  = () => {
     const initial = Number(dailyReadingGoal);
     const target = Number(targetDailyGoal);
-    if (isNaN(initial) || isNaN(target)) return 0;
+    if (isNaN(initial) || isNaN(target) || initial <= 0 || target <= 0) return '0.00';
+
+    // If target is same as initial, no increase needed
+    if (target === initial) return '0.00';
+
+    // Calculate weeks until goal date
+    const timeDifferenceMs = goalDate.getTime() - new Date().getTime();
+    const weeks = Math.max(1, Math.ceil(timeDifferenceMs / (1000 * 60 * 60 * 24 * 7)));
+
+    // If target is less than initial, return 0 (no increase needed)
+    if (target < initial) return '0.00';
 
     // percentage^weeks = target/initial
     // weeks * log(percentage) = log(target/initial)
     // log(percentage) = log(target/initial) / weeks
     // percentage = 10^(log(target/initial) / weeks)
     // percentage increase = (percentage - 1) * 100
-    const weeks = Math.max(1, Math.ceil((goalDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 7)));
     const percentage = Math.pow(10, Math.log10(target / initial) / weeks);
     const weeklyIncrease = (percentage - 1) * 100;
     let unformatted = Math.max(0, weeklyIncrease);

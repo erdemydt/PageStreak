@@ -184,7 +184,7 @@ export default function HomeScreen() {
   const migrateOldBooks = async () => {
     try {
       // Check if old books table exists and has data
-      const oldBooks = await queryAll<{id: number, name: string, author: string, page: number}>('SELECT * FROM books');
+      const oldBooks = await queryAll<{id: number, name: string, author: string, page: number}>('SELECT * FROM enhanced_books');
       
       for (const book of oldBooks) {
         // Check if book already exists in enhanced_books

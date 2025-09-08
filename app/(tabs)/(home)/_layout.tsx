@@ -19,6 +19,13 @@ export default function HomeLayout() {
           title: 'Home',
         }}
       />
+  
+    <Stack.Screen
+      name="readinglogs"
+      options={{
+        title: 'Reading Logs',
+      }}
+    />
     </Stack>
   );
 }

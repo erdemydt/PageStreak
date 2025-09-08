@@ -157,6 +157,14 @@ export default function HomeScreen() {
           >
             <Text style={styles.logTimeButtonText}>📖 Log Reading Time</Text>
           </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={{marginTop: 12, alignItems: 'center'}}>
+            <Link href={"/readinglogs"} >
+              <Text style={{color: '#6C63FF', fontWeight: '600'}}>View Reading Logs →</Text>
+            </Link>
+          </TouchableOpacity>
+
         </View>
         
         {/* Reading Progress Card */}

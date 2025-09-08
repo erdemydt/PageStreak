@@ -477,12 +477,12 @@ export default function HomeScreen() {
         />
 
         <View style={styles.actionButtons}>
-          <Link href="./search" asChild>
+          <Link href="./search" asChild style={styles.actionBtn}>
             <TouchableOpacity 
-              style={[styles.actionBtn, isAddingManually && styles.nonVisibleBtn]}
+              style={ isAddingManually && styles.nonVisibleBtn}
               disabled={loading || isAddingManually}
             >
-              <Text style={styles.actionBtnText}>🔍 Search Books</Text>
+              <Text style={styles.actionBtnText }>🔍 Search Books</Text>
             </TouchableOpacity>
           </Link>
           
@@ -618,13 +618,15 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     paddingHorizontal: 20,
+    justifyContent:'space-evenly',
     gap: 12,
     marginBottom: 16,
   },
   actionBtn: {
-    flex: 1,
+
     backgroundColor: '#6C63FF',
-    paddingVertical: 14,
+    padding: 10,
+    margin: 0,
     borderRadius: 12,
     alignItems: 'center',
     shadowColor: '#6C63FF',

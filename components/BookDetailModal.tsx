@@ -1,21 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { EnhancedBook, queryFirst } from '../db/db';
+import BookStatusModal, { BookStatus } from './BookStatusModal';
 
 interface BookDetailModalProps {
   visible: boolean;
   book: EnhancedBook | null;
   readingTimeMinutes?: number;
   onClose: () => void;
+  onStatusChange?: (bookId: number, status: BookStatus) => void;
   fadeAnim: Animated.Value;
   scaleAnim: Animated.Value;
 }
@@ -25,10 +27,16 @@ export default function BookDetailModal({
   book,
   readingTimeMinutes = 0,
   onClose,
+  onStatusChange,
   fadeAnim,
   scaleAnim,
 }: BookDetailModalProps) {
   const [firstReadingDate, setFirstReadingDate] = useState<string | null>(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  
+  // Animation values for status modal
+  const statusModalFadeAnim = useRef(new Animated.Value(0)).current;
+  const statusModalScaleAnim = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
     if (book && visible) {
@@ -107,6 +115,49 @@ export default function BookDetailModal({
     return null;
   };
 
+  const handleStatusPress = () => {
+    setShowStatusModal(true);
+    // Animate status modal in
+    Animated.parallel([
+      Animated.timing(statusModalFadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(statusModalScaleAnim, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const handleStatusModalClose = () => {
+    // Animate status modal out
+    Animated.parallel([
+      Animated.timing(statusModalFadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(statusModalScaleAnim, {
+        toValue: 0.8,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowStatusModal(false);
+    });
+  };
+
+  const handleStatusChange = (status: BookStatus) => {
+    if (book && onStatusChange) {
+      onStatusChange(book.id, status);
+    }
+    handleStatusModalClose();
+  };
+
   if (!book) return null;
 
   const progress = getReadingProgress();
@@ -156,14 +207,19 @@ export default function BookDetailModal({
                 <Text style={styles.author}>by {book.author}</Text>
                 
                 {book.reading_status && (
-                  <View style={[
-                    styles.statusBadge,
-                    { backgroundColor: getStatusColor(book.reading_status) }
-                  ]}>
+                  <TouchableOpacity
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: getStatusColor(book.reading_status) }
+                    ]}
+                    onPress={handleStatusPress}
+                    activeOpacity={0.8}
+                  >
                     <Text style={styles.statusText}>
                       {getStatusText(book.reading_status)}
                     </Text>
-                  </View>
+                    <Text style={styles.statusChangeHint}>📝</Text>
+                  </TouchableOpacity>
                 )}
               </View>
             </View>
@@ -291,6 +347,17 @@ export default function BookDetailModal({
             </ScrollView>
         </Animated.View>
       </View>
+      
+      {/* Book Status Modal */}
+      <BookStatusModal
+        visible={showStatusModal}
+        bookTitle={book?.name || ''}
+        currentStatus={(book?.reading_status as BookStatus) || 'want_to_read'}
+        onStatusChange={handleStatusChange}
+        onClose={handleStatusModalClose}
+        fadeAnim={statusModalFadeAnim}
+        scaleAnim={statusModalScaleAnim}
+      />
     </Modal>
   );
 }
@@ -392,11 +459,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   statusText: {
     fontSize: 14,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  statusChangeHint: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    opacity: 0.8,
   },
   section: {
     marginBottom: 24,

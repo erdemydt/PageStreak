@@ -67,7 +67,7 @@ export default function MyBooksScreen() {
       setLoading(false);
     }
   };
-
+  
   const deleteBook = async (bookId: number, bookTitle: string) => {
     Alert.alert(
       'Delete Book',
@@ -95,6 +95,102 @@ export default function MyBooksScreen() {
         }
       ]
     );
+  };
+  const handleStatusChange = async (newStatus: BookStatus) => {
+    if (!selectedBook) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let dateField = '';
+      let dateValue = null;
+
+      // Set appropriate date fields based on status
+      if (newStatus === 'currently_reading') {
+        dateField = ', date_started = ?';
+        dateValue = new Date().toISOString();
+      } else if (newStatus === 'read') {
+        dateField = ', date_finished = ?';
+        dateValue = new Date().toISOString();
+      }
+
+      const query = `UPDATE enhanced_books SET reading_status = ?${dateField} WHERE id = ?`;
+      const params = dateValue 
+        ? [newStatus, dateValue, selectedBook.id]
+        : [newStatus, selectedBook.id];
+      // remove finished date if switching back to currently_reading or want_to_read
+      if (newStatus !== 'read') {
+        await execute('UPDATE enhanced_books SET date_finished = NULL WHERE id = ?', [selectedBook.id]);
+      }
+      await execute(query, params);
+      await loadBooks();
+
+      // Show success message
+      const statusText = newStatus === 'want_to_read' ? 'Want to Read' : 
+                        newStatus === 'currently_reading' ? 'Currently Reading' : 'Read';
+      
+      Alert.alert('Status Updated', `"${selectedBook.name}" has been marked as ${statusText}.`);
+    } catch (e) {
+      setError('Failed to update book status');
+      console.error('Update status error:', e);
+      Alert.alert('Error', 'Failed to update book status. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDetailModalStatusChange = async (bookId: number, newStatus: BookStatus) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      let dateField = '';
+      let dateValue = null;
+
+      // Set appropriate date fields based on status
+      if (newStatus === 'currently_reading') {
+        dateField = ', date_started = ?';
+        dateValue = new Date().toISOString();
+      } else if (newStatus === 'read') {
+        dateField = ', date_finished = ?';
+        dateValue = new Date().toISOString();
+      }
+
+      const query = `UPDATE enhanced_books SET reading_status = ?${dateField} WHERE id = ?`;
+      const params = dateValue 
+        ? [newStatus, dateValue, bookId]
+        : [newStatus, bookId];
+      
+      // remove finished date if switching back to currently_reading or want_to_read
+      if (newStatus !== 'read') {
+        await execute('UPDATE enhanced_books SET date_finished = NULL WHERE id = ?', [bookId]);
+      }
+      await execute(query, params);
+      await loadBooks();
+
+      // Update the selected book for detail modal
+      if (selectedBookForDetail && selectedBookForDetail.id === bookId) {
+        setSelectedBookForDetail({
+          ...selectedBookForDetail,
+          reading_status: newStatus,
+          date_started: newStatus === 'currently_reading' ? dateValue || selectedBookForDetail.date_started : selectedBookForDetail.date_started,
+          date_finished: newStatus === 'read' ? dateValue || selectedBookForDetail.date_finished : undefined,
+        });
+      }
+
+      // Show success message
+      const statusText = newStatus === 'want_to_read' ? 'Want to Read' : 
+                        newStatus === 'currently_reading' ? 'Currently Reading' : 'Read';
+      
+      Alert.alert('Status Updated', `Book status has been updated to ${statusText}.`);
+    } catch (e) {
+      setError('Failed to update book status');
+      console.error('Update status error:', e);
+      Alert.alert('Error', 'Failed to update book status. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openStatusModal = (book: EnhancedBook) => {
@@ -151,46 +247,7 @@ export default function MyBooksScreen() {
     });
   };
 
-  const handleStatusChange = async (newStatus: BookStatus) => {
-    if (!selectedBook) return;
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      let dateField = '';
-      let dateValue = null;
-
-      if (newStatus === 'currently_reading') {
-        dateField = ', date_started = ?';
-        dateValue = new Date().toISOString();
-      } else if (newStatus === 'read') {
-        dateField = ', date_finished = ?';
-        dateValue = new Date().toISOString();
-      }
-
-      const query = `UPDATE enhanced_books SET reading_status = ?${dateField} WHERE id = ?`;
-      const params = dateValue 
-        ? [newStatus, dateValue, selectedBook.id]
-        : [newStatus, selectedBook.id];
-
-      await execute(query, params);
-      await loadBooks();
-      setStatusModalVisible(false);
-      setSelectedBook(null);
-
-      const statusText = newStatus === 'want_to_read' ? 'Want to Read' : 
-                        newStatus === 'currently_reading' ? 'Currently Reading' : 'Read';
-      
-      Alert.alert('Status Updated', `"${selectedBook.name}" has been marked as ${statusText}.`);
-    } catch (e) {
-      setError('Failed to update book status');
-      console.error('Update status error:', e);
-      Alert.alert('Error', 'Failed to update book status. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const applyFiltersAndSort = useCallback(() => {
     let filtered = [...books];
@@ -321,6 +378,7 @@ export default function MyBooksScreen() {
         book={selectedBookForDetail}
         readingTimeMinutes={selectedBookForDetail?.reading_time || 0}
         onClose={closeDetailModal}
+        onStatusChange={handleDetailModalStatusChange}
         fadeAnim={detailModalFadeAnim}
         scaleAnim={detailModalScaleAnim}
       />

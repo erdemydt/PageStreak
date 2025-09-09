@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { execute, queryAll } from '../db/db';
+import { execute } from '../db/db';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -40,56 +40,7 @@ export default function IntroScreen() {
   ];
 
   useEffect(() => {
-    // Create the user_preferences table, if it doesn't exist, but add new columns as needed
-    const initializeDatabase = async () => {
-      try {
-        // First, create the table with basic structure if it doesn't exist
-        await execute(`
-          CREATE TABLE IF NOT EXISTS user_preferences (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            username TEXT NOT NULL,
-            yearly_book_goal INTEGER NOT NULL,
-            preferred_genres TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-
-        // Define all the columns we need with their types and constraints
-        const requiredColumns = [
-          { name: 'weekly_reading_goal', type: 'INTEGER NOT NULL', defaultValue: '210' },
-          { name: 'daily_reading_goal', type: 'INTEGER', defaultValue: '30' },
-          { name: 'initial_reading_rate_minutes_per_day', type: 'INTEGER NOT NULL', defaultValue: '30' },
-          { name: 'end_reading_rate_goal_minutes_per_day', type: 'INTEGER NOT NULL', defaultValue: '60' },
-          { name: 'end_reading_rate_goal_date', type: 'DATETIME', defaultValue: null },
-          { name: 'current_reading_rate_minutes_per_day', type: 'INTEGER NOT NULL', defaultValue: '30' },
-          { name: 'current_reading_rate_last_updated', type: 'DATETIME', defaultValue: null },
-          { name: 'weekly_reading_rate_increase_minutes', type: 'INTEGER NOT NULL', defaultValue: '1' },
-          { name: 'weekly_reading_rate_increase_minutes_percentage', type: 'FLOAT NOT NULL', defaultValue: '3.33' }
-        ];
-
-        // Get current table structure
-        const tableInfo = await queryAll('PRAGMA table_info(user_preferences)');
-        const existingColumns = tableInfo.map((row: any) => row.name);
-
-        // Add missing columns
-        for (const column of requiredColumns) {
-          if (!existingColumns.includes(column.name)) {
-            let alterQuery = `ALTER TABLE user_preferences ADD COLUMN ${column.name} ${column.type}`;
-            if (column.defaultValue) {
-              alterQuery += ` DEFAULT ${column.defaultValue}`;
-            }
-            await execute(alterQuery);
-          }
-        }
-
-      } catch (error) {
-        console.error('Error setting up user_preferences table:', error);
-        setError('Failed to initialize the app. Please restart the application.');
-      }
-    };
-
-    initializeDatabase();
+  
   }, []);
 
 

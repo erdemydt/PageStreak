@@ -146,7 +146,8 @@ export default function HomeScreen() {
   const [filterStatus, setFilterStatus] = useState<BookStatus | 'all'>('all');
 
   useEffect(() => {
-    initializeDatabase();
+    // Database is already initialized by the main app entry point
+    loadBooks();
   }, []);
 
   useFocusEffect(
@@ -154,76 +155,6 @@ export default function HomeScreen() {
       loadBooks();
     }, [])
   );
-
-  const initializeDatabase = async () => {
-    try {
-      // Initialize reading sessions table
-      await initializeReadingSessions();
-      
-      // Create enhanced books table with new fields
-      await execute(`
-        CREATE TABLE IF NOT EXISTS enhanced_books (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          author TEXT NOT NULL,
-          page INTEGER NOT NULL,
-          isbn TEXT,
-          cover_id INTEGER,
-          cover_url TEXT,
-          first_publish_year INTEGER,
-          publisher TEXT,
-          language TEXT DEFAULT 'eng',
-          description TEXT,
-          subjects TEXT,
-          open_library_key TEXT,
-          author_key TEXT,
-          rating REAL,
-          date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
-          date_started DATETIME,
-          date_finished DATETIME,
-          current_page INTEGER DEFAULT 0,
-          reading_status TEXT DEFAULT 'currently_reading',
-          notes TEXT
-        )
-      `);
-
-      // Migrate existing books if they exist
-      await migrateOldBooks();
-      await loadBooks();
-    } catch (e) {
-      console.error('Database initialization error:', e);
-      setError('Failed to initialize database');
-    }
-  };
-
-  const migrateOldBooks = async () => {
-    try {
-      // Check if old books table exists and has data
-      const oldBooks = await queryAll<{id: number, name: string, author: string, page: number}>('SELECT * FROM enhanced_books');
-      
-      for (const book of oldBooks) {
-        // Check if book already exists in enhanced_books
-        const existing = await queryAll('SELECT id FROM enhanced_books WHERE name = ? AND author = ?', [book.name, book.author]);
-        
-        if (existing.length === 0) {
-          await execute(`
-            INSERT INTO enhanced_books (name, author, page, reading_status, date_added)
-            VALUES (?, ?, ?, 'currently_reading', ?) 
-          `,  [book.name, book.author, book.page, new Date().toISOString()]); // Date added should be consistent with the timezone
-        }
-      }
-
-      // Ensure all existing enhanced_books have a reading_status
-      await execute(`
-        UPDATE enhanced_books 
-        SET reading_status = 'currently_reading' 
-        WHERE reading_status IS NULL OR reading_status = ''
-      `);
-    } catch (e) {
-      // Old books table doesn't exist or other error, which is fine
-      console.log('Migration completed or no migration needed:', e);
-    }
-  };
 
   const loadBooks = async () => {
     setLoading(true);

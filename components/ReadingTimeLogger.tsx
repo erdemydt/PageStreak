@@ -64,19 +64,6 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
 
     setLoading(true);
     try {
-      // Create reading_sessions table if it doesn't exist
-      await execute(`
-        CREATE TABLE IF NOT EXISTS reading_sessions (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          book_id INTEGER NOT NULL,
-          minutes_read INTEGER NOT NULL,
-          date TEXT NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          notes TEXT,
-          FOREIGN KEY (book_id) REFERENCES enhanced_books (id)
-        )
-      `);
-
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
       // Insert the reading session

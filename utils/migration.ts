@@ -2,7 +2,8 @@ import { execute, queryAll } from '../db/db';
 
 /**
  * Migration utility to upgrade from basic books schema to enhanced books schema
- * This runs automatically in the app, but can also be run manually if needed
+ * This is now integrated into the main database initialization in db.tsx
+ * This file can still be used for manual migrations or testing purposes
  */
 export const runMigration = async () => {
   try {

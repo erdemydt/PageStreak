@@ -50,6 +50,9 @@ export interface SearchBookResult {
 const BASE_URL = 'https://openlibrary.org';
 const COVERS_URL = 'https://covers.openlibrary.org';
 
+// User-Agent header required by Open Library for regular API usage
+const USER_AGENT = 'PageStreak/1.0 (taninmiskisi05@gmail.com)';
+
 export class OpenLibraryService {
   /**
    * Search for books using the Open Library API
@@ -61,7 +64,11 @@ export class OpenLibraryService {
       
       console.log('Searching Open Library:', url);
       
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': USER_AGENT,
+        },
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -97,7 +104,11 @@ export class OpenLibraryService {
       const encodedTitle = encodeURIComponent(title);
       const url = `${BASE_URL}/search.json?title=${encodedTitle}&limit=${limit}&fields=key,title,author_name,author_key,first_publish_year,number_of_pages_median,cover_i,publisher,language,isbn,subject,ratings_average,ratings_count`;
       
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': USER_AGENT,
+        },
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -133,7 +144,11 @@ export class OpenLibraryService {
       const encodedAuthor = encodeURIComponent(author);
       const url = `${BASE_URL}/search.json?author=${encodedAuthor}&limit=${limit}&fields=key,title,author_name,author_key,first_publish_year,number_of_pages_median,cover_i,publisher,language,isbn,subject,ratings_average,ratings_count`;
       
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': USER_AGENT,
+        },
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -188,7 +203,11 @@ export class OpenLibraryService {
   static async getWorkDetails(workKey: string): Promise<any> {
     try {
       const url = `${BASE_URL}${workKey}.json`;
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': USER_AGENT,
+        },
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

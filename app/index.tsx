@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { execute, queryFirst, initializeDatabase } from '../db/db';
+import { execute, initializeDatabase, queryFirst } from '../db/db';
 
 type UserPreferences = {
   id: number;

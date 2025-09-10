@@ -50,3 +50,4 @@ fastlane/
 *.key
 *.mobileprovision
 *.keystore
+builds/

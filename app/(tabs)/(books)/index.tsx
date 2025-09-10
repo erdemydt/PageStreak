@@ -5,7 +5,7 @@ import BookCard from '../../../components/BookCard';
 import BookDetailModal from '../../../components/BookDetailModal';
 import BookStatusModal, { BookStatus } from '../../../components/BookStatusModal';
 import { EnhancedBook, execute, queryAll } from '../../../db/db';
-import { getBookReadingTime, initializeReadingSessions } from '../../../utils/readingProgress';
+import { getBookReadingTime } from '../../../utils/readingProgress';
 
 type BooksearchProps = {
   name: string;

@@ -2,17 +2,17 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  Dimensions,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Animated,
+    Dimensions,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { execute } from '../db/db';
 
@@ -28,6 +28,7 @@ export default function IntroScreen() {
   const [dailyReadingGoal, setDailyReadingGoal] = useState('');
   const [targetDailyGoal, setTargetDailyGoal] = useState('');
   const [goalDate, setGoalDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const slideAnimation = useRef(new Animated.Value(0)).current;
@@ -507,22 +508,51 @@ export default function IntroScreen() {
 
 
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <DateTimePicker
-          value={goalDate}
-          mode="date"
-          display="default"
-          minimumDate={new Date()}
-          maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
-          onChange={(event, date) => {
-            if (date) {
-              setGoalDate(date);
-              // Clear error if date is valid
-              if (error && date >= new Date(new Date().setHours(0, 0, 0, 0))) {
-                setError(null);
+        <TouchableOpacity
+          style={styles.datePickerButton}
+          onPress={() => setShowDatePicker(true)}
+          disabled={loading}
+        >
+          <Text style={styles.datePickerButtonText}>
+            📅 {goalDate.toLocaleDateString('en-US', { 
+              weekday: 'long',
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </Text>
+        </TouchableOpacity>
+        
+        {showDatePicker && (
+          <DateTimePicker
+            value={goalDate}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'default' : 'default'}
+            minimumDate={new Date()}
+            maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
+            onChange={(event, date) => {
+              // On Android, hide picker regardless of user action
+              if (Platform.OS === 'android') {
+                setShowDatePicker(false);
               }
-            }
-          }}
-        />
+              
+              // Only update date if user didn't cancel (event.type !== 'dismissed')
+              if (date && event.type !== 'dismissed') {
+                setGoalDate(date);
+                // Clear error if date is valid
+                if (error && date >= new Date(new Date().setHours(0, 0, 0, 0))) {
+                  setError(null);
+                }
+              }
+              
+              // On iOS, hide picker after selection
+              if (Platform.OS === 'ios' && event.type === 'set') {
+                setShowDatePicker(false);
+              }
+            }}
+          />
+        )}
+        
         <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 16, color: '#64748B' }}>
           Current Weekly Increase Needed: {calculateNeededWeeklyPercentageIncrease()}% ({classifyPercentageIncrease(Number(calculateNeededWeeklyPercentageIncrease()))})
         </Text>
@@ -948,5 +978,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     fontWeight: '500',
+  },
+  datePickerButton: {
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  datePickerButtonText: {
+    fontSize: 16,
+    color: '#1E293B',
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

@@ -1,5 +1,6 @@
 import { Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Animated, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import BookCard from '../../../components/BookCard';
 import BookDetailModal from '../../../components/BookDetailModal';
@@ -11,6 +12,8 @@ type SortOption = 'date_added' | 'title' | 'author' | 'reading_time' | 'progress
 type SortDirection = 'asc' | 'desc';
 
 export default function MyBooksScreen() {
+  const { t } = useTranslation();
+  
   const [books, setBooks] = useState<(EnhancedBook & { reading_time?: number })[]>([]);
   const [filteredBooks, setFilteredBooks] = useState<(EnhancedBook & { reading_time?: number })[]>([]);
   const [loading, setLoading] = useState(false);
@@ -312,19 +315,25 @@ export default function MyBooksScreen() {
     }, [applyFiltersAndSort])
   );
 
-  const getStatusCount = (status: BookStatus) => {
-    return books.filter(book => book.reading_status === status).length;
-  };
-
   const getSortLabel = (option: SortOption) => {
     switch (option) {
-      case 'date_added': return 'Date Added';
-      case 'title': return 'Title';
-      case 'author': return 'Author';
-      case 'reading_time': return 'Reading Time';
-      case 'progress': return 'Progress';
-      default: return 'Date Added';
+      case 'date_added':
+        return t('booksPage.sort.dateAdded');
+      case 'title':
+        return t('booksPage.sort.title');
+      case 'author':
+        return t('booksPage.sort.author');
+      case 'reading_time':
+        return t('booksPage.sort.readingTime');
+      case 'progress':
+        return t('booksPage.sort.progress');
+      default:
+        return t('booksPage.sort.unknown');
     }
+  };
+
+  const getStatusCount = (status: BookStatus) => {
+    return `${t(`booksPage.status.${status}`)} (${books.filter(book => book.reading_status === status).length})`;
   };
 
   const renderBook = ({ item }: { item: EnhancedBook & { reading_time?: number } }) => (

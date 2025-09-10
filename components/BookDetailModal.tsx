@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Animated,
   Image,
@@ -11,7 +12,6 @@ import {
 } from 'react-native';
 import { EnhancedBook, queryFirst } from '../db/db';
 import BookStatusModal, { BookStatus } from './BookStatusModal';
-
 interface BookDetailModalProps {
   visible: boolean;
   book: EnhancedBook | null;
@@ -31,6 +31,8 @@ export default function BookDetailModal({
   fadeAnim,
   scaleAnim,
 }: BookDetailModalProps) {
+  const { t } = useTranslation();
+  // State to hold the first reading date
   const [firstReadingDate, setFirstReadingDate] = useState<string | null>(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   
@@ -71,6 +73,7 @@ export default function BookDetailModal({
 
   const formatReadingTime = (minutes: number) => {
     if (minutes < 60) {
+
       return `${minutes} minutes`;
     } else {
       const hours = Math.floor(minutes / 60);
@@ -98,13 +101,13 @@ export default function BookDetailModal({
   const getStatusText = (status?: string) => {
     switch (status) {
       case 'currently_reading':
-        return 'Currently Reading';
+        return t("components.bookCard.currentlyReading");
       case 'read':
-        return 'Read';
+        return t("components.bookCard.read");
       case 'want_to_read':
-        return 'Want to Read';
+        return t("components.bookCard.wantToRead");
       default:
-        return 'Unknown';
+        return t("components.bookCard.unknown");
     }
   };
 
@@ -180,7 +183,7 @@ export default function BookDetailModal({
           ]}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Book Details</Text>
+            <Text style={styles.modalTitle}>{t("components.bookDetailModal.title")}</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
@@ -227,7 +230,7 @@ export default function BookDetailModal({
             {/* Reading Progress */}
             {progress !== null && book.reading_status === 'currently_reading' && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>📊 Reading Progress</Text>
+                <Text style={styles.sectionTitle}>{t("components.bookDetailModal.readingProgress")}</Text>
                 <View style={styles.progressContainer}>
                   <View style={styles.progressBar}>
                     <View 
@@ -238,7 +241,7 @@ export default function BookDetailModal({
                     />
                   </View>
                   <Text style={styles.progressText}>
-                    {book.current_page} of {book.page} pages ({progress}% complete)
+                    {t("components.bookDetailModal.progressText", { pagesRead: book.current_page, totalPages: book.page, percentage: progress }) }
                   </Text>
                 </View>
               </View>
@@ -246,22 +249,22 @@ export default function BookDetailModal({
 
             {/* Reading Statistics */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📈 Reading Statistics</Text>
+              <Text style={styles.sectionTitle}>{t("components.bookDetailModal.statistics")}</Text>
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{book.page}</Text>
-                  <Text style={styles.statLabel}>Total Pages</Text>
+                  <Text style={styles.statLabel}>{t("components.bookDetailModal.totalPages")}</Text>
                 </View>
                 {readingTimeMinutes > 0 && (
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{formatReadingTime(readingTimeMinutes)}</Text>
-                    <Text style={styles.statLabel}>Time Spent</Text>
+                    <Text style={styles.statLabel}>{t("components.bookDetailModal.totalReadingTime")}</Text>
                   </View>
                 )}
                 {book.date_started && (
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{formatDate(book.date_started)}</Text>
-                    <Text style={styles.statLabel}>Started Reading</Text>
+                    <Text style={styles.statLabel}>{t("components.bookDetailModal.firstRead")}</Text>
                   </View>
                 )}
               </View>
@@ -269,23 +272,23 @@ export default function BookDetailModal({
 
             {/* Book Information */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📚 Book Information</Text>
+              <Text style={styles.sectionTitle}>{t("components.bookDetailModal.bookInformation")}</Text>
               <View style={styles.infoGrid}>
                 {book.first_publish_year && (
                   <View style={styles.infoItem}>
-                    <Text style={styles.infoLabel}>Published:</Text>
+                    <Text style={styles.infoLabel}>{t("components.bookDetailModal.publishedDate")}</Text>
                     <Text style={styles.infoValue}>{book.first_publish_year}</Text>
                   </View>
                 )}
                 {book.publisher && (
                   <View style={styles.infoItem}>
-                    <Text style={styles.infoLabel}>Publisher:</Text>
+                    <Text style={styles.infoLabel}>{t("components.bookDetailModal.publisher")}</Text>
                     <Text style={styles.infoValue}>{book.publisher}</Text>
                   </View>
                 )}
                 {book.language && (
                   <View style={styles.infoItem}>
-                    <Text style={styles.infoLabel}>Language:</Text>
+                    <Text style={styles.infoLabel}>{t("components.bookDetailModal.language")}</Text>
                     <Text style={styles.infoValue}>{book.language}</Text>
                   </View>
                 )}
@@ -297,7 +300,7 @@ export default function BookDetailModal({
                 )}
                 {book.rating && (
                   <View style={styles.infoItem}>
-                    <Text style={styles.infoLabel}>Rating:</Text>
+                    <Text style={styles.infoLabel}>{t("components.bookDetailModal.rating")}</Text>
                     <Text style={styles.infoValue}>⭐ {book.rating.toFixed(1)}</Text>
                   </View>
                 )}
@@ -307,31 +310,31 @@ export default function BookDetailModal({
             {/* Description */}
             {book.description && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>📝 Description</Text>
+                <Text style={styles.sectionTitle}>{t("components.bookDetailModal.description")}</Text>
                 <Text style={styles.description}>{book.description}</Text>
               </View>
             )}
 
             {/* Important Dates */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📅 Timeline</Text>
+              <Text style={styles.sectionTitle}>{t("components.bookDetailModal.timeline")}</Text>
               <View style={styles.timelineContainer}>
                 {book.date_added && (
                   <View style={styles.timelineItem}>
                     <Text style={styles.timelineDate}>{formatDate(book.date_added)}</Text>
-                    <Text style={styles.timelineEvent}>Added to library</Text>
+                    <Text style={styles.timelineEvent}>{t("components.bookDetailModal.addedToLibrary")}</Text>
                   </View>
                 )}
                 {book.date_started && (
                   <View style={styles.timelineItem}>
                     <Text style={styles.timelineDate}>{formatDate(book.date_started)}</Text>
-                    <Text style={styles.timelineEvent}>Started reading</Text>
+                    <Text style={styles.timelineEvent}>{t("components.bookDetailModal.dateStarted")}</Text>
                   </View>
                 )}
                 {book.date_finished && (
                   <View style={styles.timelineItem}>
                     <Text style={styles.timelineDate}>{formatDate(book.date_finished)}</Text>
-                    <Text style={styles.timelineEvent}>Finished reading</Text>
+                    <Text style={styles.timelineEvent}>{t("components.bookDetailModal.dateFinished")}</Text>
                   </View>
                 )}
               </View>
@@ -340,7 +343,7 @@ export default function BookDetailModal({
             {/* Notes */}
             {book.notes && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>🗒️ Notes</Text>
+                <Text style={styles.sectionTitle}>{t("components.bookDetailModal.notes")}</Text>
                 <Text style={styles.notes}>{book.notes}</Text>
               </View>
             )}

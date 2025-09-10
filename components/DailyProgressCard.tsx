@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -13,6 +14,7 @@ export default function DailyProgressCard({
   goalMinutes, 
   streakDays 
 }: DailyProgressCardProps) {
+  const { t } = useTranslation();
   const percentage = goalMinutes > 0 ? Math.min((todayMinutes / goalMinutes) * 100, 100) : 0;
   const isGoalReached = todayMinutes >= goalMinutes;
   
@@ -32,23 +34,23 @@ export default function DailyProgressCard({
 
   const getMotivationMessage = () => {
     if (isGoalReached) {
-      return "🎉 Goal crushed! Amazing work!";
+      return t('components.dailyProgress.goalCrushed');
     } else if (percentage >= 75) {
-      return "💪 Almost there! Keep going!";
+      return t('components.dailyProgress.almostThere');
     } else if (percentage >= 50) {
-      return "📖 Good progress! You're halfway!";
+      return t('components.dailyProgress.goodProgress');
     } else if (percentage >= 25) {
-      return "🌱 Great start! Keep building momentum!";
+      return t('components.dailyProgress.greatStart');
     } else if (todayMinutes > 0) {
-      return "📚 Every minute counts! You got this!";
+      return t('components.dailyProgress.everyMinute');
     } else {
-      return "☕ Ready to start your reading session?";
+      return t('components.dailyProgress.readyToStart');
     }
   };
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>📅 Today's Reading Progress</Text>
+      <Text style={styles.cardTitle}>{t('components.dailyProgress.title')}</Text>
       
       <View style={styles.progressContainer}>
         {/* Progress Ring */}
@@ -82,7 +84,7 @@ export default function DailyProgressCard({
             <Text style={styles.progressPercentage}>
               {Math.round(percentage)}%
             </Text>
-            <Text style={styles.progressLabel}>complete</Text>
+            <Text style={styles.progressLabel}>{t('components.dailyProgress.complete')}</Text>
           </View>
         </View>
 
@@ -90,21 +92,21 @@ export default function DailyProgressCard({
         <View style={styles.stats}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{formatMinutes(todayMinutes)}</Text>
-            <Text style={styles.statLabel}>Today</Text>
+            <Text style={styles.statLabel}>{t('components.dailyProgress.today')}</Text>
           </View>
           
           <View style={styles.statDivider} />
           
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{formatMinutes(goalMinutes)}</Text>
-            <Text style={styles.statLabel}>Goal</Text>
+            <Text style={styles.statLabel}>{t('components.dailyProgress.goal')}</Text>
           </View>
           
           <View style={styles.statDivider} />
           
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{streakDays}</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
+            <Text style={styles.statLabel}>{t('components.dailyProgress.dayStreak')}</Text>
           </View>
         </View>
       </View>
@@ -125,7 +127,7 @@ export default function DailyProgressCard({
       {/* Time Remaining */}
       {!isGoalReached && goalMinutes > 0 && (
         <Text style={styles.remainingText}>
-          {formatMinutes(goalMinutes - todayMinutes)} left to reach your daily goal
+          {t('components.dailyProgress.leftToReach', { time: formatMinutes(goalMinutes - todayMinutes) })}
         </Text>
       )}
     </View>

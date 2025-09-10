@@ -1,12 +1,12 @@
 import { Link, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Animated, FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import BookCard from '../../../components/BookCard';
 import BookDetailModal from '../../../components/BookDetailModal';
 import BookStatusModal, { BookStatus } from '../../../components/BookStatusModal';
 import { EnhancedBook, execute, queryAll } from '../../../db/db';
 import { getBookReadingTime } from '../../../utils/readingProgress';
-
 type BooksearchProps = {
   name: string;
   setName: (name: string) => void;
@@ -25,6 +25,7 @@ type BooksearchProps = {
 };
 
 function ManualBookEntry(props: BooksearchProps) {
+  const { t } = useTranslation();
   const getStatusColor = (status: BookStatus) => {
     switch (status) {
       case 'currently_reading':
@@ -37,17 +38,16 @@ function ManualBookEntry(props: BooksearchProps) {
         return '#64748B';
     }
   };
-
   const getStatusText = (status: BookStatus) => {
     switch (status) {
       case 'currently_reading':
-        return 'Currently Reading';
+        return t('components.bookCard.currentlyReading');
       case 'read':
-        return 'Read';
+        return t('components.bookCard.read');
       case 'want_to_read':
-        return 'Want to Read';
+        return t('components.bookCard.wantToRead');
       default:
-        return 'Unknown';
+        return t('components.bookCard.unknown');
     }
   };
 
@@ -63,7 +63,7 @@ function ManualBookEntry(props: BooksearchProps) {
         ]}
       >
         <View style={styles.modalHeader}>
-          <Text style={styles.cardTitle}>Add Book Manually</Text>
+          <Text style={styles.cardTitle}>{t('components.bookSearchModal.title')}</Text>
           <TouchableOpacity 
             style={styles.closeButton}
             onPress={props.onClose}
@@ -73,12 +73,12 @@ function ManualBookEntry(props: BooksearchProps) {
           </TouchableOpacity>
         </View>
         <View style={styles.inputContainer}>
-          <TextInput style={styles.input} placeholder="Book Name" placeholderTextColor="#9CA3AF" value={props.name} onChangeText={props.setName} editable={!props.loading} autoCapitalize="words" returnKeyType="next" />
-          <TextInput style={styles.input} placeholder="Author" placeholderTextColor="#9CA3AF" value={props.author} onChangeText={props.setAuthor} editable={!props.loading} autoCapitalize="words" returnKeyType="next" />
-          <TextInput style={styles.input} placeholder="Page Count" placeholderTextColor="#9CA3AF" value={props.page} onChangeText={props.setPage} editable={!props.loading} keyboardType="numeric" returnKeyType="done" onSubmitEditing={props.saveBook} />
-          
+          <TextInput style={styles.input} placeholder={t('components.bookSearchModal.title')} placeholderTextColor="#9CA3AF" value={props.name} onChangeText={props.setName} editable={!props.loading} autoCapitalize="words" returnKeyType="next" />
+          <TextInput style={styles.input} placeholder={t('components.bookSearchModal.author')} placeholderTextColor="#9CA3AF" value={props.author} onChangeText={props.setAuthor} editable={!props.loading} autoCapitalize="words" returnKeyType="next" />
+          <TextInput style={styles.input} placeholder={t('components.bookSearchModal.pageCount')} placeholderTextColor="#9CA3AF" value={props.page} onChangeText={props.setPage} editable={!props.loading} keyboardType="numeric" returnKeyType="done" onSubmitEditing={props.saveBook} />
+
           <View style={styles.statusSelectionContainer}>
-            <Text style={styles.statusSelectionLabel}>Reading Status:</Text>
+            <Text style={styles.statusSelectionLabel}>{t('components.bookDetailModal.status')}</Text>
             <View style={styles.statusButtons}>
               {(['want_to_read', 'currently_reading', 'read'] as BookStatus[]).map((status) => (
                 <TouchableOpacity
@@ -108,7 +108,7 @@ function ManualBookEntry(props: BooksearchProps) {
           </View>
 
           <TouchableOpacity style={[styles.saveBtn, (!props.name.trim() || !props.author.trim() || !props.page.trim() || props.loading) && styles.saveBtnDisabled]} onPress={props.saveBook} disabled={props.loading || !props.name.trim() || !props.author.trim() || !props.page.trim()}>
-            <Text style={styles.saveBtnText}>{props.loading ? 'Saving...' : 'Add Book'}</Text>
+            <Text style={styles.saveBtnText}>{props.loading ? t("booksPage.saving") : t("booksPage.addBook")}</Text>
           </TouchableOpacity>
         </View>
         {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
@@ -155,7 +155,7 @@ export default function HomeScreen() {
       loadBooks();
     }, [])
   );
-
+  const { t } = useTranslation();
   const loadBooks = async () => {
     setLoading(true);
     try {
@@ -201,7 +201,7 @@ export default function HomeScreen() {
       
       setBooks(booksWithReadingTime);
     } catch (e) {
-      setError('Failed to load books');
+      setError(t('booksPage.failedToLoad'));
       console.error('Load books error:', e);
     } finally {
       setLoading(false);
@@ -256,7 +256,7 @@ export default function HomeScreen() {
       await loadBooks();
       toggleManualForm();
     } catch (e) {
-      setError('Failed to save book');
+      setError(t('booksPage.failedToSave'));
       console.error('Save manual book error:', e);
     } finally {
       setLoading(false);
@@ -265,12 +265,12 @@ export default function HomeScreen() {
 
   const deleteBook = async (bookId: number, bookTitle: string) => {
     Alert.alert(
-      'Delete Book',
-      `Are you sure you want to delete "${bookTitle}"?`,
+      t('booksPage.alert.deleteTitle'),
+      t('booksPage.alert.deleteMessage', { title: bookTitle }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('booksPage.alert.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('booksPage.alert.delete'),
           style: 'destructive',
           onPress: async () => {
             setLoading(true);
@@ -449,14 +449,14 @@ export default function HomeScreen() {
       }
 
       // Show success message
-      const statusText = newStatus === 'want_to_read' ? 'Want to Read' : 
-                        newStatus === 'currently_reading' ? 'Currently Reading' : 'Read';
-      
-      Alert.alert('Status Updated', `Book status has been updated to ${statusText}.`);
+      const statusText = newStatus === 'want_to_read' ? t('components.bookCard.wantToRead') : 
+                        newStatus === 'currently_reading' ? t('components.bookCard.currentlyReading') : t('components.bookCard.read');
+
+      Alert.alert(t("booksPage.alert.statusUpdated"), t("booksPage.alert.bookStatusUpdated", { statusText }));
     } catch (e) {
-      setError('Failed to update book status');
+      setError(t('booksPage.alert.failedUpdate'));
       console.error('Update status error:', e);
-      Alert.alert('Error', 'Failed to update book status. Please try again.');
+      Alert.alert(t('error'), t('booksPage.alert.failedUpdate'));
     } finally {
       setLoading(false);
     }
@@ -523,8 +523,8 @@ export default function HomeScreen() {
         <Stack.Screen options={{ title: 'Books' }} />
         <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>📖 Book Library</Text>
-          <Text style={styles.subtitle}>Discover and track your reading journey</Text>
+          <Text style={styles.title}>{t('booksPage.title')}</Text>
+          <Text style={styles.subtitle}>{t('booksPage.subtitle')}</Text>
         </View>
 
         {isAddingManually && (
@@ -581,12 +581,12 @@ export default function HomeScreen() {
             onPress={toggleManualForm}
             disabled={loading || isAddingManually}
           >
-            <Text style={[styles.actionBtnText, styles.secondaryBtnText]}>✏️ Add Manually</Text>
+            <Text style={[styles.actionBtnText, styles.secondaryBtnText]}>{t('booksPage.addBookManually')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.filterSection}>
-          <Text style={styles.filterTitle}>Filter by Status:</Text>
+          <Text style={styles.filterTitle}>{t('booksPage.filter.title')}</Text>
           <View style={styles.filterButtons}>
             <TouchableOpacity
               style={[
@@ -599,7 +599,7 @@ export default function HomeScreen() {
                 styles.filterBtnText,
                 filterStatus === 'all' && styles.filterBtnTextActive
               ]}>
-                All ({allBooksCount})
+                {t("booksPage.filter.all")} ({allBooksCount})
               </Text>
             </TouchableOpacity>
             
@@ -614,7 +614,7 @@ export default function HomeScreen() {
                 styles.filterBtnText,
                 filterStatus === 'want_to_read' && styles.filterBtnTextActive
               ]}>
-                Want to Read ({getStatusCount('want_to_read')})
+                {t("booksPage.filter.want_to_read")} ({getStatusCount('want_to_read')})
               </Text>
             </TouchableOpacity>
             
@@ -629,7 +629,7 @@ export default function HomeScreen() {
                 styles.filterBtnText,
                 filterStatus === 'currently_reading' && styles.filterBtnTextActive
               ]}>
-                Reading ({getStatusCount('currently_reading')})
+                {t("booksPage.filter.currently_reading")} ({getStatusCount('currently_reading')})
               </Text>
             </TouchableOpacity>
             
@@ -644,7 +644,7 @@ export default function HomeScreen() {
                 styles.filterBtnText,
                 filterStatus === 'read' && styles.filterBtnTextActive
               ]}>
-                Read ({getStatusCount('read')})
+                {t("booksPage.filter.read")} ({getStatusCount('read')})
               </Text>
             </TouchableOpacity>
           </View>
@@ -653,11 +653,11 @@ export default function HomeScreen() {
         <View style={styles.listSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              📚 My Books (showing {filteredBooks.length} of {allBooksCount})
+              {t('booksPage.listHeader.myBooks') } {t('booksPage.listHeader.showing')} ({filteredBooks.length} {t('booksPage.listHeader.of')} {allBooksCount})
             </Text>
             <Link href="./my-books" asChild>
               <TouchableOpacity style={styles.viewAllButton}>
-                <Text style={styles.viewAllButtonText}>View All</Text>
+                <Text style={styles.viewAllButtonText}>{t('booksPage.listHeader.viewAll')}</Text>
               </TouchableOpacity>
             </Link>
           </View>
@@ -669,12 +669,12 @@ export default function HomeScreen() {
               <View style={styles.emptyState}>
                 <Text style={styles.emptyIcon}>📚</Text>
                 <Text style={styles.emptyTitle}>
-                  {filterStatus === 'all' ? 'No books yet' : `No ${filterStatus.replace('_', ' ')} books`}
+                  {filterStatus === 'all' ? t("booksPage.empty.noBooks") : t("booksPage.empty.noFilteredBooks", { status: filterStatus.replace('_', ' ') })}
                 </Text>
                 <Text style={styles.emptySubtitle}>
                   {filterStatus === 'all' 
-                    ? 'Search for books online or add them manually!' 
-                    : 'Try changing the filter or add some books!'
+                    ? t("booksPage.empty.searchOrAdd") 
+                    : t("booksPage.empty.tryChangingFilter")
                   }
                 </Text>
               </View>

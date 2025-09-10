@@ -1,8 +1,8 @@
 
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
 
 import BookCard from '../../../components/BookCard';
 import DailyProgressCard from '../../../components/DailyProgressCard';
@@ -29,6 +29,7 @@ type ReadingSession = {
 };
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const [books, setBooks] = useState<EnhancedBook[]>([]);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(false);
@@ -138,9 +139,9 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
 
         <View style={styles.header}>
-          <Text style={styles.title}>📚 PageStreak</Text>
+          <Text style={styles.title}>{t('home.title')}</Text>
           {userPreferences && (
-            <Text style={styles.subtitle}>Welcome back, {userPreferences.username}!</Text>
+            <Text style={styles.subtitle}>{t('home.welcomeBack', { username: userPreferences.username })}</Text>
           )}
         </View>
 
@@ -157,13 +158,13 @@ export default function HomeScreen() {
             style={styles.logTimeButton}
             onPress={() => setShowReadingLogger(true)}
           >
-            <Text style={styles.logTimeButtonText}>📖 Log Reading Time</Text>
+            <Text style={styles.logTimeButtonText}>{t('home.logReadingTime')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={{ marginTop: 12, alignItems: 'center' }}>
             <Link href={"/readinglogs"} >
-              <Text style={{ color: '#6C63FF', fontWeight: '600' }}>View Reading Logs →</Text>
+              <Text style={{ color: '#6C63FF', fontWeight: '600' }}>{t('home.viewReadingLogs')}</Text>
             </Link>
           </TouchableOpacity>
 
@@ -171,22 +172,22 @@ export default function HomeScreen() {
 
         {/* Reading Progress Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📊 Your Reading Journey</Text>
+          <Text style={styles.cardTitle}>{t('home.readingJourney')}</Text>
           <View style={styles.progressContainer}>
             <View style={styles.progressStats}>
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{booksRead}</Text>
-                <Text style={styles.statLabel}>Books Read</Text>
+                <Text style={styles.statLabel}>{t('home.booksRead')}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{currentlyReading}</Text>
-                <Text style={styles.statLabel}>Reading</Text>
+                <Text style={styles.statLabel}>{t('home.reading')}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{wantToRead}</Text>
-                <Text style={styles.statLabel}>Want to Read</Text>
+                <Text style={styles.statLabel}>{t('home.wantToRead')}</Text>
               </View>
             </View>
 
@@ -202,8 +203,8 @@ export default function HomeScreen() {
                 </View>
                 <Text style={styles.progressText}>
                   {booksRead >= yearlyGoal
-                    ? "🎉 Goal achieved! Amazing work!"
-                    : `${yearlyGoal - booksRead} more books to reach your yearly goal of ${yearlyGoal}`
+                    ? t('home.goalAchieved')
+                    : t('home.goalProgress', { remaining: yearlyGoal - booksRead, goal: yearlyGoal })
                   }
                 </Text>
               </View>
@@ -214,10 +215,10 @@ export default function HomeScreen() {
         {/* Recent Books Section */}
         <View style={styles.listSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>📖 Recent Books ({books.length})</Text>
+            <Text style={styles.sectionTitle}>{t('home.recentBooks', { count: books.length })}</Text>
             <Link href={"/(books)" as any} asChild>
               <TouchableOpacity style={styles.seeAllBtn}>
-                <Text style={styles.seeAllText}>See All →</Text>
+                <Text style={styles.seeAllText}>{t('home.seeAll')}</Text>
               </TouchableOpacity>
             </Link>
           </View>
@@ -237,11 +238,11 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📚</Text>
-            <Text style={styles.emptyTitle}>No books yet</Text>
-            <Text style={styles.emptySubtitle}>Start by discovering and adding books!</Text>
+            <Text style={styles.emptyTitle}>{t('home.noBooksYet')}</Text>
+            <Text style={styles.emptySubtitle}>{t('home.startDiscovering')}</Text>
             <Link href={"/(books)" as any} asChild>
               <TouchableOpacity style={styles.addFirstBookBtn}>
-                <Text style={styles.addFirstBookText}>🔍 Discover Books</Text>
+                <Text style={styles.addFirstBookText}>{t('home.discoverBooks')}</Text>
               </TouchableOpacity>
             </Link>
           </View>

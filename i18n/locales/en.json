@@ -1,0 +1,19 @@
+{
+  "home": {
+    "title": "📚 PageStreak",
+    "welcomeBack": "Welcome back, {{username}}!",
+    "logReadingTime": "📖 Log Reading Time",
+    "viewReadingLogs": "View Reading Logs →",
+    "readingJourney": "📊 Your Reading Journey",
+    "booksRead": "Books Read",
+    "reading": "Reading",
+    "wantToRead": "Want to Read",
+    "goalAchieved": "🎉 Goal achieved! Amazing work!",
+    "goalProgress": "{{remaining}} more books to reach your yearly goal of {{goal}}",
+    "recentBooks": "📖 Recent Books ({{count}})",
+    "seeAll": "See All →",
+    "noBooksYet": "No books yet",
+    "startDiscovering": "Start by discovering and adding books!",
+    "discoverBooks": "🔍 Discover Books"
+  }
+}

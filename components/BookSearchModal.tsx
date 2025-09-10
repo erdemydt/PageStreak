@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { OpenLibraryService, SearchBookResult } from '../services/openLibrary';
 
@@ -28,6 +29,7 @@ export default function BookSearchModal({
   fadeAnim,
   scaleAnim,
 }: BookSearchModalProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchBookResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,7 +37,7 @@ export default function BookSearchModal({
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      Alert.alert('Search Error', 'Please enter a search term');
+      Alert.alert(t('components.bookSearchModal.searchError'), t('components.bookSearchModal.enterSearchTerm'));
       return;
     }
 
@@ -58,11 +60,18 @@ export default function BookSearchModal({
       setSearchResults(results);
       
       if (results.length === 0) {
-        Alert.alert('No Results', 'No books found for your search. Try different keywords.');
+        Alert.alert(
+          t('components.bookSearchModal.noResults'), 
+          t('components.bookSearchModal.noResultsFound', { query: searchQuery }) + '\n\n' + 
+          t('components.bookSearchModal.tryDifferentSearch')
+        );
       }
     } catch (error) {
       console.error('Search error:', error);
-      Alert.alert('Search Error', error instanceof Error ? error.message : 'Failed to search books');
+      Alert.alert(
+        t('components.bookSearchModal.searchError'), 
+        error instanceof Error ? error.message : t('components.bookSearchModal.searchFailed')
+      );
     } finally {
       setLoading(false);
     }

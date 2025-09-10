@@ -1,0 +1,19 @@
+{
+  "home": {
+    "title": "📚 PageStreak",
+    "welcomeBack": "Tekrar hoş geldin, {{username}}!",
+    "logReadingTime": "📖 Okuma Süresi Kaydet",
+    "viewReadingLogs": "Okuma Kayıtlarını Görüntüle →",
+    "readingJourney": "📊 Okuma Yolculuğun",
+    "booksRead": "Okunan Kitaplar",
+    "reading": "Okuyor",
+    "wantToRead": "Okumak İstiyorum",
+    "goalAchieved": "🎉 Hedef başarıldı! Harika iş!",
+    "goalProgress": "Yıllık {{goal}} kitap hedefinize ulaşmak için {{remaining}} kitap daha",
+    "recentBooks": "📖 Son Kitaplar ({{count}})",
+    "seeAll": "Tümünü Gör →",
+    "noBooksYet": "Henüz kitap yok",
+    "startDiscovering": "Kitap keşfetmeye ve eklemeye başlayın!",
+    "discoverBooks": "🔍 Kitap Keşfet"
+  }
+}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { EnhancedBook } from '../db/db';
 
@@ -27,6 +28,7 @@ export default function BookCard({
   compact = false,
   smaller = false 
 }: BookCardProps) {
+  const { t } = useTranslation();
   const formatReadingTime = (minutes: number) => {
     if (minutes < 60) {
       return `${minutes}m`;
@@ -59,13 +61,13 @@ export default function BookCard({
   const getStatusText = (status?: string) => {
     switch (status) {
       case 'currently_reading':
-        return 'Currently Reading';
+        return t('components.bookCard.currentlyReading');
       case 'read':
-        return 'Read';
+        return t('components.bookCard.read');
       case 'want_to_read':
-        return 'Want to Read';
+        return t('components.bookCard.wantToRead');
       default:
-        return 'Unknown';
+        return t('components.bookCard.unknown');
     }
   };
 
@@ -100,9 +102,9 @@ export default function BookCard({
             {book.name}
           </Text>
           <Text style={styles.compactAuthor} numberOfLines={1}>
-            by {book.author}
+            {t('components.bookCard.by')} {book.author}
           </Text>
-          <Text style={styles.compactPages}>{book.page} pages</Text>
+          <Text style={styles.compactPages}>{book.page} {t('components.bookCard.pages')}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -130,7 +132,7 @@ export default function BookCard({
             {book.name}
           </Text>
           <Text style={styles.smallerAuthor} numberOfLines={1}>
-            by {book.author}
+            {t('components.bookCard.by')} {book.author}
           </Text>
           
           <View style={styles.smallerMetadata}>
@@ -185,11 +187,11 @@ export default function BookCard({
             {book.name}
           </Text>
           <Text style={styles.author} numberOfLines={1}>
-            by {book.author}
+            {t('components.bookCard.by')} {book.author}
           </Text>
           
           <View style={styles.metadata}>
-            <Text style={styles.pages}>📄 {book.page} pages</Text>
+            <Text style={styles.pages}>📄 {book.page} {t('components.bookCard.pages')}</Text>
             {book.first_publish_year && (
               <Text style={styles.year}>📅 {book.first_publish_year}</Text>
             )}
@@ -225,7 +227,7 @@ export default function BookCard({
           {showReadingTime && readingTimeMinutes > 0 && (
             <View style={styles.readingTimeContainer}>
               <Text style={styles.readingTimeText}>
-                ⏱️ {formatReadingTime(readingTimeMinutes)} reading time
+                ⏱️ {formatReadingTime(readingTimeMinutes)} {t('components.bookCard.readingTime')}
               </Text>
             </View>
           )}
@@ -240,7 +242,7 @@ export default function BookCard({
                   ]} 
                 />
               </View>
-              <Text style={styles.progressText}>{progress}% complete</Text>
+              <Text style={styles.progressText}>{progress}% {t('components.bookCard.complete')}</Text>
             </View>
           )}
           
@@ -252,7 +254,7 @@ export default function BookCard({
           
           {book.date_finished && (
             <Text style={styles.dateFinished}>
-              ✅ Finished: {formatDate(book.date_finished)}
+              {t('components.bookCard.finished')} {formatDate(book.date_finished)}
             </Text>
           )}
         </View>

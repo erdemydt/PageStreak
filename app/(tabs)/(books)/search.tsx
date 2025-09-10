@@ -1,5 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +21,7 @@ import { OpenLibraryService, SearchBookResult } from '../../../services/openLibr
 
 export default function BookSearchScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchBookResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,13 +32,19 @@ export default function BookSearchScreen() {
   const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
   const [clickedSearch, setClickedSearch] = useState(false);
 
+  const searchTypeLabels = {
+    general: t('booksPage.search.general'),
+    title: t('booksPage.search.title'),
+    author: t('booksPage.search.author'),
+  };
+
   useEffect(() => {
     // Reset search results when search type changes
     setClickedSearch(false);
   }, []);
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      Alert.alert('Search Error', 'Please enter a search term');
+      Alert.alert(t('booksPage.search.error'), t('booksPage.search.enterSearchTerm'));
       return;
     }
 
@@ -288,7 +296,7 @@ export default function BookSearchScreen() {
               styles.searchTypeText,
               searchType === 'general' && styles.searchTypeTextActive,
             ]}>
-              General
+              {searchTypeLabels.general}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -302,7 +310,7 @@ export default function BookSearchScreen() {
               styles.searchTypeText,
               searchType === 'title' && styles.searchTypeTextActive,
             ]}>
-              Title
+              {searchTypeLabels.title}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -316,7 +324,7 @@ export default function BookSearchScreen() {
               styles.searchTypeText,
               searchType === 'author' && styles.searchTypeTextActive,
             ]}>
-              Author
+              {searchTypeLabels.author}
             </Text>
           </TouchableOpacity>
         </View>
@@ -325,7 +333,7 @@ export default function BookSearchScreen() {
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder={`Search by ${searchType}...`}
+            placeholder={t(`booksPage.search.placeholder`)}
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}

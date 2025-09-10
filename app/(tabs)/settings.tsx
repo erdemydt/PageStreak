@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Keyboard,
@@ -11,6 +12,7 @@ import {
   TouchableWithoutFeedback,
   View
 } from 'react-native';
+import LanguageSelector from '../../components/LanguageSelector';
 import { queryFirst } from '../../db/db';
 import { logoutUser } from '../../utils/migration';
 
@@ -24,6 +26,7 @@ type UserPreferences = {
 };
 
 export default function SettingsScreen() {
+  const { t } = useTranslation();
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -48,7 +51,7 @@ export default function SettingsScreen() {
 
   const handleLogout = () => {
     Alert.alert(
-      'Log Out',
+      t('settings.logout'),
       'Are you sure you want to log out? This will delete all your books and reading progress. This action cannot be undone.',
       [
         {
@@ -56,7 +59,7 @@ export default function SettingsScreen() {
           style: 'cancel',
         },
         {
-          text: 'Log Out',
+          text: t('settings.logout'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -83,14 +86,14 @@ export default function SettingsScreen() {
   
         <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>⚙️ Settings</Text>
-          <Text style={styles.subtitle}>Manage your PageStreak preferences</Text>
+          <Text style={styles.title}>{t('settings.title')}</Text>
+          <Text style={styles.subtitle}>{t('settings.subtitle')}</Text>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Profile Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Profile</Text>
+            <Text style={styles.sectionTitle}>{t('settings.profile')}</Text>
             <View style={styles.profileCard}>
               <TouchableOpacity 
                 style={styles.profileNavigationButton}
@@ -105,9 +108,9 @@ export default function SettingsScreen() {
                   <View style={styles.profileInfo}>
                     <Text style={styles.profileName}>{userPreferences?.username || 'Loading...'}</Text>
                     <Text style={styles.profileGoal}>
-                      📖 Goal: {userPreferences?.yearly_book_goal || 0} books this year
+                      {t('settings.goal', { goal: userPreferences?.yearly_book_goal || 0 })}
                     </Text>
-                    <Text style={styles.profileSubtext}>Tap to view & edit full profile</Text>
+                    <Text style={styles.profileSubtext}>{t('settings.editProfile')}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="#6C63FF" />
                 </View>
@@ -115,22 +118,28 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* Language Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
+            <LanguageSelector />
+          </View>
+
           {/* App Info Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.sectionTitle}>{t('settings.about')}</Text>
             <View style={styles.aboutCard}>
               <View style={styles.aboutItem}>
                 <Ionicons name="information-circle-outline" size={24} color="#6C63FF" />
                 <View style={styles.aboutInfo}>
-                  <Text style={styles.aboutTitle}>PageStreak</Text>
-                  <Text style={styles.aboutSubtitle}>Version 1.0.0</Text>
+                  <Text style={styles.aboutTitle}>{t('settings.appName')}</Text>
+                  <Text style={styles.aboutSubtitle}>{t('settings.version')}</Text>
                 </View>
               </View>
               <View style={styles.aboutItem}>
                 <Ionicons name="book-outline" size={24} color="#10B981" />
                 <View style={styles.aboutInfo}>
-                  <Text style={styles.aboutTitle}>Track Your Reading</Text>
-                  <Text style={styles.aboutSubtitle}>Built for book lovers</Text>
+                  <Text style={styles.aboutTitle}>{t('settings.trackReading')}</Text>
+                  <Text style={styles.aboutSubtitle}>{t('settings.builtForBookLovers')}</Text>
                 </View>
               </View>
             </View>
@@ -138,7 +147,7 @@ export default function SettingsScreen() {
 
           {/* Logout Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account</Text>
+            <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
             <View style={styles.logoutCard}>
               <TouchableOpacity 
                 style={styles.logoutBtn}
@@ -147,8 +156,8 @@ export default function SettingsScreen() {
               >
                 <Ionicons name="log-out-outline" size={24} color="#EF4444" />
                 <View style={styles.logoutInfo}>
-                  <Text style={styles.logoutTitle}>Log Out</Text>
-                  <Text style={styles.logoutSubtitle}>Clear all data and start fresh</Text>
+                  <Text style={styles.logoutTitle}>{t('settings.logout')}</Text>
+                  <Text style={styles.logoutSubtitle}>{t('settings.logoutDescription')}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#EF4444" />
               </TouchableOpacity>
@@ -156,7 +165,7 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.copyright}>Made with ❤️ for book lovers</Text>
+            <Text style={styles.copyright}>{t('settings.madeWithLove')}</Text>
           </View>
         </ScrollView>
       </View>

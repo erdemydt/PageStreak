@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Alert,
     Dimensions,
@@ -21,6 +22,7 @@ interface ReadingTimeLoggerProps {
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function ReadingTimeLogger({ visible, onClose, onSuccess }: ReadingTimeLoggerProps) {
+  const { t } = useTranslation();
   const [minutes, setMinutes] = useState('');
   const [selectedBook, setSelectedBook] = useState<EnhancedBook | null>(null);
   const [currentlyReadingBooks, setCurrentlyReadingBooks] = useState<EnhancedBook[]>([]);
@@ -53,12 +55,12 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
 
   const handleSubmit = async () => {
     if (!minutes.trim() || isNaN(Number(minutes)) || Number(minutes) <= 0) {
-      Alert.alert('Invalid Input', 'Please enter a valid number of minutes');
+      Alert.alert(t('components.readingTimeLogger.invalidInput'), t('components.readingTimeLogger.enterValidMinutes'));
       return;
     }
 
     if (!selectedBook) {
-      Alert.alert('Select a Book', 'Please select which book you were reading');
+      Alert.alert(t('components.readingTimeLogger.selectBook'), t('components.readingTimeLogger.pleaseSelectBook'));
       return;
     }
 
@@ -81,10 +83,13 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
       onSuccess();
       onClose();
       
-      Alert.alert('Success! 🎉', `Logged ${minutes} minutes of reading for "${selectedBook.name}"`);
+      Alert.alert(
+        t('components.readingTimeLogger.success'), 
+        t('components.readingTimeLogger.loggedMinutes', { minutes, bookName: selectedBook.name })
+      );
     } catch (error) {
       console.error('Error logging reading time:', error);
-      Alert.alert('Error', 'Failed to log reading time. Please try again.');
+      Alert.alert(t('components.readingTimeLogger.error'), t('components.readingTimeLogger.failedToLog'));
     } finally {
       setLoading(false);
     }
@@ -109,16 +114,16 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t('components.readingTimeLogger.cancel')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>📖 Log Reading Time</Text>
+          <Text style={styles.title}>{t('components.readingTimeLogger.title')}</Text>
           <TouchableOpacity 
             onPress={handleSubmit} 
             style={[styles.saveButton, loading && styles.saveButtonDisabled]}
             disabled={loading}
           >
             <Text style={styles.saveButtonText}>
-              {loading ? 'Saving...' : 'Save'}
+              {loading ? t('components.readingTimeLogger.saving') : t('components.readingTimeLogger.save')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -126,11 +131,11 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Book Selection */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📚 Which book were you reading?</Text>
+            <Text style={styles.sectionTitle}>{t('components.readingTimeLogger.whichBook')}</Text>
             {currentlyReadingBooks.length === 0 ? (
               <View style={styles.noBooks}>
                 <Text style={styles.noBooksText}>
-                  No currently reading books found. Add a book to your "Currently Reading" list first.
+                  {t('components.readingTimeLogger.noBooksFound')}
                 </Text>
               </View>
             ) : (
@@ -155,7 +160,7 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
                         styles.bookAuthor,
                         selectedBook?.id === book.id && styles.bookAuthorSelected
                       ]}>
-                        by {book.author}
+                        {t('components.bookCard.by')} {book.author}
                       </Text>
                     </View>
                     {selectedBook?.id === book.id && (
@@ -169,7 +174,7 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
 
           {/* Time Input */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>⏰ How many minutes did you read?</Text>
+            <Text style={styles.sectionTitle}>{t('components.readingTimeLogger.howManyMinutes')}</Text>
             
             {/* Quick Time Buttons */}
             <View style={styles.quickTimeContainer}>
@@ -196,23 +201,23 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
             <View style={styles.customTimeContainer}>
               <TextInput
                 style={styles.timeInput}
-                placeholder="Enter custom minutes"
+                placeholder={t('components.readingTimeLogger.enterCustomMinutes')}
                 placeholderTextColor="#94A3B8"
                 value={minutes}
                 onChangeText={setMinutes}
                 keyboardType="numeric"
                 returnKeyType="next"
               />
-              <Text style={styles.minutesLabel}>minutes</Text>
+              <Text style={styles.minutesLabel}>{t('components.readingTimeLogger.minutes')}</Text>
             </View>
           </View>
 
           {/* Notes (Optional) */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📝 Notes (optional)</Text>
+            <Text style={styles.sectionTitle}>{t('components.readingTimeLogger.notesOptional')}</Text>
             <TextInput
               style={styles.notesInput}
-              placeholder="How was your reading session? Any thoughts on the book?"
+              placeholder={t('components.readingTimeLogger.notesPlaceholder')}
               placeholderTextColor="#94A3B8"
               value={notes}
               onChangeText={setNotes}

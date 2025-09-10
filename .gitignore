@@ -43,9 +43,9 @@ credentials/
 
 fastlane/
 .env
-.apk
-.p12
-.p8
-.jks
-.key
-.mobileprovision
+*.apk
+*.p12
+*.p8
+*.jks
+*.key
+*.mobileprovision

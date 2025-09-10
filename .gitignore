@@ -49,3 +49,4 @@ fastlane/
 *.jks
 *.key
 *.mobileprovision
+*.keystore

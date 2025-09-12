@@ -1,14 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  Alert,
-  Keyboard,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    Keyboard,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { execute, queryFirst } from '../../db/db';
 
@@ -34,6 +35,7 @@ const genres = [
 ];
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const [userPreferences, setUserPreferences] = useState<FullUserPreferences | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -45,6 +47,28 @@ export default function ProfileScreen() {
   const [editedGenres, setEditedGenres] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
+
+  // Get translated genres
+  const getTranslatedGenres = () => [
+    t('intro.genres.options.fiction'),
+    t('intro.genres.options.nonFiction'),
+    t('intro.genres.options.mystery'),
+    t('intro.genres.options.romance'),
+    t('intro.genres.options.sciFi'),
+    t('intro.genres.options.fantasy'),
+    t('intro.genres.options.biography'),
+    t('intro.genres.options.history'),
+    t('intro.genres.options.selfHelp'),
+    t('intro.genres.options.business'),
+    t('intro.genres.options.poetry'),
+    t('intro.genres.options.philosophy'),
+    t('intro.genres.options.thriller'),
+    t('intro.genres.options.horror'),
+    t('intro.genres.options.adventure'),
+    t('intro.genres.options.comedy'),
+    t('intro.genres.options.drama'),
+    t('intro.genres.options.educational')
+  ];
 
   useEffect(() => {
     loadUserPreferences();
@@ -89,7 +113,7 @@ export default function ProfileScreen() {
       Number(editedYearlyGoal) <= 0 ||
       Number(editedDailyGoal) <= 0 ||
       Number(editedTargetGoal) <= 0) {
-      Alert.alert('Invalid Input', 'Please fill in all fields with valid positive numbers');
+      Alert.alert(t('profile.error.title'), t('profile.validation.usernameRequired'));
       return;
     }
 
@@ -139,10 +163,10 @@ export default function ProfileScreen() {
 
       await loadUserPreferences();
       setIsEditing(false);
-      Alert.alert('Success', 'Your profile has been updated!');
+      Alert.alert(t('profile.success.title'), t('profile.success.message'));
     } catch (e) {
       console.error('Save error:', e);
-      Alert.alert('Error', 'Failed to save preferences. Please try again.');
+      Alert.alert(t('profile.error.title'), t('profile.error.message'));
     } finally {
       setLoading(false);
     }
@@ -179,29 +203,29 @@ export default function ProfileScreen() {
           </Text>
         </View>
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{userPreferences?.username || 'Loading...'}</Text>
-          <Text style={styles.profileSubtitle}>PageStreak Reader</Text>
+          <Text style={styles.profileName}>{userPreferences?.username || t('profile.labels.username')}</Text>
+          <Text style={styles.profileSubtitle}>{t('profile.subtitle')}</Text>
         </View>
         <TouchableOpacity
           style={styles.editButton}
           onPress={() => setIsEditing(true)}
         >
           <Ionicons name="pencil" size={18} color="#6C63FF" />
-          <Text style={styles.editButtonText}>Edit</Text>
+          <Text style={styles.editButtonText}>{t('profile.edit')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Reading Goals Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📚 Reading Goals</Text>
+        <Text style={styles.sectionTitle}>📚 {t('profile.sections.goals')}</Text>
         <View style={styles.card}>
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="library" size={20} color="#6C63FF" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Yearly Book Goal</Text>
-              <Text style={styles.infoValue}>{userPreferences?.yearly_book_goal || 0} books</Text>
+              <Text style={styles.infoLabel}>{t('profile.fields.yearlyGoal')}</Text>
+              <Text style={styles.infoValue}>{userPreferences?.yearly_book_goal || 0} {t('intro.goal.label')}</Text>
             </View>
           </View>
 
@@ -212,7 +236,7 @@ export default function ProfileScreen() {
               <Ionicons name="time" size={20} color="#10B981" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Daily Reading Goal</Text>
+              <Text style={styles.infoLabel}>{t('profile.fields.currentDailyGoal')}</Text>
               <Text style={styles.infoValue}>{userPreferences?.current_reading_rate_minutes_per_day || 0} minutes</Text>
             </View>
           </View>
@@ -224,7 +248,7 @@ export default function ProfileScreen() {
               <Ionicons name="trending-up" size={20} color="#F59E0B" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Target Daily Goal</Text>
+              <Text style={styles.infoLabel}>{t('profile.fields.targetDailyGoal')}</Text>
               <Text style={styles.infoValue}>{userPreferences?.end_reading_rate_goal_minutes_per_day || 0} minutes</Text>
             </View>
           </View>
@@ -236,8 +260,8 @@ export default function ProfileScreen() {
               <Ionicons name="calendar" size={20} color="#EF4444" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Weekly Reading Goal</Text>
-              <Text style={styles.infoValue}>{userPreferences?.weekly_reading_goal || 0} minutes</Text>
+              <Text style={styles.infoLabel}>{t('profile.labels.weeklyGoal')}</Text>
+              <Text style={styles.infoValue}>{userPreferences?.weekly_reading_goal || 0} {t('profile.units.minutes')}</Text>
             </View>
           </View>
         </View>
@@ -245,14 +269,14 @@ export default function ProfileScreen() {
 
       {/* Reading Progress Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📈 Progress Tracking</Text>
+        <Text style={styles.sectionTitle}>📈 {t('profile.sections.statistics')}</Text>
         <View style={styles.card}>
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="trending-up" size={20} color="#8B5CF6" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Total Increase From The Initial Rate</Text>
+              <Text style={styles.infoLabel}>{t('profile.stats.totalIncrease')}</Text>
               <Text style={styles.infoValue}>
                 {(userPreferences?.current_reading_rate_minutes_per_day != null && userPreferences?.initial_reading_rate_minutes_per_day != null)
                   ? ((userPreferences.current_reading_rate_minutes_per_day - userPreferences.initial_reading_rate_minutes_per_day) / userPreferences.initial_reading_rate_minutes_per_day * 100).toFixed(2)
@@ -266,8 +290,8 @@ export default function ProfileScreen() {
               <Ionicons name="speedometer" size={20} color="#8B5CF6" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Current Reading Rate</Text>
-              <Text style={styles.infoValue}>{userPreferences?.current_reading_rate_minutes_per_day || 0} min/day</Text>
+              <Text style={styles.infoLabel}>{t('profile.stats.currentRate')}</Text>
+              <Text style={styles.infoValue}>{userPreferences?.current_reading_rate_minutes_per_day || 0} {t('profile.units.minPerDay')}</Text>
             </View>
           </View>
 
@@ -278,8 +302,8 @@ export default function ProfileScreen() {
               <Ionicons name="stats-chart" size={20} color="#06B6D4" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Starting Rate</Text>
-              <Text style={styles.infoValue}>{userPreferences?.initial_reading_rate_minutes_per_day || 0} min/day</Text>
+              <Text style={styles.infoLabel}>{t('profile.stats.startingRate')}</Text>
+              <Text style={styles.infoValue}>{userPreferences?.initial_reading_rate_minutes_per_day || 0} {t('profile.units.minPerDay')}</Text>
             </View>
           </View>
 
@@ -290,7 +314,7 @@ export default function ProfileScreen() {
               <Ionicons name="flag" size={20} color="#EC4899" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Goal Target Date</Text>
+              <Text style={styles.infoLabel}>{t('profile.stats.goalTargetDate')}</Text>
               <Text style={styles.infoValue}>{formatDate(userPreferences?.end_reading_rate_goal_date)}</Text>
             </View>
           </View>
@@ -299,7 +323,7 @@ export default function ProfileScreen() {
 
       {/* Preferred Genres Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🎭 Preferred Genres</Text>
+        <Text style={styles.sectionTitle}>🎭 {t('profile.fields.favoriteGenres')}</Text>
         <View style={styles.card}>
           <View style={styles.genresDisplay}>
             {userPreferences?.preferred_genres ? (
@@ -309,7 +333,7 @@ export default function ProfileScreen() {
                 </View>
               ))
             ) : (
-              <Text style={styles.noGenresText}>No genres selected</Text>
+              <Text style={styles.noGenresText}>{t('profile.stats.noGenres')}</Text>
             )}
           </View>
         </View>
@@ -317,14 +341,14 @@ export default function ProfileScreen() {
 
       {/* Account Info Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ℹ️ Account Information</Text>
+        <Text style={styles.sectionTitle}>ℹ️ {t('profile.sections.account')}</Text>
         <View style={styles.card}>
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
               <Ionicons name="calendar-outline" size={20} color="#64748B" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Member Since</Text>
+              <Text style={styles.infoLabel}>{t('profile.account.memberSince')}</Text>
               <Text style={styles.infoValue}>{formatDate(userPreferences?.created_at)}</Text>
             </View>
           </View>
@@ -336,7 +360,7 @@ export default function ProfileScreen() {
               <Ionicons name="refresh-outline" size={20} color="#64748B" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Last Updated</Text>
+              <Text style={styles.infoLabel}>{t('profile.account.lastUpdated')}</Text>
               <Text style={styles.infoValue}>{formatDate(userPreferences?.updated_at)}</Text>
             </View>
           </View>
@@ -357,37 +381,37 @@ export default function ProfileScreen() {
       <View style={styles.editHeader}>
 
 
-        <Text style={styles.editTitle}>✏️ Edit Profile</Text>
+        <Text style={styles.editTitle}>✏️ {t('profile.edit')}</Text>
 
-        <Text style={styles.editSubtitle}>Update your reading preferences</Text>
+        <Text style={styles.editSubtitle}>{t('profile.subtitle')}</Text>
       </View>
 
       {/* Basic Info */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Basic Information</Text>
+        <Text style={styles.sectionTitle}>{t('profile.sections.personal')}</Text>
         <View style={styles.card}>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              <Ionicons name="person" size={16} color="#6C63FF" /> Username
+              <Ionicons name="person" size={16} color="#6C63FF" /> {t('profile.fields.username')}
             </Text>
             <TextInput
               style={styles.input}
               value={editedUsername}
               onChangeText={setEditedUsername}
-              placeholder="Enter your username"
+              placeholder={t('profile.placeholders.username')}
               editable={!loading}
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              <Ionicons name="library" size={16} color="#6C63FF" /> Yearly Book Goal
+              <Ionicons name="library" size={16} color="#6C63FF" /> {t('profile.fields.yearlyGoal')}
             </Text>
             <TextInput
               style={styles.input}
               value={editedYearlyGoal}
               onChangeText={setEditedYearlyGoal}
-              placeholder="e.g. 12"
+              placeholder={t('profile.placeholders.yearlyGoal')}
               keyboardType="numeric"
               editable={!loading}
             />
@@ -397,17 +421,17 @@ export default function ProfileScreen() {
 
       {/* Reading Time Goals */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Reading Time Goals</Text>
+        <Text style={styles.sectionTitle}>{t('profile.sections.goals')}</Text>
         <View style={styles.card}>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              <Ionicons name="time" size={16} color="#10B981" /> Current Daily Reading (minutes)
+              <Ionicons name="time" size={16} color="#10B981" /> {t('profile.fields.currentDailyGoal')}
             </Text>
             <TextInput
               style={styles.input}
               value={editedDailyGoal}
               onChangeText={setEditedDailyGoal}
-              placeholder="e.g. 30"
+              placeholder={t('profile.placeholders.dailyGoal')}
               keyboardType="numeric"
               editable={!loading}
             />
@@ -415,13 +439,13 @@ export default function ProfileScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              <Ionicons name="trending-up" size={16} color="#F59E0B" /> Target Daily Reading (minutes)
+              <Ionicons name="trending-up" size={16} color="#F59E0B" /> {t('profile.fields.targetDailyGoal')}
             </Text>
             <TextInput
               style={styles.input}
               value={editedTargetGoal}
               onChangeText={setEditedTargetGoal}
-              placeholder="e.g. 60"
+              placeholder={t('profile.placeholders.targetGoal')}
               keyboardType="numeric"
               editable={!loading}
             />
@@ -431,7 +455,7 @@ export default function ProfileScreen() {
 
       {/* Preferred Genres */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferred Genres</Text>
+        <Text style={styles.sectionTitle}>{t('profile.sections.preferredGenres')}</Text>
         <View style={styles.card}>
           <View style={styles.genresGrid}>
             {genres.map((genre) => (
@@ -448,7 +472,7 @@ export default function ProfileScreen() {
                   styles.genreChipText,
                   editedGenres.includes(genre) && styles.genreChipTextSelected
                 ]}>
-                  {genre}
+                  {getTranslatedGenres()[genres.indexOf(genre)]}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -464,7 +488,7 @@ export default function ProfileScreen() {
           disabled={loading}
         >
           <Ionicons name="close" size={18} color="#64748B" />
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('profile.buttons.cancel')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.saveButton}
@@ -473,7 +497,7 @@ export default function ProfileScreen() {
         >
           <Ionicons name="checkmark" size={18} color="#FFFFFF" />
           <Text style={styles.saveButtonText}>
-            {loading ? 'Saving...' : 'Save Changes'}
+            {loading ? t('profile.buttons.saving') : t('profile.buttons.saveChanges')}
           </Text>
         </TouchableOpacity>
       </View>

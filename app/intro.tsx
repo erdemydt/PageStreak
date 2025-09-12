@@ -1,6 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Animated,
     Dimensions,
@@ -21,6 +22,7 @@ const { width: screenWidth } = Dimensions.get('window');
 type Step = 1 | 2 | 3 | 4 | 5;
 
 export default function IntroScreen() {
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [username, setUsername] = useState('');
   const [yearlyGoal, setYearlyGoal] = useState('');
@@ -35,9 +37,24 @@ export default function IntroScreen() {
   const fadeAnimation = useRef(new Animated.Value(1)).current;
 
   const genres = [
-    'Fiction', 'Non-Fiction', 'Mystery', 'Romance', 'Sci-Fi', 'Fantasy',
-    'Biography', 'History', 'Self-Help', 'Business', 'Poetry', 'Philosophy',
-    'Thriller', 'Horror', 'Adventure', 'Comedy', 'Drama', 'Educational'
+    t('intro.genres.options.fiction'),
+    t('intro.genres.options.nonFiction'),
+    t('intro.genres.options.mystery'),
+    t('intro.genres.options.romance'),
+    t('intro.genres.options.sciFi'),
+    t('intro.genres.options.fantasy'),
+    t('intro.genres.options.biography'),
+    t('intro.genres.options.history'),
+    t('intro.genres.options.selfHelp'),
+    t('intro.genres.options.business'),
+    t('intro.genres.options.poetry'),
+    t('intro.genres.options.philosophy'),
+    t('intro.genres.options.thriller'),
+    t('intro.genres.options.horror'),
+    t('intro.genres.options.adventure'),
+    t('intro.genres.options.comedy'),
+    t('intro.genres.options.drama'),
+    t('intro.genres.options.educational')
   ];
 
   useEffect(() => {
@@ -97,38 +114,38 @@ export default function IntroScreen() {
 
     if (currentStep === 1) {
       if (!username.trim()) {
-        setError('Please enter your name');
+        setError(t('intro.validation.nameRequired'));
         return;
       }
       if (username.trim().length < 2) {
-        setError('Name must be at least 2 characters long');
+        setError(t('intro.validation.nameInvalid'));
         return;
       }
       if (username.trim().length > 50) {
-        setError('Name must be less than 50 characters');
+        setError(t('intro.validation.nameInvalid'));
         return;
       }
       animateStepTransition(2);
     } else if (currentStep === 2) {
       if (!yearlyGoal.trim()) {
-        setError('Please enter a yearly book goal');
+        setError(t('intro.validation.goalRequired'));
         return;
       }
       if (isNaN(Number(yearlyGoal))) {
-        setError('Please enter a valid number');
+        setError(t('intro.validation.goalInvalid'));
         return;
       }
       const yearlyGoalNum = Number(yearlyGoal);
       if (yearlyGoalNum <= 0) {
-        setError('Yearly goal must be greater than 0');
+        setError(t('intro.validation.goalInvalid'));
         return;
       }
       if (yearlyGoalNum > 1000) {
-        setError('Yearly goal seems unrealistic. Please enter a number less than 1000');
+        setError(t('intro.validation.goalInvalid'));
         return;
       }
       if (!Number.isInteger(yearlyGoalNum)) {
-        setError('Please enter a whole number of books');
+        setError(t('intro.validation.goalMustBeInteger'));
         return;
       }
       animateStepTransition(3);
@@ -137,24 +154,24 @@ export default function IntroScreen() {
       animateStepTransition(4);
     } else if (currentStep === 4) {
       if (!dailyReadingGoal.trim()) {
-        setError('Please enter your current daily reading time');
+        setError(t('intro.validation.dailyGoalRequired'));
         return;
       }
       if (isNaN(Number(dailyReadingGoal))) {
-        setError('Please enter a valid number of minutes');
+        setError(t('intro.validation.dailyGoalInvalid'));
         return;
       }
       const dailyGoalNum = Number(dailyReadingGoal);
       if (dailyGoalNum <= 0) {
-        setError('Daily reading time must be greater than 0 minutes');
+        setError(t('intro.validation.dailyGoalInvalid'));
         return;
       }
       if (dailyGoalNum > 1440) {
-        setError('Daily reading time cannot exceed 24 hours (1440 minutes)');
+        setError(t('intro.validation.dailyGoalTooHigh'));
         return;
       }
       if (dailyGoalNum > 480) {
-        setError('Are you sure you read more than 8 hours a day? Please enter a realistic time.');
+        setError(t('intro.validation.dailyGoalUnrealistic'));
         return;
       }
       animateStepTransition(5);
@@ -316,16 +333,16 @@ export default function IntroScreen() {
     <>
       <View style={styles.stepHeader}>
         <Text style={styles.stepEmoji}>👋</Text>
-        <Text style={styles.stepTitle}>Nice to meet you!</Text>
+        <Text style={styles.stepTitle}>{t('intro.welcome.title')}</Text>
         <Text style={styles.stepSubtitle}>
-          What should we call you on your reading journey?
+          {t('intro.welcome.subtitle')}
         </Text>
       </View>
 
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Enter your name"
+          placeholder={t('intro.welcome.placeholder')}
           placeholderTextColor="#9CA3AF"
           value={username}
           onChangeText={(text) => {
@@ -351,16 +368,16 @@ export default function IntroScreen() {
     <>
       <View style={styles.stepHeader}>
         <Text style={styles.stepEmoji}>🎯</Text>
-        <Text style={styles.stepTitle}>Set your goal, {username}!</Text>
+        <Text style={styles.stepTitle}>{t('intro.goal.title', { username })}</Text>
         <Text style={styles.stepSubtitle}>
-          How many books would you like to read this year?
+          {t('intro.goal.subtitle')}
         </Text>
       </View>
 
       <View style={styles.goalContainer}>
         <TextInput
           style={styles.goalInput}
-          placeholder="12"
+          placeholder={t('intro.goal.placeholder')}
           placeholderTextColor="#9CA3AF"
           value={yearlyGoal}
           onChangeText={(text) => {
@@ -380,11 +397,11 @@ export default function IntroScreen() {
           autoFocus
           maxLength={4}
         />
-        <Text style={styles.goalLabel}>books</Text>
+        <Text style={styles.goalLabel}>{t('intro.goal.label')}</Text>
       </View>
 
       <Text style={styles.goalHint}>
-        💡 Start with a realistic goal - you can always adjust it later!
+        {t('intro.goal.hint')}
       </Text>
     </>
   );
@@ -393,9 +410,9 @@ export default function IntroScreen() {
     <>
       <View style={styles.stepHeader}>
         <Text style={styles.stepEmoji}>📚</Text>
-        <Text style={styles.stepTitle}>What do you love to read?</Text>
+        <Text style={styles.stepTitle}>{t('intro.genres.title')}</Text>
         <Text style={styles.stepSubtitle}>
-          Select your favorite genres (optional)
+          {t('intro.genres.subtitle')}
         </Text>
       </View>
 
@@ -428,16 +445,16 @@ export default function IntroScreen() {
     <>
       <View style={styles.stepHeader}>
         <Text style={styles.stepEmoji}>⏰</Text>
-        <Text style={styles.stepTitle}>How much do you read daily?</Text>
+        <Text style={styles.stepTitle}>{t('intro.currentReading.title')}</Text>
         <Text style={styles.stepSubtitle}>
-          How many minutes do you currently spend reading per day?
+          {t('intro.currentReading.subtitle')}
         </Text>
       </View>
 
       <View style={styles.goalContainer}>
         <TextInput
           style={styles.goalInput}
-          placeholder="30"
+          placeholder={t('intro.currentReading.placeholder')}
           placeholderTextColor="#9CA3AF"
           value={dailyReadingGoal}
           onChangeText={(text) => {
@@ -457,11 +474,11 @@ export default function IntroScreen() {
           autoFocus
           maxLength={4}
         />
-        <Text style={styles.goalLabel}>minutes</Text>
+        <Text style={styles.goalLabel}>{t('intro.currentReading.label')}</Text>
       </View>
 
       <Text style={styles.goalHint}>
-        💡 Be honest about your current habits - this helps us track your progress!
+        💡 {t('intro.currentReading.hint')}
       </Text>
     </>
   );
@@ -470,16 +487,16 @@ export default function IntroScreen() {
     <View style={{ flex: 1, gap: 0, width: '100%' , justifyContent: 'center', alignItems: 'center' }}>
       <View style={styles.stepHeader}>
         <Text style={styles.stepEmoji}>🚀</Text>
-        <Text style={styles.stepTitle}>What's your reading goal?</Text>
+        <Text style={styles.stepTitle}>{t('intro.targetGoal.title')}</Text>
         <Text style={styles.stepSubtitle}>
-          How many minutes would you like to read daily by the end of the year?
+          {t('intro.targetGoal.subtitle')}
         </Text>
       </View>
 
       <View style={styles.goalContainer}>
         <TextInput
           style={styles.goalInput}
-          placeholder="60"
+          placeholder={t('intro.targetGoal.placeholder')}
           placeholderTextColor="#9CA3AF"
           value={targetDailyGoal}
           onChangeText={(text) => {
@@ -498,12 +515,12 @@ export default function IntroScreen() {
           autoFocus
           maxLength={4}
         />
-        <Text style={styles.goalLabel}>minutes</Text>
+        <Text style={styles.goalLabel}>{t('intro.targetGoal.label')}</Text>
       </View>
 
       <View style={styles.stepHeader }>
         <Text style={styles.stepEmoji}></Text>
-        <Text style={styles.stepTitle}>When Would You Like To Reach This Goal?</Text>
+        <Text style={styles.stepTitle}>{t('intro.targetGoal.dateLabel')}</Text>
       </View>
 
 
@@ -554,12 +571,15 @@ export default function IntroScreen() {
         )}
         
         <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 16, color: '#64748B' }}>
-          Current Weekly Increase Needed: {calculateNeededWeeklyPercentageIncrease()}% ({classifyPercentageIncrease(Number(calculateNeededWeeklyPercentageIncrease()))})
+          {t('intro.targetGoal.currentWeeklyIncrease', { 
+            percentage: calculateNeededWeeklyPercentageIncrease(), 
+            classification: classifyPercentageIncrease(Number(calculateNeededWeeklyPercentageIncrease())) 
+          })}
         </Text>
       </View>
 
       <Text style={styles.goalHint}>
-        🎯 We'll help you gradually increase your reading time to reach this goal!
+        🎯 {t('intro.targetGoal.hint')}
       </Text>
     </View>
   );
@@ -572,7 +592,7 @@ export default function IntroScreen() {
           onPress={handleBack}
           disabled={loading}
         >
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>{t('intro.buttons.back')}</Text>
         </TouchableOpacity>
       )}
 
@@ -595,9 +615,9 @@ export default function IntroScreen() {
         }
       >
         <Text style={styles.nextButtonText}>
-          {loading ? 'Setting up...' :
-            currentStep === 5 ? 'Get Started! 🚀' :
-              'Continue →'}
+          {loading ? t('intro.buttons.settingUp') :
+            currentStep === 5 ? t('intro.buttons.getStarted') :
+              t('intro.buttons.continue')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -629,10 +649,13 @@ export default function IntroScreen() {
   };
 
   const classifyPercentageIncrease = (percentage: number) => {
-    // Classify the percentage increase into categories, Easy, Moderate, Challenging
-    if (percentage <= 15) return 'Easy';
-    if (percentage <= 40) return 'Moderate';
-    return 'Challenging';
+    // Classify the percentage increase into categories
+    if (percentage <= 5) return t('intro.percentageClassification.minimal');
+    if (percentage <= 15) return t('intro.percentageClassification.easy');
+    if (percentage <= 40) return t('intro.percentageClassification.moderate');
+    if (percentage <= 80) return t('intro.percentageClassification.challenging');
+    if (percentage <= 150) return t('intro.percentageClassification.veryDifficult');
+    return t('intro.percentageClassification.nearlyImpossible');
   };
 
   return (

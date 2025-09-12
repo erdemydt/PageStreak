@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Platform, View } from 'react-native';
 
 export default function TabLayout() {
+  const { t } = useTranslation();
+
   return (
     <View style={{flex: 1}}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -46,7 +49,7 @@ export default function TabLayout() {
         <Tabs.Screen 
           name="(home)" 
           options={{ 
-            title: 'Home',
+            title: t('navigation.home'),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="home" size={size} color={color} />
             ),
@@ -56,7 +59,7 @@ export default function TabLayout() {
         <Tabs.Screen 
           name="(books)" 
           options={{ 
-            title: 'Books',
+            title: t('navigation.books'),
             headerShown: false,
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="book" size={size} color={color} />
@@ -66,7 +69,7 @@ export default function TabLayout() {
         <Tabs.Screen 
           name="profile" 
           options={{ 
-            title: 'Profile',
+            title: t('navigation.profile'),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person" size={size} color={color} />
             ),
@@ -76,7 +79,7 @@ export default function TabLayout() {
         <Tabs.Screen 
           name="settings" 
           options={{ 
-            title: 'Settings',
+            title: t('navigation.settings'),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="settings" size={size} color={color} />
             ),

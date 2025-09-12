@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Animated,
     Modal,
@@ -29,6 +30,8 @@ export default function BookStatusModal({
   fadeAnim,
   scaleAnim,
 }: BookStatusModalProps) {
+  const { t } = useTranslation();
+
   const statusOptions: Array<{
     value: BookStatus;
     label: string;
@@ -38,22 +41,22 @@ export default function BookStatusModal({
   }> = [
     {
       value: 'want_to_read',
-      label: 'Want to Read',
-      description: 'Add to your reading list',
+      label: t('bookStatus.options.wantToRead.label'),
+      description: t('bookStatus.options.wantToRead.description'),
       emoji: '📚',
       color: '#F59E0B',
     },
     {
       value: 'currently_reading',
-      label: 'Currently Reading',
-      description: 'You are reading this book',
+      label: t('bookStatus.options.currentlyReading.label'),
+      description: t('bookStatus.options.currentlyReading.description'),
       emoji: '📖',
       color: '#3B82F6',
     },
     {
       value: 'read',
-      label: 'Read',
-      description: 'You have finished this book',
+      label: t('bookStatus.options.read.label'),
+      description: t('bookStatus.options.read.description'),
       emoji: '✅',
       color: '#10B981',
     },
@@ -82,9 +85,9 @@ export default function BookStatusModal({
           ]}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Change Reading Status</Text>
+            <Text style={styles.modalTitle}>{t('bookStatus.title')}</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>✕</Text>
+              <Text style={styles.closeButtonText}>{t('bookStatus.close')}</Text>
             </TouchableOpacity>
           </View>
 

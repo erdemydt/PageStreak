@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
@@ -27,9 +26,9 @@ export default function DailyProgressCard({
     if (minutes >= 60) {
       const hours = Math.floor(minutes / 60); 
       const remainingMinutes = minutes % 60;
-      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+      return remainingMinutes > 0 ? `${hours} ${t('settings.hours')} ${remainingMinutes} ${t('components.readingTimeLogger.minutesShort')}` : `${hours} ${t('settings.hours')}`;
     }
-    return `${minutes}m`;
+    return `${minutes} ${t('components.readingTimeLogger.minutesShort')}`;
   };
 
   const getMotivationMessage = () => {
@@ -154,7 +153,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
+    gap: 16,
+    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
@@ -177,14 +178,15 @@ const styles = StyleSheet.create({
     color: '#1E293B',
   },
   progressLabel: {
-    fontSize: 12,
+    fontSize: 9,
     color: '#64748B',
     marginTop: 2,
   },
   stats: {
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    gap: 10,
     alignItems: 'center',
   },
   statItem: {

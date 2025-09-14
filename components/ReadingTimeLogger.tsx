@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Alert,
-    Dimensions,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Dimensions,
+  findNodeHandle,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { EnhancedBook, execute, queryAll } from '../db/db';
 import NotificationService from '../services/notificationService';
+
 
 interface ReadingTimeLoggerProps {
   visible: boolean;
@@ -21,6 +23,8 @@ interface ReadingTimeLoggerProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
+
+
 
 export default function ReadingTimeLogger({ visible, onClose, onSuccess }: ReadingTimeLoggerProps) {
   const { t } = useTranslation();
@@ -44,7 +48,7 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
          ORDER BY date_started DESC, date_added DESC`
       );
       setCurrentlyReadingBooks(books);
-      
+
       // Auto-select the first book if there's only one
       if (books.length === 1) {
         setSelectedBook(books[0]);
@@ -83,12 +87,12 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
       setMinutes('');
       setSelectedBook(currentlyReadingBooks.length === 1 ? currentlyReadingBooks[0] : null);
       setNotes('');
-      
+
       onSuccess();
       onClose();
-      
+
       Alert.alert(
-        t('components.readingTimeLogger.success'), 
+        t('components.readingTimeLogger.success'),
         t('components.readingTimeLogger.loggedMinutes', { minutes, bookName: selectedBook.name })
       );
     } catch (error) {
@@ -105,9 +109,20 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
     setNotes('');
     onClose();
   };
-
+  const notesInputRef = useRef<TextInput>(null);
+  const scrollRef = useRef<KeyboardAwareScrollView>(null);
   const quickTimeButtons = [5, 10, 15, 30, 45, 60];
 
+  const scrollTo = (inputRef: React.RefObject<TextInput | null>) => {
+    const node = findNodeHandle(inputRef.current);
+    if (node && scrollRef.current?.scrollToFocusedInput) {
+      scrollRef.current.scrollToFocusedInput(node);
+      // Additional offset if needed
+      setTimeout(() => {
+        scrollRef.current?.scrollToPosition(0, 300, true);
+      }, 100);
+    }
+  };
   return (
     <Modal
       visible={visible}
@@ -117,22 +132,15 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
-            <Text style={styles.cancelButtonText}>{t('components.readingTimeLogger.cancel')}</Text>
-          </TouchableOpacity>
+
           <Text style={styles.title}>{t('components.readingTimeLogger.title')}</Text>
-          <TouchableOpacity 
-            onPress={handleSubmit} 
-            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-            disabled={loading}
-          >
-            <Text style={styles.saveButtonText}>
-              {loading ? t('components.readingTimeLogger.saving') : t('components.readingTimeLogger.save')}
-            </Text>
-          </TouchableOpacity>
+
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <KeyboardAwareScrollView style={styles.content}
+          showsVerticalScrollIndicator={false}
+          enableAutomaticScroll={true}
+          extraScrollHeight={30} keyboardOpeningTime={0} ref={scrollRef}>
           {/* Book Selection */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('components.readingTimeLogger.whichBook')}</Text>
@@ -179,7 +187,7 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
           {/* Time Input */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('components.readingTimeLogger.howManyMinutes')}</Text>
-            
+
             {/* Quick Time Buttons */}
             <View style={styles.quickTimeContainer}>
               {quickTimeButtons.map((time) => (
@@ -195,7 +203,7 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
                     styles.quickTimeText,
                     minutes === time.toString() && styles.quickTimeTextSelected
                   ]}>
-                    {time}m
+                    {time} {t('components.readingTimeLogger.minutesShort')}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -224,13 +232,33 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
               placeholder={t('components.readingTimeLogger.notesPlaceholder')}
               placeholderTextColor="#94A3B8"
               value={notes}
+              ref={notesInputRef}
               onChangeText={setNotes}
+              onFocus={() => {
+                scrollTo(notesInputRef);
+              }}
               multiline
               numberOfLines={3}
               returnKeyType="done"
             />
           </View>
-        </ScrollView>
+          {/* Action Buttons */}
+          <View style={styles.actionButonsContainer}>
+            <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
+              <Text style={styles.cancelButtonText}>{t('components.readingTimeLogger.cancel')}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleSubmit}
+              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading ? t('components.readingTimeLogger.saving') : t('components.readingTimeLogger.save')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAwareScrollView>
       </View>
     </Modal>
   );
@@ -243,7 +271,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -251,14 +279,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
+  actionButonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
   title: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1E293B',
   },
   cancelButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: '#E2E8F0',
   },
   cancelButtonText: {
     fontSize: 16,
@@ -267,8 +307,8 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: '#6C63FF',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderRadius: 8,
   },
   saveButtonDisabled: {

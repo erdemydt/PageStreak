@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { EnhancedBook } from '../db/db';
@@ -31,11 +30,11 @@ export default function BookCard({
   const { t } = useTranslation();
   const formatReadingTime = (minutes: number) => {
     if (minutes < 60) {
-      return `${minutes}m`;
+      return `${minutes} ${t('components.readingTimeLogger.minutesShort')}`;
     } else {
       const hours = Math.floor(minutes / 60);
       const remainingMinutes = minutes % 60;
-      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+      return remainingMinutes > 0 ? `${hours} ${t('settings.hours')} ${remainingMinutes} ${t('components.readingTimeLogger.minutesShort')}` : `${hours} ${t('settings.hours')}`;
     }
   };
 

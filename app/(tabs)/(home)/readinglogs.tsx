@@ -1,20 +1,20 @@
 
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-    Alert,
-    Dimensions,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Dimensions,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { ReadingSession, execute, queryAll } from '../../../db/db';
-
 interface WeekDay {
   date: string;
   day: string;
@@ -43,6 +43,7 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
   const [minutes, setMinutes] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (session) {
@@ -56,7 +57,7 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
 
   const handleSave = async () => {
     if (!session || !minutes.trim() || isNaN(Number(minutes)) || Number(minutes) <= 0) {
-      Alert.alert('Invalid Input', 'Please enter a valid number of minutes');
+      Alert.alert(t('components.readingLogsEditModal.invalidInput'), t('components.readingLogsEditModal.enterValidMinutes'));
       return;
     }
 
@@ -65,7 +66,7 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
       await onSave(session.id, Number(minutes), notes.trim());
       onClose();
     } catch (error) {
-      Alert.alert('Error', 'Failed to update session');
+      Alert.alert(t('components.readingLogsEditModal.updateError'), t('components.readingLogsEditModal.updateErrorMessage'));
     } finally {
       setLoading(false);
     }
@@ -75,12 +76,12 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
     if (!session) return;
     
     Alert.alert(
-      'Delete Session',
-      'Are you sure you want to delete this reading session?',
+      t('components.readingLogsEditModal.deleteConfirmTitle'),
+      t('components.readingLogsEditModal.deleteConfirmMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('components.readingLogsEditModal.deleteConfirmCancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('components.readingLogsEditModal.deleteConfirmDelete'),
           style: 'destructive',
           onPress: () => {
             onDelete(session.id);
@@ -98,50 +99,50 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <TouchableOpacity onPress={onClose}>
-            <Text style={styles.modalCancelText}>Cancel</Text>
+            <Text style={styles.modalCancelText}>{t('components.readingLogsEditModal.cancel')}</Text>
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Edit Session</Text>
+          <Text style={styles.modalTitle}>{t('components.readingLogsEditModal.title')}</Text>
           <TouchableOpacity onPress={handleSave} disabled={loading}>
             <Text style={[styles.modalSaveText, loading && styles.modalSaveTextDisabled]}>
-              {loading ? 'Saving...' : 'Save'}
+              {loading ? t('components.readingLogsEditModal.saving') : t('components.readingLogsEditModal.save')}
             </Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.modalContent}>
           <View style={styles.modalSection}>
-            <Text style={styles.modalSectionTitle}>Book</Text>
+            <Text style={styles.modalSectionTitle}>{t('components.readingLogsEditModal.book')}</Text>
             <View style={styles.bookInfoContainer}>
               <Text style={styles.bookInfoTitle}>{session.book_name}</Text>
-              <Text style={styles.bookInfoAuthor}>by {session.book_author}</Text>
+              <Text style={styles.bookInfoAuthor}>{t('components.readingLogsEditModal.by')} {session.book_author}</Text>
             </View>
           </View>
 
           <View style={styles.modalSection}>
-            <Text style={styles.modalSectionTitle}>Reading Time (minutes)</Text>
+            <Text style={styles.modalSectionTitle}>{t('components.readingLogsEditModal.readingTimeLabel')}</Text>
             <TextInput
               style={styles.modalInput}
               value={minutes}
               onChangeText={setMinutes}
               keyboardType="numeric"
-              placeholder="Enter minutes"
+              placeholder={t('components.readingLogsEditModal.readingTimePlaceholder')}
             />
           </View>
 
           <View style={styles.modalSection}>
-            <Text style={styles.modalSectionTitle}>Notes</Text>
+            <Text style={styles.modalSectionTitle}>{t('components.readingLogsEditModal.notesLabel')}</Text>
             <TextInput
               style={[styles.modalInput, styles.modalNotesInput]}
               value={notes}
               onChangeText={setNotes}
-              placeholder="Optional notes about your reading session"
+              placeholder={t('components.readingLogsEditModal.notesPlaceholder')}
               multiline
               numberOfLines={3}
             />
           </View>
 
           <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-            <Text style={styles.deleteButtonText}>🗑️ Delete Session</Text>
+            <Text style={styles.deleteButtonText}>{t('components.readingLogsEditModal.deleteSession')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -156,7 +157,25 @@ export default function ReadingLogs() {
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionWithBook | null>(null);
+  const { t } = useTranslation();
 
+  const getLocalizedWeekday = (date: Date): string => {
+    const dayIndex = date.getDay();
+    // Convert JavaScript day index (0=Sunday) to Monday-first array index
+    // JS: Sun=0, Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6
+    // We want: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+    const mondayFirstIndex = dayIndex === 0 ? 6 : dayIndex - 1;
+    const weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    return t(`components.readingLogs.weekdays.${weekdays[mondayFirstIndex]}`);
+  };
+
+  const getLocalizedMonth = (monthIndex: number): string => {
+    const months = [
+      'january', 'february', 'march', 'april', 'may', 'june',
+      'july', 'august', 'september', 'october', 'november', 'december'
+    ];
+    return t(`components.readingLogs.months.${months[monthIndex]}`);
+  };
   useFocusEffect(
     useCallback(() => {
       loadWeekData();
@@ -166,8 +185,12 @@ export default function ReadingLogs() {
   const getWeekStart = (date: Date) => {
     const d = new Date(date);
     const day = d.getDay();
-    const diff = d.getDate() - day; // Get Monday as start of week
-    return new Date(d.setDate(diff));
+    // Calculate days to subtract to get to Monday
+    // If day is 0 (Sunday), subtract 6 days to get to Monday
+    // If day is 1 (Monday), subtract 0 days
+    // If day is 2 (Tuesday), subtract 1 day, etc.
+    const diff = day === 0 ? -6 : -(day - 1);
+    return new Date(d.setDate(d.getDate() + diff));
   };
 
   const getWeekDates = (startDate: Date): WeekDay[] => {
@@ -181,7 +204,7 @@ export default function ReadingLogs() {
       
       dates.push({
         date: dateString,
-        day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        day: getLocalizedWeekday(date),
         dayNum: date.getDate(),
         isToday: dateString === today,
         sessions: [],
@@ -230,7 +253,7 @@ export default function ReadingLogs() {
       setWeekData(weekDates);
     } catch (error) {
       console.error('Error loading week data:', error);
-      Alert.alert('Error', 'Failed to load reading logs');
+      Alert.alert(t('components.readingLogs.errorTitle'), t('components.readingLogs.errorMessage'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -264,7 +287,7 @@ export default function ReadingLogs() {
         [minutes, notes || null, sessionId]
       );
       loadWeekData();
-      Alert.alert('Success', 'Session updated successfully');
+      Alert.alert(t('components.readingLogsEditModal.updateSuccess'), t('components.readingLogsEditModal.updateSuccessMessage'));
     } catch (error) {
       console.error('Error updating session:', error);
       throw error;
@@ -275,15 +298,18 @@ export default function ReadingLogs() {
     try {
       await execute(`DELETE FROM reading_sessions WHERE id = ?`, [sessionId]);
       loadWeekData();
-      Alert.alert('Success', 'Session deleted successfully');
+      Alert.alert(t('components.readingLogsEditModal.deleteSuccess'), t('components.readingLogsEditModal.deleteSuccessMessage'));
     } catch (error) {
       console.error('Error deleting session:', error);
-      Alert.alert('Error', 'Failed to delete session');
+      Alert.alert(t('components.readingLogsEditModal.deleteError'), t('components.readingLogsEditModal.deleteErrorMessage'));
     }
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const month = getLocalizedMonth(date.getMonth());
+    const day = date.getDate();
+    const year = date.getFullYear();
+    return `${month} ${day}, ${year}`;
   };
 
   const weekTotal = weekData.reduce((sum, day) => sum + day.totalMinutes, 0);
@@ -294,7 +320,7 @@ export default function ReadingLogs() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <Text style={styles.loadingText}>Loading reading logs...</Text>
+        <Text style={styles.loadingText}>{t('components.readingLogs.loadingText')}</Text>
       </View>
     );
   }
@@ -312,7 +338,7 @@ export default function ReadingLogs() {
             <Text style={styles.weekRange}>
               {formatDate(weekStart)} - {formatDate(weekEnd)}
             </Text>
-            <Text style={styles.weekTotal}>{weekTotal} minutes this week</Text>
+            <Text style={styles.weekTotal}>{weekTotal} {t('components.readingLogs.minutesThisWeek')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity onPress={() => navigateWeek('next')} style={styles.navButton}>
@@ -334,14 +360,14 @@ export default function ReadingLogs() {
                 <Text style={[styles.dayName, day.isToday && styles.todayText]}>{day.day}</Text>
                 <Text style={[styles.dayNumber, day.isToday && styles.todayText]}>{day.dayNum}</Text>
                 <Text style={[styles.dayTotal, day.isToday && styles.todayText]}>
-                  {day.totalMinutes}m
+                  {day.totalMinutes} {t('components.readingTimeLogger.minutesShort')}
                 </Text>
               </View>
 
               {/* Sessions */}
               <View style={styles.sessionsContainer}>
                 {day.sessions.length === 0 ? (
-                  <Text style={styles.noSessionsText}>No reading sessions</Text>
+                  <Text style={styles.noSessionsText}>{t('components.readingLogs.noSessionsText')}</Text>
                 ) : (
                   day.sessions.map((session) => (
                     <TouchableOpacity
@@ -350,14 +376,14 @@ export default function ReadingLogs() {
                       onPress={() => handleEditSession(session)}
                     >
                       <View style={styles.sessionHeader}>
-                        <Text style={styles.sessionTime}>{session.minutes_read}m</Text>
+                        <Text style={styles.sessionTime}>{session.minutes_read}{t('components.readingLogs.minutesSuffix')}</Text>
                         <Text style={styles.editHint}>✏️</Text>
                       </View>
                       <Text style={styles.sessionBook} numberOfLines={2}>
                         {session.book_name}
                       </Text>
                       <Text style={styles.sessionAuthor} numberOfLines={1}>
-                        by {session.book_author}
+                        {t('components.readingLogs.sessionCardBy')} {session.book_author}
                       </Text>
                       {session.notes && (
                         <Text style={styles.sessionNotes} numberOfLines={2}>

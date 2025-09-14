@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { queryAll } from '../db/db';
-
 interface ReadingCalendarProps {
   onDatePress?: (date: string, minutes: number) => void;
 }
@@ -100,7 +100,7 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
     const today = new Date().toISOString().split('T')[0];
     return dateString === today;
   };
-
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -156,7 +156,7 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
                 {dayNumber}
               </Text>
               {dayData.minutes > 0 && (
-                <Text style={styles.minutesText}>{dayData.minutes}m</Text>
+                <Text style={styles.minutesText}>{dayData.minutes} {t('components.readingTimeLogger.minutesShort')}</Text>
               )}
             </TouchableOpacity>
           );

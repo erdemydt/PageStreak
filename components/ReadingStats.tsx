@@ -1,6 +1,5 @@
-import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
-
 interface ReadingStatsProps {
   weeklyMinutes: number[];
   monthlyGoal?: number;
@@ -12,6 +11,7 @@ export default function ReadingStats({
   monthlyGoal = 900, // 30 minutes * 30 days
   averageDaily 
 }: ReadingStatsProps) {
+  const { t } = useTranslation();
   const totalWeeklyMinutes = weeklyMinutes.reduce((sum, minutes) => sum + minutes, 0);
   const avgDailyThisWeek = Math.round(totalWeeklyMinutes / 7);
   const weeklyGoal = 210; // 30 minutes * 7 days
@@ -21,9 +21,9 @@ export default function ReadingStats({
     if (minutes >= 60) {
       const hours = Math.floor(minutes / 60);
       const remainingMinutes = minutes % 60;
-      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+      return remainingMinutes > 0 ? `${hours} ${t('settings.hours')} ${remainingMinutes} ${t('components.readingTimeLogger.minutesShort')}` : `${hours} ${t('settings.hours')}`;
     }
-    return `${minutes}m`;
+    return `${minutes} ${t('components.readingTimeLogger.minutesShort')}`;
   };
 
   return (
@@ -89,7 +89,7 @@ export default function ReadingStats({
                   ]}>
                     {dayNames[dayIndex]}
                   </Text>
-                  <Text style={styles.minutesLabel}>{minutes}m</Text>
+                  <Text style={styles.minutesLabel}>{minutes} {t('components.readingTimeLogger.minutesShort')}</Text>
                 </View>
               );
             })}

@@ -106,9 +106,29 @@ export default function HomeScreen() {
 
   const loadReadingStreak = async () => {
     try {
-      // Get the user's daily goal
-      const user = await queryFirst<UserPreferences>('SELECT current_reading_rate_minutes_per_day FROM user_preferences WHERE id = 1');
-      const dailyGoal = user?.current_reading_rate_minutes_per_day || 30;
+      // Get the user's daily goal with fallback for missing columns
+      let user;
+      let dailyGoal = 30; // Default fallback
+      
+      try {
+        user = await queryFirst<UserPreferences>('SELECT current_reading_rate_minutes_per_day FROM user_preferences WHERE id = 1');
+        dailyGoal = user?.current_reading_rate_minutes_per_day || 30;
+      } catch (columnError) {
+        // If the column doesn't exist, fall back to basic user check
+        console.log('📝 current_reading_rate_minutes_per_day column not found, using default goal');
+        try {
+          const basicUser = await queryFirst<UserPreferences>('SELECT id FROM user_preferences WHERE id = 1');
+          if (!basicUser) {
+            // No user exists yet
+            setReadingStreak(0);
+            return;
+          }
+        } catch (error) {
+          console.log('📝 user_preferences table not found, using default streak');
+          setReadingStreak(0);
+          return;
+        }
+      }
 
       const streak = await getReadingStreak(dailyGoal);
       setReadingStreak(streak);

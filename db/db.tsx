@@ -10,7 +10,7 @@ export type DBResult<T = any> = SQLiteExecuteAsyncResult<T>;
 let isInitialized = false;
 
 // Current database schema version
-const CURRENT_DB_VERSION = 1;
+const CURRENT_DB_VERSION = 2;
 
 // Type for column definitions
 type ColumnDefinition = {
@@ -62,6 +62,27 @@ export type DailyProgress = {
   goal_minutes: number;
   percentage: number;
   sessions_count: number;
+};
+
+// Notification preferences type
+export type NotificationPreferences = {
+  id: number;
+  notifications_enabled: boolean;
+  daily_reminder_enabled: boolean;
+  daily_reminder_hours_after_last_open: number;
+  daily_reminder_title: string;
+  daily_reminder_body: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// App usage tracking type
+export type AppUsageTracking = {
+  id: number;
+  last_opened_at: string;
+  last_closed_at?: string;
+  session_count_today: number;
+  date: string; // YYYY-MM-DD format
 };
 
 /**
@@ -126,10 +147,16 @@ export async function initializeDatabase(): Promise<void> {
     // 4. Create and update weekly_progress table
     await createOrUpdateWeeklyProgressTable();
 
-    // 5. Migrate old books if they exist (from legacy 'books' table)
+    // 5. Create and update notification_preferences table
+    await createOrUpdateNotificationPreferencesTable();
+
+    // 6. Create and update app_usage_tracking table
+    await createOrUpdateAppUsageTrackingTable();
+
+    // 7. Migrate old books if they exist (from legacy 'books' table)
     await migrateOldBooksIfNeeded();
 
-    // 6. Update database version
+    // 8. Update database version
     await updateDatabaseVersion();
 
     isInitialized = true;
@@ -366,6 +393,105 @@ async function createOrUpdateWeeklyProgressTable(): Promise<void> {
 }
 
 /**
+ * Create or update notification_preferences table with all required columns
+ */
+async function createOrUpdateNotificationPreferencesTable(): Promise<void> {
+  // Create table if it doesn't exist
+  await execute(`
+    CREATE TABLE IF NOT EXISTS notification_preferences (
+      id INTEGER PRIMARY KEY,
+      notifications_enabled BOOLEAN DEFAULT 1,
+      daily_reminder_enabled BOOLEAN DEFAULT 1,
+      daily_reminder_hours_after_last_open INTEGER DEFAULT 5,
+      daily_reminder_title TEXT DEFAULT 'Time to read! 📚',
+      daily_reminder_body TEXT DEFAULT 'You haven''t reached your daily reading goal yet. Keep your streak going!',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Define all required columns with their types and defaults
+  const requiredColumns: ColumnDefinition[] = [
+    { name: 'notifications_enabled', type: 'BOOLEAN', default: '1' },
+    { name: 'daily_reminder_enabled', type: 'BOOLEAN', default: '1' },
+    { name: 'daily_reminder_hours_after_last_open', type: 'INTEGER', default: '5' },
+    { name: 'daily_reminder_title', type: 'TEXT', default: "'Time to read! 📚'" },
+    { name: 'daily_reminder_body', type: 'TEXT', default: "'You haven''t reached your daily reading goal yet. Keep your streak going!'" },
+    { name: 'created_at', type: 'DATETIME', default: 'CURRENT_TIMESTAMP' },
+    { name: 'updated_at', type: 'DATETIME', default: 'CURRENT_TIMESTAMP' }
+  ];
+
+  // Add missing columns
+  for (const column of requiredColumns) {
+    if (!(await columnExists('notification_preferences', column.name))) {
+      const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
+      await execute(`ALTER TABLE notification_preferences ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
+      console.log(`✅ Added column: notification_preferences.${column.name}`);
+    }
+  }
+
+  // Ensure default preferences exist
+  try {
+    const existingPrefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
+    if (!existingPrefs) {
+      await execute(`
+        INSERT INTO notification_preferences (
+          id, notifications_enabled, daily_reminder_enabled, daily_reminder_hours_after_last_open,
+          daily_reminder_title, daily_reminder_body, created_at, updated_at
+        ) VALUES (1, 1, 1, 5, 'Time to read! 📚', 
+          'You haven''t reached your daily reading goal yet. Keep your streak going!',
+          datetime('now'), datetime('now'))
+      `);
+      console.log('🔔 Created default notification preferences');
+    }
+  } catch (error) {
+    console.error('⚠️  Failed to create default notification preferences:', error);
+  }
+
+  console.log('✅ Created/verified notification_preferences table');
+}
+
+/**
+ * Create or update app_usage_tracking table with all required columns
+ */
+async function createOrUpdateAppUsageTrackingTable(): Promise<void> {
+  // Create table if it doesn't exist
+  await execute(`
+    CREATE TABLE IF NOT EXISTS app_usage_tracking (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      last_opened_at DATETIME NOT NULL,
+      last_closed_at DATETIME,
+      session_count_today INTEGER DEFAULT 1,
+      date TEXT NOT NULL
+    )
+  `);
+
+  // Define all required columns with their types and defaults
+  const requiredColumns: ColumnDefinition[] = [
+    { name: 'last_opened_at', type: 'DATETIME' },
+    { name: 'last_closed_at', type: 'DATETIME' },
+    { name: 'session_count_today', type: 'INTEGER', default: '1' },
+    { name: 'date', type: 'TEXT' }
+  ];
+
+  // Add missing columns
+  for (const column of requiredColumns) {
+    if (!(await columnExists('app_usage_tracking', column.name))) {
+      const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
+      await execute(`ALTER TABLE app_usage_tracking ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
+      console.log(`✅ Added column: app_usage_tracking.${column.name}`);
+    }
+  }
+
+  // Create index for faster queries by date
+  await execute(`
+    CREATE INDEX IF NOT EXISTS idx_app_usage_date ON app_usage_tracking(date)
+  `);
+
+  console.log('✅ Created/verified app_usage_tracking table');
+}
+
+/**
  * Migrate data from old 'books' table to 'enhanced_books' table if needed
  */
 async function migrateOldBooksIfNeeded(): Promise<void> {
@@ -404,6 +530,65 @@ async function migrateOldBooksIfNeeded(): Promise<void> {
  */
 export function resetInitializationFlag(): void {
   isInitialized = false;
+}
+
+/**
+ * Check notification database integrity
+ */
+export async function checkNotificationDatabaseIntegrity(): Promise<{
+  notification_preferences_exists: boolean;
+  app_usage_tracking_exists: boolean;
+  notification_preferences_has_defaults: boolean;
+  error?: string;
+}> {
+  try {
+    // Check if tables exist
+    const notifTable = await queryFirst(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='notification_preferences'"
+    );
+    const usageTable = await queryFirst(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='app_usage_tracking'"
+    );
+
+    // Check if default preferences exist
+    let hasDefaults = false;
+    if (notifTable) {
+      const defaultPrefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
+      hasDefaults = !!defaultPrefs;
+    }
+
+    return {
+      notification_preferences_exists: !!notifTable,
+      app_usage_tracking_exists: !!usageTable,
+      notification_preferences_has_defaults: hasDefaults
+    };
+  } catch (error) {
+    return {
+      notification_preferences_exists: false,
+      app_usage_tracking_exists: false,
+      notification_preferences_has_defaults: false,
+      error: error?.toString()
+    };
+  }
+}
+
+/**
+ * Repair notification database if needed
+ */
+export async function repairNotificationDatabase(): Promise<boolean> {
+  try {
+    console.log('🔧 Repairing notification database...');
+    
+    // Recreate notification tables
+    await createOrUpdateNotificationPreferencesTable();
+    await createOrUpdateAppUsageTrackingTable();
+    
+    console.log('✅ Notification database repaired');
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to repair notification database:', error);
+    return false;
+  }
 }
 
 export default db;

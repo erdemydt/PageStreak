@@ -572,7 +572,7 @@ export default function HomeScreen() {
               style={ isAddingManually && styles.nonVisibleBtn}
               disabled={loading || isAddingManually}
             >
-              <Text style={styles.actionBtnText }>🔍 Search Books</Text>
+              <Text style={styles.actionBtnText }>{t('booksPage.searchButton')}</Text>
             </TouchableOpacity>
           </Link>
           

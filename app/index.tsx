@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { execute, initializeDatabase, queryFirst } from '../db/db';
+import NotificationService from '../services/notificationService';
 
 type UserPreferences = {
   id: number;
@@ -30,8 +31,31 @@ export default function Index() {
 
   const initializeAppDatabase = async () => {
     try {
+      console.log('🔄 Starting app database initialization...');
+      
       // Initialize all database tables first
       await initializeDatabase();
+      console.log('✅ Database tables initialized');
+      
+      // Verify database integrity before proceeding
+      const { checkNotificationDatabaseIntegrity } = await import('../db/db');
+      const dbIntegrity = await checkNotificationDatabaseIntegrity();
+      console.log('📊 Database integrity check:', dbIntegrity);
+      
+      // If notification tables are missing, repair them
+      if (!dbIntegrity.notification_preferences_exists || !dbIntegrity.notification_preferences_has_defaults) {
+        console.log('🔧 Repairing notification database...');
+        const { repairNotificationDatabase } = await import('../db/db');
+        await repairNotificationDatabase();
+      }
+      
+      // Initialize notification service after database is verified
+      try {
+        await NotificationService.reset();
+        console.log('✅ Notification service initialized');
+      } catch (notificationError) {
+        console.error('⚠️ Notification service initialization failed, continuing without notifications:', notificationError);
+      }
       
       // Then check user setup and handle navigation
       await checkUserSetup();

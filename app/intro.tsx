@@ -16,6 +16,7 @@ import {
     View
 } from 'react-native';
 import { execute } from '../db/db';
+import NotificationService from '../services/notificationService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -286,6 +287,12 @@ export default function IntroScreen() {
           weeklyReadingRateIncreasePercentage
         ]
       );
+
+      // Initialize notification preferences for new user
+      const notificationPrefs = await NotificationService.getNotificationPreferences();
+      if (!notificationPrefs) {
+        console.log('🔔 Initializing notification preferences for new user');
+      }
 
       Keyboard.dismiss();
 

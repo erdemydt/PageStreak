@@ -3,16 +3,18 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
-  Keyboard,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View
+    Alert,
+    Keyboard,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
 } from 'react-native';
 import LanguageSelector from '../../components/LanguageSelector';
+import NotificationSettings from '../../components/NotificationSettings';
+import NotificationTester from '../../components/NotificationTester';
 import { queryFirst } from '../../db/db';
 import { logoutUser } from '../../utils/migration';
 
@@ -123,6 +125,20 @@ export default function SettingsScreen() {
             <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
             <LanguageSelector />
           </View>
+
+          {/* Notifications Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('settings.notifications')}</Text>
+            <NotificationSettings />
+          </View>
+
+          {/* Development Notification Tester - Only show in development */}
+          {__DEV__ && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🧪 Development Tools</Text>
+              <NotificationTester />
+            </View>
+          )}
 
           {/* App Info Section */}
           <View style={styles.section}>

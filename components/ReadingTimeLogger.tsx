@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Alert,
@@ -12,6 +12,7 @@ import {
     View
 } from 'react-native';
 import { EnhancedBook, execute, queryAll } from '../db/db';
+import NotificationService from '../services/notificationService';
 
 interface ReadingTimeLoggerProps {
   visible: boolean;
@@ -74,6 +75,9 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
          VALUES (?, ?, ?, ?)`,
         [selectedBook.id, Number(minutes), today, notes.trim() || null]
       );
+
+      // Check if daily goal is met and update notification schedule
+      await NotificationService.checkAndScheduleNotification();
 
       // Reset form
       setMinutes('');

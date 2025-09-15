@@ -23,7 +23,7 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = PageStreak/Info.plist; sourceTree = "<group>"; };
 		33C5A29DFA7AC1D1F1AB1873 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-PageStreak/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		44A36A4B0EFBB6204E837C80 /* libPods-PageStreak.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-PageStreak.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		953D523E68018593A5D5B9E8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = PageStreak/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		953D523E68018593A5D5B9E8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = PageStreak/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = PageStreak/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		E1533C4C5F35AD942AADF129 /* Pods-PageStreak.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PageStreak.release.xcconfig"; path = "Target Support Files/Pods-PageStreak/Pods-PageStreak.release.xcconfig"; sourceTree = "<group>"; };
@@ -72,7 +72,6 @@
 				0ECC23058BE503B457A753D1 /* Pods-PageStreak.debug.xcconfig */,
 				E1533C4C5F35AD942AADF129 /* Pods-PageStreak.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -357,6 +356,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = PageStreak/PageStreak.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TU2P3LBD8J;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -376,7 +376,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.erdemydt.PageStreak;
-				PRODUCT_NAME = "PageStreak";
+				PRODUCT_NAME = PageStreak;
 				SWIFT_OBJC_BRIDGING_HEADER = "PageStreak/PageStreak-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -393,6 +393,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = PageStreak/PageStreak.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TU2P3LBD8J;
 				INFOPLIST_FILE = PageStreak/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -407,7 +408,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.erdemydt.PageStreak;
-				PRODUCT_NAME = "PageStreak";
+				PRODUCT_NAME = PageStreak;
 				SWIFT_OBJC_BRIDGING_HEADER = "PageStreak/PageStreak-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Animated,
@@ -207,7 +207,7 @@ export default function BookDetailModal({
               
               <View style={styles.bookInfo}>
                 <Text style={styles.title}>{book.name}</Text>
-                <Text style={styles.author}>by {book.author}</Text>
+                <Text style={styles.author}>{t('components.bookCard.by')} {book.author}</Text>
                 
                 {book.reading_status && (
                   <TouchableOpacity

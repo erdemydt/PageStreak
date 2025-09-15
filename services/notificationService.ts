@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { AppUsageTracking, execute, NotificationPreferences, queryFirst } from '../db/db';
+import { AppUsageTracking, checkNotificationDatabaseIntegrity, execute, NotificationPreferences, queryFirst, repairNotificationDatabase } from '../db/db';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -35,6 +35,19 @@ export class NotificationService {
   }
 
   /**
+   * Check if a user is logged in by verifying user_preferences table
+   */
+  private async isUserLoggedIn(): Promise<boolean> {
+    try {
+      const user = await queryFirst('SELECT id FROM user_preferences WHERE id = 1');
+      return !!user;
+    } catch (error) {
+      console.error('❌ Error checking user login status:', error);
+      return false;
+    }
+  }
+
+  /**
    * Request notification permissions from the user
    */
   async requestPermissions(): Promise<boolean> {
@@ -44,7 +57,7 @@ export class NotificationService {
           name: 'default',
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#6C63FF',
+          lightColor: '#FF231F7C',
         });
       }
 
@@ -60,6 +73,55 @@ export class NotificationService {
     } catch (error) {
       console.error('❌ Error requesting notification permissions:', error);
       return false;
+    }
+  }
+
+  /**
+   * Check current system notification permissions without requesting
+   */
+  async checkCurrentPermissions(): Promise<boolean> {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.error('❌ Error checking notification permissions:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Sync system permissions with database preferences
+   * If system permissions are denied, update database to reflect this
+   */
+  async syncPermissionsWithDatabase(): Promise<void> {
+    try {
+      const hasSystemPermission = await this.checkCurrentPermissions();
+      const prefs = await this.getNotificationPreferences();
+      
+      if (!prefs) {
+        console.log('📝 No preferences found, creating defaults');
+        return;
+      }
+
+      console.log('🔄 Syncing permissions:', {
+        hasSystemPermission,
+        dbNotificationsEnabled: prefs.notifications_enabled,
+        dbDailyReminderEnabled: prefs.daily_reminder_enabled
+      });
+
+      // If system permissions are denied but database shows enabled, update database
+      if (!hasSystemPermission && (prefs.notifications_enabled || prefs.daily_reminder_enabled)) {
+        console.log('🔄 System permissions denied, updating database to reflect this');
+        await this.updateNotificationPreferences({
+          notifications_enabled: false,
+          daily_reminder_enabled: false
+        });
+        
+        // Cancel any scheduled notifications
+        await this.cancelScheduledNotification();
+      }
+    } catch (error) {
+      console.error('❌ Error syncing permissions with database:', error);
     }
   }
 
@@ -187,6 +249,13 @@ export class NotificationService {
    */
   async scheduleDailyReminderNotification(): Promise<void> {
     try {
+      // Check if user is logged in first
+      const isLoggedIn = await this.isUserLoggedIn();
+      if (!isLoggedIn) {
+        console.log('👤 No user logged in, skipping notification scheduling');
+        return;
+      }
+
       const areEnabled = await this.areNotificationsEnabled();
       if (!areEnabled) {
         console.log('📵 Notifications disabled, skipping schedule');
@@ -264,6 +333,13 @@ export class NotificationService {
     }
 
     try {
+      // Check if user is logged in first
+      const isLoggedIn = await this.isUserLoggedIn();
+      if (!isLoggedIn) {
+        console.log('👤 No user logged in, skipping test notification scheduling');
+        return;
+      }
+
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) {
         console.log('📵 No notification permission for test notification');
@@ -307,6 +383,13 @@ export class NotificationService {
    */
   async scheduleNotificationBasedOnLastOpen(): Promise<void> {
     try {
+      // Check if user is logged in first
+      const isLoggedIn = await this.isUserLoggedIn();
+      if (!isLoggedIn) {
+        console.log('👤 No user logged in, skipping notification scheduling based on last open');
+        return;
+      }
+
       const areEnabled = await this.areNotificationsEnabled();
       if (!areEnabled) {
         console.log('📵 Notifications disabled, skipping schedule based on last open');
@@ -344,7 +427,12 @@ export class NotificationService {
       let triggerSeconds: number;
       let triggerTime = new Date();
 
-      if (false) {
+      if (this.isDevelopment()) {
+        // In development: schedule for 1 minute for quick testing
+        triggerSeconds = 60; // 1 minute
+        triggerTime.setMinutes(triggerTime.getMinutes() + 1);
+        console.log(`🔧 [DEV MODE] Scheduling notification in 1 minute for testing`);
+      
       } else {
         // In production: calculate remaining time needed
         const targetHours = prefs.daily_reminder_hours_after_last_open;
@@ -574,6 +662,13 @@ export class NotificationService {
    */
   async checkAndScheduleNotification(): Promise<void> {
     try {
+      // Check if user is logged in first
+      const isLoggedIn = await this.isUserLoggedIn();
+      if (!isLoggedIn) {
+        console.log('👤 No user logged in, skipping notification check and scheduling');
+        return;
+      }
+
       const areEnabled = await this.areNotificationsEnabled();
       if (!areEnabled) {
         return;
@@ -751,6 +846,13 @@ export class NotificationService {
     }
 
     try {
+      // Check if user is logged in first
+      const isLoggedIn = await this.isUserLoggedIn();
+      if (!isLoggedIn) {
+        console.log('👤 No user logged in, skipping immediate test notification');
+        return;
+      }
+
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) {
         console.log('📵 No notification permission for immediate test');
@@ -856,9 +958,6 @@ export class NotificationService {
       
       // Verify that notification tables exist and are properly set up
       try {
-        // Import the database integrity functions
-        const { checkNotificationDatabaseIntegrity, repairNotificationDatabase } = await import('../db/db');
-        
         // Check database integrity
         const integrity = await checkNotificationDatabaseIntegrity();
         

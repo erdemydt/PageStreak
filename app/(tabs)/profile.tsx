@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Alert,
-    Keyboard,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Keyboard,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { execute, queryFirst } from '../../db/db';
 
@@ -28,13 +28,10 @@ type FullUserPreferences = {
   updated_at?: string;
 };
 
-const genres = [
-  'Fiction', 'Non-Fiction', 'Mystery', 'Romance', 'Sci-Fi', 'Fantasy',
-  'Biography', 'History', 'Self-Help', 'Business', 'Poetry', 'Philosophy',
-  'Thriller', 'Horror', 'Adventure', 'Comedy', 'Drama', 'Educational'
-];
+
 
 export default function ProfileScreen() {
+  
   const { t } = useTranslation();
   const [userPreferences, setUserPreferences] = useState<FullUserPreferences | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -69,7 +66,15 @@ export default function ProfileScreen() {
     t('intro.genres.options.drama'),
     t('intro.genres.options.educational')
   ];
-
+  const genres = [
+    'Fiction', 'Non-Fiction', 'Mystery', 'Romance', 'Sci-Fi', 'Fantasy',
+    'Biography', 'History', 'Self-Help', 'Business', 'Poetry', 'Philosophy',
+    'Thriller', 'Horror', 'Adventure', 'Comedy', 'Drama', 'Educational'
+  ];
+  const getTranslationOfGenre = (genre: string) => {
+    const index = genres.indexOf(genre);
+    return index !== -1 ? getTranslatedGenres()[index] : genre;
+  };
   useEffect(() => {
     loadUserPreferences();
   }, []);
@@ -237,7 +242,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>{t('profile.fields.currentDailyGoal')}</Text>
-              <Text style={styles.infoValue}>{userPreferences?.current_reading_rate_minutes_per_day || 0} minutes</Text>
+              <Text style={styles.infoValue}>{userPreferences?.current_reading_rate_minutes_per_day || 0} {t('profile.units.minutes')}</Text>
             </View>
           </View>
 
@@ -249,7 +254,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>{t('profile.fields.targetDailyGoal')}</Text>
-              <Text style={styles.infoValue}>{userPreferences?.end_reading_rate_goal_minutes_per_day || 0} minutes</Text>
+              <Text style={styles.infoValue}>{userPreferences?.end_reading_rate_goal_minutes_per_day || 0} {t('profile.units.minutes')}</Text>
             </View>
           </View>
 
@@ -329,7 +334,7 @@ export default function ProfileScreen() {
             {userPreferences?.preferred_genres ? (
               userPreferences.preferred_genres.split(',').filter(g => g.trim()).map((genre, index) => (
                 <View key={index} style={styles.genreTag}>
-                  <Text style={styles.genreTagText}>{genre.trim()}</Text>
+                  <Text style={styles.genreTagText}>{getTranslationOfGenre(genre.trim())}</Text>
                 </View>
               ))
             ) : (
@@ -341,7 +346,7 @@ export default function ProfileScreen() {
 
       {/* Account Info Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ℹ️ {t('profile.sections.account')}</Text>
+        <Text style={styles.sectionTitle}> {t('profile.sections.account')}</Text>
         <View style={styles.card}>
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>

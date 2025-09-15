@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -69,11 +69,11 @@ export default function BookSearchScreen() {
       setSearchResults(results);
       
       if (results.length === 0) {
-        Alert.alert('No Results', 'No books found for your search. Try different keywords.');
+        Alert.alert(t('booksPage.search.noResults'), t('booksPage.search.noResultsMessage'));
       }
     } catch (error) {
       console.error('Search error:', error);
-      Alert.alert('Search Error', error instanceof Error ? error.message : 'Failed to search books');
+      Alert.alert(t('booksPage.search.error'), error instanceof Error ? error.message : t('booksPage.search.failedToSearchBooks'));
     } finally {
       setLoading(false);
     }
@@ -169,18 +169,20 @@ export default function BookSearchScreen() {
       
       await execute(query, params);
       
-      const statusText = status === 'want_to_read' ? 'Want to Read' : 
-                        status === 'currently_reading' ? 'Currently Reading' : 'Read';
+      const statusText = t(`booksPage.search.statusLabels.${status}`);
       
-      Alert.alert('Success', `"${selectedBook.title}" has been added to your library as ${statusText}!`, [
+      Alert.alert(t('booksPage.search.success'), t('booksPage.search.bookAddedMessage', { 
+        title: selectedBook.title, 
+        status: statusText 
+      }), [
         {
-          text: 'OK',
+          text: t('booksPage.search.ok'),
           onPress: () => router.back(),
         }
       ]);
     } catch (error) {
       console.error('Error adding book:', error);
-      Alert.alert('Error', 'Failed to add book to your library. Please try again.');
+      Alert.alert(t('error'), t('booksPage.search.failedToAddBook'));
     }
   };
 
@@ -208,7 +210,7 @@ export default function BookSearchScreen() {
           {item.title}
         </Text>
         <Text style={styles.bookAuthor} numberOfLines={1}>
-          by {item.authors.join(', ')}
+          {t('booksPage.search.by')} {item.authors.join(', ')}
         </Text>
         
         <View style={styles.bookMetadata}>
@@ -221,7 +223,7 @@ export default function BookSearchScreen() {
           {item.pageCount && (
             <View style={styles.metadataItem}>
               <Text style={styles.metadataIcon}>📄</Text>
-              <Text style={styles.metadataText}>{item.pageCount} pages</Text>
+              <Text style={styles.metadataText}>{item.pageCount} {t('booksPage.search.pages')}</Text>
             </View>
           )}
         </View>
@@ -238,7 +240,7 @@ export default function BookSearchScreen() {
         {item.rating && item.ratingsCount && (
           <View style={styles.ratingContainer}>
             <Text style={styles.ratingText}>⭐ {item.rating.toFixed(1)}</Text>
-            <Text style={styles.ratingCount}>({item.ratingsCount} ratings)</Text>
+            <Text style={styles.ratingCount}>({item.ratingsCount} {t('booksPage.search.ratings')})</Text>
           </View>
         )}
         
@@ -270,7 +272,7 @@ export default function BookSearchScreen() {
       <View style={styles.container}>
         <Stack.Screen 
           options={{ 
-            title: 'Search Books',
+            title: t('booksPage.search.headerTitle'),
             headerStyle: { backgroundColor: '#6C63FF' },
             headerTintColor: '#FFFFFF',
             headerTitleStyle: { fontWeight: 'bold' },
@@ -279,8 +281,8 @@ export default function BookSearchScreen() {
         
         {/* Search Header */}
         <View style={styles.searchHeader}>
-          <Text style={styles.searchTitle}>🔍 Discover New Books</Text>
-          <Text style={styles.searchSubtitle}>Search millions of books from Open Library</Text>
+          <Text style={styles.searchTitle}>{t('booksPage.search.searchTitle')}</Text>
+          <Text style={styles.searchSubtitle}>{t('booksPage.search.searchSubtitle')}</Text>
         </View>
 
         {/* Search Type Selection */}
@@ -348,7 +350,7 @@ export default function BookSearchScreen() {
             disabled={loading}
           >
             <Text style={styles.searchButtonText}>
-              {loading ? 'Searching...' : 'Search'}
+              {loading ? t('booksPage.search.searching') : t('booksPage.search.searchBtn')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -357,7 +359,10 @@ export default function BookSearchScreen() {
         <View style={styles.resultsContainer}>
           {searchResults.length > 0 && (
             <Text style={styles.resultsCount}>
-              Found {searchResults.length} book{searchResults.length !== 1 ? 's' : ''}
+              {searchResults.length === 1 
+                ? t('booksPage.search.foundBooks', { count: searchResults.length })
+                : t('booksPage.search.foundBooksPlural', { count: searchResults.length })
+              }
             </Text>
           )}
           
@@ -374,17 +379,17 @@ export default function BookSearchScreen() {
               searchResults.length === 0 ? (
                 <View style={styles.emptyResults}>
                   <Text style={styles.emptyResultsIcon}>📚</Text>
-                  <Text style={styles.emptyResultsText}>No books found</Text>
+                  <Text style={styles.emptyResultsText}>{t('booksPage.search.noBooksfound')}</Text>
                   <Text style={styles.emptyResultsSubtext}>
-                    Try different search terms or check your spelling
+                    {t('booksPage.search.noResultsMessage')}
                   </Text>
                 </View>
               ) : searchResults.length === 0 && !clickedSearch ? (
                 <View style={styles.emptyResults}>
                   <Text style={styles.emptyResultsIcon}>🔍</Text>
-                  <Text style={styles.emptyResultsText}>Start searching</Text>
+                  <Text style={styles.emptyResultsText}>{t('booksPage.search.startSearching')}</Text>
                   <Text style={styles.emptyResultsSubtext}>
-                    Enter a book title, author name, or keywords to discover new books
+                    {t('booksPage.search.startSearchingSubtext')}
                   </Text>
                 </View>
               ) : null
@@ -394,7 +399,7 @@ export default function BookSearchScreen() {
           {loading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#6C63FF" />
-              <Text style={styles.loadingText}>Searching books...</Text>
+              <Text style={styles.loadingText}>{t('booksPage.search.searchingBooks')}</Text>
             </View>
           )}
         </View>

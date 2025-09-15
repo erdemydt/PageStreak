@@ -1,4 +1,5 @@
-import { execute, queryAll } from '../db/db';
+import { execute, queryAll, resetInitializationFlag } from '../db/db';
+import NotificationService from '../services/notificationService';
 
 /**
  * Migration utility to upgrade from basic books schema to enhanced books schema
@@ -142,7 +143,6 @@ export const logoutUser = async () => {
   try {
     // Cancel any scheduled notifications before clearing data
     try {
-      const NotificationService = (await import('../services/notificationService')).default;
       await NotificationService.cleanup();
       console.log('📵 Cancelled scheduled notifications');
     } catch (notifError) {
@@ -262,7 +262,6 @@ export const logoutUser = async () => {
     `);
 
     // Reset database initialization flag so it can be re-initialized
-    const { resetInitializationFlag } = await import('../db/db');
     resetInitializationFlag();
     
     console.log('🎉 User logout completed!');

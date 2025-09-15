@@ -241,9 +241,35 @@ const resources = {
           title: 'Title',
           author: 'Author',
           placeholder: 'Search for books, authors, or titles...',
+          noResults: 'No Results',
+          searchTitle: '🔍 Discover New Books',
+          searchSubtitle: 'Search millions of books from Open Library',
           error: 'Search Error',
+          searchBtn: 'Search',
+          searching: 'Searching...',
           enterSearchTerm: 'Please enter a search term',
           failed: 'Search failed. Please try again.',
+          headerTitle: 'Search Books',
+          noResultsMessage: 'No books found for your search. Try different keywords.',
+          failedToSearchBooks: 'Failed to search books',
+          success: 'Success',
+          bookAddedMessage: '"{{title}}" has been added to your library as {{status}}!',
+          failedToAddBook: 'Failed to add book to your library. Please try again.',
+          foundBooks: 'Found {{count}} book',
+          foundBooksPlural: 'Found {{count}} books',
+          by: 'by',
+          pages: 'pages',
+          ratings: 'ratings',
+          noBooksfound: 'No books found',
+          startSearching: 'Start searching',
+          startSearchingSubtext: 'Enter a book title, author name, or keywords to discover new books',
+          searchingBooks: 'Searching books...',
+          ok: 'OK',
+          statusLabels: {
+            want_to_read: 'Want to Read',
+            currently_reading: 'Currently Reading',
+            read: 'Read',
+          },
         },
         input: {
             searchPlaceholder: 'Search...',
@@ -288,6 +314,7 @@ const resources = {
         notificationMessage: 'Notification Message',
         testNotification: 'Send Test Notification',
         notificationPermissionRequired: 'Notification permission is required to send reminders',
+        notificationPermissionDenied: 'Notifications are disabled in your device settings. Please enable them to receive reading reminders.',
         pushNotifications: 'Push Notifications',
         pushNotificationsDescription: 'Get reminders to keep your reading streak',
         dailyReadingReminders: 'Daily Reading Reminders',
@@ -426,7 +453,7 @@ const resources = {
 
       profile: {
         title: '👤 Profile',
-        subtitle: 'Manage your reading preferences',
+        subtitle: 'Manage your preferences',
         edit: 'Edit Profile',
         save: 'Save Changes',
         cancel: 'Cancel',
@@ -435,7 +462,9 @@ const resources = {
           personal: '👤 Personal Information',
           goals: '🎯 Reading Goals',
           preferences: '📚 Reading Preferences',
+          preferredGenres: '🎭 Preferred Genres',
           statistics: '📊 Statistics',
+          account: 'ℹ️ Account Information',
         },
         fields: {
           username: 'Username',
@@ -443,6 +472,14 @@ const resources = {
           currentDailyGoal: 'Current Daily Reading (minutes)',
           targetDailyGoal: 'Target Daily Reading (minutes)',
           favoriteGenres: 'Favorite Genres',
+        },
+        labels: {
+          username: 'Username',
+          weeklyGoal: 'Weekly Goal',
+        },
+        units: {
+          minutes: 'minutes',
+          minPerDay: 'min/day',
         },
         placeholders: {
           username: 'Enter your username',
@@ -457,9 +494,23 @@ const resources = {
           totalReadingTime: 'Total Reading Time',
           averagePerDay: 'Average per Day',
           goalProgress: 'Goal Progress',
+          totalIncrease: 'Total Increase',
+          currentRate: 'Current Rate',
+          startingRate: 'Starting Rate',
+          goalTargetDate: 'Goal Target Date',
+          noGenres: 'No genres selected',
           days: '{{count}} days',
           hours: '{{count}}h {{minutes}}m',
           minutes: '{{count}}m',
+        },
+        buttons: {
+          cancel: 'Cancel',
+          saveChanges: 'Save Changes',
+          saving: 'Saving...',
+        },
+        account: {
+          memberSince: 'Member Since',
+          lastUpdated: 'Last Updated',
         },
         success: {
           title: 'Success',
@@ -479,7 +530,7 @@ const resources = {
       },
 
       bookStatus: {
-        title: 'Change Reading Status',
+        title: 'Select Reading Status',
         close: '✕',
         options: {
           wantToRead: {
@@ -521,7 +572,7 @@ const resources = {
 
       components: {
         bookCard: {
-          by: 'yazan',
+          by: 'Yazar:',
           pages: 'sayfa',
           currentlyReading: 'Okunmakta',
           read: 'Okundu',
@@ -576,7 +627,7 @@ const resources = {
           save: 'Kaydet',
           saving: 'Kaydediliyor...',
           book: 'Kitap',
-          by: 'yazan',
+          by: 'Yazar',
           readingTimeLabel: 'Okuma Süresi (dakika)',
           readingTimePlaceholder: 'Dakika girin',
           notesLabel: 'Notlar',
@@ -680,7 +731,7 @@ const resources = {
           status: 'Durum',
           changeStatus: 'Durum Değiştir',
           pagesRead: 'Okunan Sayfalar',
-          totalPages: 'Toplam Sayfalar',
+          totalPages: 'Sayfa',
           notes: '🗒️ Notlar',
           editNotes: 'Notları Düzenle',
           noNotes: 'Henüz not eklenmedi.',
@@ -692,7 +743,7 @@ const resources = {
       booksPage: {
         title: '📖 Kütüphanem',
         subtitle: 'Okuma yolculuğunuzu keşfedin ve takip edin',
-        addBookManually: '✏️ Kitap Ekle',
+        addBookManually: '✏️ Direkt Kitap Ekle',
         searchButton: '🔍 Kitap Ara',
         saving: 'Kaydediliyor...',
         failedToSave: 'Kitap kaydedilemedi. Lütfen tekrar deneyin.',
@@ -708,8 +759,8 @@ const resources = {
         },
         listHeader: {
           myBooks: '📚 Kitaplarım',
-          showing: 'gösteriliyor',
-          of: 'toplam',
+          showing: '',
+          of: '/',
           viewAll: 'Tümünü Gör',
         },
         empty: {
@@ -735,10 +786,35 @@ const resources = {
           general: 'Genel',
           title: 'Başlık',
           author: 'Yazar',
+          searchBtn: 'Ara',
+          searching: 'Aranıyor...',
+          searchTitle:"🔍 Yeni Kitaplar Keşfedin",
+          searchSubtitle:'Open Library\'den milyonlarca kitabı arayın',
           placeholder: 'Kitap, yazar veya başlık ara...',
           error: 'Arama Hatası',
           enterSearchTerm: 'Lütfen bir arama terimi girin',
           failed: 'Arama başarısız oldu. Lütfen tekrar deneyin.',
+          headerTitle: 'Kitap Ara',
+          noResultsMessage: 'Aramanız için kitap bulunamadı. Farklı anahtar kelimeler deneyin.',
+          failedToSearchBooks: 'Kitap arama başarısız',
+          success: 'Başarılı',
+          bookAddedMessage: '"{{title}}" kütüphanenize {{status}} olarak eklendi!',
+          failedToAddBook: 'Kitap kütüphanenize eklenemedi. Lütfen tekrar deneyin.',
+          foundBooks: '{{count}} kitap bulundu',
+          foundBooksPlural: '{{count}} kitap bulundu',
+          by: 'Yazar',
+          pages: 'sayfa',
+          ratings: 'değerlendirme',
+          noBooksfound: 'Kitap bulunamadı',
+          startSearching: 'Aramaya başlayın',
+          startSearchingSubtext: 'Yeni kitaplar keşfetmek için kitap başlığı, yazar adı veya anahtar kelimeler girin',
+          searchingBooks: 'Kitaplar aranıyor...',
+          ok: 'Tamam',
+          statusLabels: {
+            want_to_read: 'Okuma Listesinde',
+            currently_reading: 'Okunmakta',
+            read: 'Okundu',
+          },
         },
         input: {
             searchPlaceholder: 'Ara...',
@@ -784,6 +860,7 @@ const resources = {
         notificationMessage: 'Bildirim Mesajı',
         testNotification: 'Test Bildirimi Gönder',
         notificationPermissionRequired: 'Hatırlatıcı göndermek için bildirim izni gerekiyor',
+        notificationPermissionDenied: 'Cihaz ayarlarınızda bildirimler devre dışı. Okuma hatırlatıcıları almak için lütfen etkinleştirin.',
         pushNotifications: 'Anlık Bildirimler',
         pushNotificationsDescription: 'Okuma serinizi sürdürmeniz için hatırlatıcı alın',
         dailyReadingReminders: 'Günlük Okuma Hatırlatıcıları',
@@ -922,7 +999,7 @@ const resources = {
 
       profile: {
         title: '👤 Profil',
-        subtitle: 'Okuma tercihlerinizi yönetin',
+        subtitle: 'Tercihlerinizi yönetin',
         edit: 'Profili Düzenle',
         save: 'Değişiklikleri Kaydet',
         cancel: 'İptal',
@@ -931,7 +1008,9 @@ const resources = {
           personal: '👤 Kişisel Bilgiler',
           goals: '🎯 Okuma Hedefleri',
           preferences: '📚 Okuma Tercihleri',
+          preferredGenres: '🎭 Tercih Edilen Türler',
           statistics: '📊 İstatistikler',
+          account: 'ℹ️ Hesap Bilgileri',
         },
         fields: {
           username: 'Kullanıcı Adı',
@@ -939,6 +1018,14 @@ const resources = {
           currentDailyGoal: 'Mevcut Günlük Okuma (dakika)',
           targetDailyGoal: 'Hedef Günlük Okuma (dakika)',
           favoriteGenres: 'Favori Türler',
+        },
+        labels: {
+          username: 'Kullanıcı Adı',
+          weeklyGoal: 'Haftalık Hedef',
+        },
+        units: {
+          minutes: 'dakika',
+          minPerDay: 'dk/gün',
         },
         placeholders: {
           username: 'Kullanıcı adınızı girin',
@@ -953,9 +1040,23 @@ const resources = {
           totalReadingTime: 'Toplam Okuma Süresi',
           averagePerDay: 'Günlük Ortalama',
           goalProgress: 'Hedef İlerlemesi',
+          totalIncrease: 'Toplam Artış',
+          currentRate: 'Mevcut Oran',
+          startingRate: 'Başlangıç Oranı',
+          goalTargetDate: 'Hedef Tarih',
+          noGenres: 'Tür seçilmedi',
           days: '{{count}} gün',
           hours: '{{count}}s {{minutes}}d',
           minutes: '{{count}}d',
+        },
+        buttons: {
+          cancel: 'İptal',
+          saveChanges: 'Değişiklikleri Kaydet',
+          saving: 'Kaydediliyor...',
+        },
+        account: {
+          memberSince: 'Üye Olma Tarihi',
+          lastUpdated: 'Son Güncelleme',
         },
         success: {
           title: 'Başarılı',
@@ -975,7 +1076,7 @@ const resources = {
       },
 
       bookStatus: {
-        title: 'Okuma Durumunu Değiştir',
+        title: 'Okunma Durumunu Seçin',
         close: '✕',
         options: {
           wantToRead: {

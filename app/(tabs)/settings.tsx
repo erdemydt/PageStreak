@@ -3,14 +3,13 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Alert,
-    Keyboard,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View
+  Alert,
+  Keyboard,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import LanguageSelector from '../../components/LanguageSelector';
 import NotificationSettings from '../../components/NotificationSettings';
@@ -83,7 +82,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+    <View style={{flex: 1}} onTouchStart={dismissKeyboard}>
       <View style={{flex: 1}}>
   
         <View style={styles.container}>
@@ -186,7 +185,7 @@ export default function SettingsScreen() {
         </ScrollView>
       </View>
       </View>
-    </TouchableWithoutFeedback>
+    </View>
   );
 }
 

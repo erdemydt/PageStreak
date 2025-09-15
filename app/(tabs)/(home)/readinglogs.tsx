@@ -455,7 +455,7 @@ export default function ReadingLogs() {
             </Text>
           </TouchableOpacity>
         </View>
-
+      
         <WeeklyStatsView
           weekStart={getWeekStart(currentWeekStart)}
           onNavigateWeek={navigateWeek}

@@ -5,3 +5,4 @@
 #
 #  Created by Erdem Pülat on 16.09.2025.
 #  
+pod install

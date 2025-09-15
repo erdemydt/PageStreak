@@ -19,7 +19,6 @@ type FullUserPreferences = {
   yearly_book_goal: number;
   preferred_genres?: string;
   weekly_reading_goal?: number;
-  daily_reading_goal?: number;
   initial_reading_rate_minutes_per_day?: number;
   end_reading_rate_goal_minutes_per_day?: number;
   end_reading_rate_goal_date?: string;
@@ -144,7 +143,6 @@ export default function ProfileScreen() {
           yearly_book_goal = ?, 
           preferred_genres = ?,
           weekly_reading_goal = ?,
-          daily_reading_goal = ?,
           end_reading_rate_goal_minutes_per_day = ?,
           end_reading_rate_goal_date = ?,
           current_reading_rate_minutes_per_day = ?,
@@ -157,7 +155,6 @@ export default function ProfileScreen() {
           Number(editedYearlyGoal),
           editedGenres.join(','),
           weeklyGoal,
-          Number(editedDailyGoal),
           targetRate,
           endGoalDate,
           initialRate, // reset current rate to initial

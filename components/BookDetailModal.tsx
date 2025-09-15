@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Animated,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Animated,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { EnhancedBook, queryFirst } from '../db/db';
 import BookStatusModal, { BookStatus } from './BookStatusModal';
@@ -55,7 +55,7 @@ export default function BookDetailModal({
         [book.id]
       );
       console.log(book.date_added)
-      setFirstReadingDate(result?.date || "Have Not Started Reading");
+      setFirstReadingDate(result?.date || t("components.bookDetailModal.haveNotStartedReading"));
     } catch (error) {
       console.error('Error loading first reading date:', error);
       setFirstReadingDate(null);
@@ -73,15 +73,16 @@ export default function BookDetailModal({
 
   const formatReadingTime = (minutes: number) => {
     if (minutes < 60) {
-
-      return `${minutes} minutes`;
+      return `${minutes} ${t('components.bookDetailModal.minutes')}`;
     } else {
       const hours = Math.floor(minutes / 60);
       const remainingMinutes = minutes % 60;
       if (remainingMinutes > 0) {
-        return `${hours} hour${hours > 1 ? 's' : ''} ${remainingMinutes} minutes`;
+        const hourText = hours > 1 ? t('components.bookDetailModal.hours') : t('components.bookDetailModal.hour');
+        return `${hours} ${hourText} ${remainingMinutes} ${t('components.bookDetailModal.minutes')}`;
       }
-      return `${hours} hour${hours > 1 ? 's' : ''}`;
+      const hourText = hours > 1 ? t('components.bookDetailModal.hours') : t('components.bookDetailModal.hour');
+      return `${hours} ${hourText}`;
     }
   };
 

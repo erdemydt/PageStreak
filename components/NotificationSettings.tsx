@@ -103,7 +103,7 @@ export default function NotificationSettings() {
       }
     } catch (error) {
       console.error('❌ Error updating notification preferences:', error);
-      Alert.alert('Error', 'Failed to update notification settings');
+      Alert.alert(t('settings.error'), t('settings.failedToUpdateNotificationSettings'));
     } finally {
       setSaving(false);
     }
@@ -129,9 +129,9 @@ export default function NotificationSettings() {
             t('settings.permissionRequired'),
             t('settings.notificationPermissionDenied'),
             [
-              { text: 'Cancel', style: 'cancel' },
+              { text: t('settings.cancel'), style: 'cancel' },
               { 
-                text: 'Open Settings', 
+                text: t('settings.openSettings'), 
                 style: 'default',
                 onPress: () => {
                   if (Platform.OS === 'ios') {
@@ -167,9 +167,9 @@ export default function NotificationSettings() {
             t('settings.permissionRequired'),
             t('settings.notificationPermissionDenied'),
             [
-              { text: 'Cancel', style: 'cancel' },
+              { text: t('settings.cancel'), style: 'cancel' },
               { 
-                text: 'Open Settings', 
+                text: t('settings.openSettings'), 
                 style: 'default',
                 onPress: () => {
                   if (Platform.OS === 'ios') {
@@ -197,7 +197,7 @@ export default function NotificationSettings() {
       }
     } catch (error) {
       console.error('❌ Error sending test notification:', error);
-      Alert.alert('Error', 'Failed to send test notification');
+      Alert.alert(t('settings.error'), t('settings.failedToSendTestNotification'));
     }
   };
 
@@ -231,7 +231,7 @@ export default function NotificationSettings() {
           <View style={styles.warningContent}>
             <Ionicons name="warning" size={20} color="#F59E0B" />
             <Text style={styles.warningText}>
-              Notifications are disabled in system settings. 
+              {t('settings.notificationsDisabledInSystem')}
             </Text>
             <TouchableOpacity 
               style={styles.settingsButton}
@@ -243,7 +243,7 @@ export default function NotificationSettings() {
                 }
               }}
             >
-              <Text style={styles.settingsButtonText}>Open Settings</Text>
+              <Text style={styles.settingsButtonText}>{t('settings.openSettings')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -364,7 +364,7 @@ export default function NotificationSettings() {
               </View>
 
               {/* Test Notification Button */}
-              <TouchableOpacity
+              {__DEV__  &&(<TouchableOpacity
                 style={styles.testButton}
                 onPress={handleTestNotification}
                 disabled={saving}
@@ -374,7 +374,7 @@ export default function NotificationSettings() {
                   {__DEV__ ? t('settings.sendTestDev') : t('settings.sendTest')}
                 </Text>
                 {__DEV__ && <Text style={styles.devBadge}>DEV</Text>}
-              </TouchableOpacity>
+              </TouchableOpacity>)}
             </View>
           )}
         </View>

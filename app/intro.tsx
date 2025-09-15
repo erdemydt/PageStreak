@@ -3,17 +3,18 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Animated,
-    Dimensions,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Animated,
+  Dimensions,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { execute } from '../db/db';
 import NotificationService from '../services/notificationService';
@@ -676,7 +677,11 @@ export default function IntroScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.headerContainer}>
-
+            <Image 
+              source={require('../assets/images/Logo.png')} 
+              style={styles.welcomeLogo}
+              resizeMode="contain"
+            />
             <Text style={styles.welcomeTitle}>Welcome to PageStreak!</Text>
             <Text style={styles.welcomeSubtitle}>
               Let's set up your reading journey in just a few steps
@@ -746,6 +751,11 @@ const styles = StyleSheet.create({
   headerContainer: {
     alignItems: 'center',
     marginBottom: 32,
+  },
+  welcomeLogo: {
+    width: 100,
+    height: 100,
+    marginBottom: 20,
   },
   welcomeEmoji: {
     fontSize: 64,

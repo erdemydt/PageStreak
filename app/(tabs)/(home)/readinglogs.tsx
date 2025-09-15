@@ -1,4 +1,5 @@
 
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +15,8 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { ReadingSession, execute, queryAll } from '../../../db/db';
+import WeeklyStatsView from '../../../components/WeeklyStatsView';
+import { EnhancedBook, execute, queryAll, ReadingSession } from '../../../db/db';
 interface WeekDay {
   date: string;
   day: string;
@@ -150,6 +152,87 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
   );
 }
 
+// Development utility function to generate random reading data
+const generateRandomReadingData = async (): Promise<void> => {
+  try {
+    // Check if we're in development mode
+    if (!__DEV__) {
+      console.log('⚠️ Random data generation is only available in development mode');
+      return;
+    }
+
+    // Get currently reading books
+    const currentlyReadingBooks = await queryAll<EnhancedBook>(
+      `SELECT * FROM enhanced_books 
+       WHERE reading_status = 'currently_reading' 
+       ORDER BY date_started DESC, date_added DESC`
+    );
+
+    if (currentlyReadingBooks.length === 0) {
+      Alert.alert(
+        'No Currently Reading Books',
+        'Please add some books with "currently reading" status first.'
+      );
+      return;
+    }
+
+    // Generate 20 random reading sessions
+    const sessions = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 20; i++) {
+      // Generate random date within the last 30 days
+      const daysBack = Math.floor(Math.random() * 30);
+      const sessionDate = new Date(today);
+      sessionDate.setDate(today.getDate() - daysBack);
+      
+      // Generate random time between 1-5 PM (13:00-17:00)
+      const hour = 13 + Math.floor(Math.random() * 4); // 13, 14, 15, or 16
+      const minute = Math.floor(Math.random() * 60);
+      sessionDate.setHours(hour, minute, 0, 0);
+      
+      // Random reading time between 1-20 minutes
+      const minutesRead = 1 + Math.floor(Math.random() * 20);
+      
+      // Random book selection
+      const randomBook = currentlyReadingBooks[Math.floor(Math.random() * currentlyReadingBooks.length)];
+      
+      // Format date as YYYY-MM-DD
+      const dateString = sessionDate.toISOString().split('T')[0];
+      
+      // Create session with timestamp including hour
+      const createdAt = sessionDate.toISOString();
+      
+      sessions.push({
+        book_id: randomBook.id,
+        minutes_read: minutesRead,
+        date: dateString,
+        created_at: createdAt,
+        notes: null
+      });
+    }
+
+    // Insert all sessions into the database
+    for (const session of sessions) {
+      await execute(
+        `INSERT INTO reading_sessions (book_id, minutes_read, date, created_at, notes) 
+         VALUES (?, ?, ?, ?, ?)`,
+        [session.book_id, session.minutes_read, session.date, session.created_at, session.notes]
+      );
+    }
+
+    console.log(`✅ Generated ${sessions.length} random reading sessions`);
+    Alert.alert(
+      'Random Data Generated',
+      `Successfully added ${sessions.length} random reading sessions across different days and hours.`
+    );
+
+  } catch (error) {
+    console.error('❌ Error generating random data:', error);
+    Alert.alert('Error', 'Failed to generate random reading data');
+  }
+};
+
 export default function ReadingLogs() {
   const [weekData, setWeekData] = useState<WeekDay[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(new Date());
@@ -157,6 +240,9 @@ export default function ReadingLogs() {
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionWithBook | null>(null);
+  
+  const [isWeeklyView, setIsWeeklyView] = useState(false);
+  
   const { t } = useTranslation();
 
   const getLocalizedWeekday = (date: Date): string => {
@@ -305,6 +391,16 @@ export default function ReadingLogs() {
     }
   };
 
+  const handleGenerateRandomData = async () => {
+    try {
+      await generateRandomReadingData();
+      // Refresh the data after generation
+      loadWeekData();
+    } catch (error) {
+      console.error('Error generating random data:', error);
+    }
+  };
+
   const formatDate = (date: Date) => {
     const month = getLocalizedMonth(date.getMonth());
     const day = date.getDate();
@@ -319,15 +415,87 @@ export default function ReadingLogs() {
 
   if (loading) {
     return (
+
       <View style={[styles.container, styles.centered]}>
         <Text style={styles.loadingText}>{t('components.readingLogs.loadingText')}</Text>
+      </View>
+
+    );
+  }
+
+  if (isWeeklyView) {
+    return (
+      <View style={styles.container}>
+        {/* View Mode Toggle */}
+        <View style={styles.viewModeToggle}>
+          <TouchableOpacity
+            style={[styles.toggleButton, !isWeeklyView ? styles.toggleButtonActive : undefined]}
+            onPress={() => setIsWeeklyView(false)}
+          >
+            <Ionicons 
+              name="calendar" 
+              size={16} 
+              color={!isWeeklyView ? '#FFFFFF' : '#64748B'} 
+            />
+            <Text style={[styles.toggleText, !isWeeklyView ? styles.toggleTextActive : undefined]}>
+              {t('components.readingLogs.dailyView')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleButton, isWeeklyView ? styles.toggleButtonActive : undefined]}
+            onPress={() => setIsWeeklyView(true)}
+          >
+            <Ionicons 
+              name="analytics" 
+              size={16} 
+              color={isWeeklyView ? '#FFFFFF' : '#64748B'} 
+            />
+            <Text style={[styles.toggleText, isWeeklyView ? styles.toggleTextActive : undefined]}>
+              {t('components.readingLogs.analytics')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <WeeklyStatsView
+          weekStart={getWeekStart(currentWeekStart)}
+          onNavigateWeek={navigateWeek}
+          onGoToCurrentWeek={goToCurrentWeek}
+        />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* View Mode Toggle */}
+        <View style={styles.viewModeToggle}>
+          <TouchableOpacity
+            style={[styles.toggleButton, !isWeeklyView ? styles.toggleButtonActive : undefined]}
+            onPress={() => setIsWeeklyView(false)}
+          >
+            <Ionicons 
+              name="calendar" 
+              size={16} 
+              color={!isWeeklyView ? '#FFFFFF' : '#64748B'} 
+            />
+            <Text style={[styles.toggleText, !isWeeklyView ? styles.toggleTextActive : undefined]}>
+              {t('components.readingLogs.dailyView')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleButton, isWeeklyView ? styles.toggleButtonActive : undefined]}
+            onPress={() => setIsWeeklyView(true)}
+          >
+            <Ionicons 
+              name="analytics" 
+              size={16} 
+              color={isWeeklyView ? '#FFFFFF' : '#64748B'} 
+            />
+            <Text style={[styles.toggleText, isWeeklyView ? styles.toggleTextActive : undefined]}>
+              {t('components.readingLogs.analytics')}
+            </Text>
+          </TouchableOpacity>
+        </View>      {/* Header */}
       <View style={styles.header}>
         <View style={styles.weekNavigation}>
           <TouchableOpacity onPress={() => navigateWeek('prev')} style={styles.navButton}>
@@ -346,6 +514,19 @@ export default function ReadingLogs() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Development Only: Random Data Button */}
+      {__DEV__ && (
+        <View style={styles.devButtonContainer}>
+          <TouchableOpacity 
+            style={styles.devButton} 
+            onPress={handleGenerateRandomData}
+          >
+            <Ionicons name="flask" size={16} color="#FFFFFF" />
+            <Text style={styles.devButtonText}>Generate Random Data (20 sessions)</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Week Grid */}
       <ScrollView 
@@ -423,6 +604,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748B',
     fontWeight: '500',
+  },
+  viewModeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    padding: 4,
+    margin: 16,
+    marginBottom: 0,
+  },
+  toggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    gap: 6,
+  },
+  toggleButtonActive: {
+    backgroundColor: '#6C63FF',
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  toggleTextActive: {
+    color: '#FFFFFF',
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -661,5 +871,27 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontWeight: '600',
     textAlign: 'center',
+  },
+  
+  // Development button styles
+  devButtonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  devButton: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  devButtonText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

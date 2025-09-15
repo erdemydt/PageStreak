@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import NotificationService from '../services/notificationService';
 
 const NotificationTester: React.FC = () => {
+  const { t } = useTranslation();
   const [notificationStatus, setNotificationStatus] = useState<any>(null);
   const [isDev, setIsDev] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,49 +34,49 @@ const NotificationTester: React.FC = () => {
   const handleSendImmediateTest = async () => {
     try {
       await NotificationService.sendImmediateTestNotification();
-      Alert.alert('✅ Immediate Test Sent', 'Check your notification panel!');
+      Alert.alert(t('components.notificationTester.immediateTestSent'), t('components.notificationTester.checkNotificationPanel'));
     } catch (error) {
-      Alert.alert('❌ Error', 'Failed to send immediate test');
+      Alert.alert(t('components.notificationTester.error'), t('components.notificationTester.failedToSendImmediateTest'));
     }
   };
 
   const handleSchedule1MinuteTest = async () => {
     try {
       await NotificationService.scheduleTestNotification(1);
-      Alert.alert('🕐 Test Scheduled', 'Notification will appear in 1 minute!');
+      Alert.alert(t('components.notificationTester.testScheduled'), t('components.notificationTester.notificationIn1Minute'));
       await loadNotificationStatus();
     } catch (error) {
-      Alert.alert('❌ Error', 'Failed to schedule test');
+      Alert.alert(t('components.notificationTester.error'), t('components.notificationTester.failedToScheduleTest'));
     }
   };
 
   const handleSchedule5MinuteTest = async () => {
     try {
       await NotificationService.scheduleTestNotification(5);
-      Alert.alert('🕐 Test Scheduled', 'Notification will appear in 5 minutes!');
+      Alert.alert(t('components.notificationTester.testScheduled'), t('components.notificationTester.notificationIn5Minutes'));
       await loadNotificationStatus();
     } catch (error) {
-      Alert.alert('❌ Error', 'Failed to schedule test');
+      Alert.alert(t('components.notificationTester.error'), t('components.notificationTester.failedToScheduleTest'));
     }
   };
 
   const handleCheckSchedule = async () => {
     try {
       await NotificationService.checkAndScheduleNotification();
-      Alert.alert('✅ Schedule Check', 'Checked and scheduled based on app usage!');
+      Alert.alert(t('components.notificationTester.scheduleCheck'), t('components.notificationTester.checkedAndScheduled'));
       await loadNotificationStatus();
     } catch (error) {
-      Alert.alert('❌ Error', 'Failed to check schedule');
+      Alert.alert(t('components.notificationTester.error'), t('components.notificationTester.failedToCheckSchedule'));
     }
   };
 
   const handleCancelNotifications = async () => {
     try {
       await NotificationService.cancelScheduledNotification();
-      Alert.alert('🚫 Cancelled', 'All scheduled notifications cancelled!');
+      Alert.alert(t('components.notificationTester.cancelled'), t('components.notificationTester.allNotificationsCancelled'));
       await loadNotificationStatus();
     } catch (error) {
-      Alert.alert('❌ Error', 'Failed to cancel notifications');
+      Alert.alert(t('components.notificationTester.error'), t('components.notificationTester.failedToCancelNotifications'));
     }
   };
 
@@ -89,42 +91,42 @@ const NotificationTester: React.FC = () => {
           <Ionicons name="flask" size={24} color="#FF6B6B" />
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Notification Tester</Text>
-          <Text style={styles.subtitle}>Development testing tools</Text>
+          <Text style={styles.title}>{t('components.notificationTester.title')}</Text>
+          <Text style={styles.subtitle}>{t('components.notificationTester.subtitle')}</Text>
         </View>
         <View style={styles.devBadge}>
-          <Text style={styles.devBadgeText}>DEV</Text>
+          <Text style={styles.devBadgeText}>{t('components.notificationTester.devBadge')}</Text>
         </View>
       </View>
       
       {notificationStatus && (
         <View style={styles.statusContainer}>
-          <Text style={styles.statusTitle}>Current Status</Text>
+          <Text style={styles.statusTitle}>{t('components.notificationTester.currentStatus')}</Text>
           <View style={styles.statusGrid}>
             <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Enabled</Text>
+              <Text style={styles.statusLabel}>{t('components.notificationTester.enabled')}</Text>
               <Text style={styles.statusValue}>
                 {notificationStatus.enabled ? '✅' : '❌'}
               </Text>
             </View>
             <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Permission</Text>
+              <Text style={styles.statusLabel}>{t('components.notificationTester.permission')}</Text>
               <Text style={styles.statusValue}>
                 {notificationStatus.hasPermission ? '✅' : '❌'}
               </Text>
             </View>
             <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Scheduled</Text>
+              <Text style={styles.statusLabel}>{t('components.notificationTester.scheduled')}</Text>
               <Text style={styles.statusValue}>
                 {notificationStatus.scheduledNotifications}
               </Text>
             </View>
             <View style={styles.statusItemWide}>
-              <Text style={styles.statusLabel}>Last Opened</Text>
+              <Text style={styles.statusLabel}>{t('components.notificationTester.lastOpened')}</Text>
               <Text style={styles.statusValue}>
                 {notificationStatus.lastOpenedTime 
                   ? new Date(notificationStatus.lastOpenedTime).toLocaleString()
-                  : 'Never'
+                  : t('components.notificationTester.never')
                 }
               </Text>
             </View>
@@ -133,39 +135,39 @@ const NotificationTester: React.FC = () => {
       )}
 
       <View style={styles.actionsContainer}>
-        <Text style={styles.actionsTitle}>Test Actions</Text>
+        <Text style={styles.actionsTitle}>{t('components.notificationTester.testActions')}</Text>
         
         <View style={styles.buttonGrid}>
           <TouchableOpacity style={[styles.button, styles.immediateButton]} onPress={handleSendImmediateTest}>
             <Ionicons name="flash" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>Immediate Test</Text>
+            <Text style={styles.buttonText}>{t('components.notificationTester.immediateTest')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.button, styles.timedButton]} onPress={handleSchedule1MinuteTest}>
             <Ionicons name="time" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>1 Min Test</Text>
+            <Text style={styles.buttonText}>{t('components.notificationTester.oneMinuteTest')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.button, styles.timedButton]} onPress={handleSchedule5MinuteTest}>
             <Ionicons name="timer" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>5 Min Test</Text>
+            <Text style={styles.buttonText}>{t('components.notificationTester.fiveMinuteTest')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.button, styles.usageButton]} onPress={handleCheckSchedule}>
             <Ionicons name="analytics" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>Usage Test</Text>
+            <Text style={styles.buttonText}>{t('components.notificationTester.usageTest')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.controlButtons}>
           <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={handleCancelNotifications}>
             <Ionicons name="close-circle" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>Cancel All</Text>
+            <Text style={styles.buttonText}>{t('components.notificationTester.cancelAll')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.button, styles.refreshButton]} onPress={loadNotificationStatus}>
             <Ionicons name="refresh" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>Refresh Status</Text>
+            <Text style={styles.buttonText}>{t('components.notificationTester.refreshStatus')}</Text>
           </TouchableOpacity>
         </View>
       </View>

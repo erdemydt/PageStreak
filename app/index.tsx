@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { checkNotificationDatabaseIntegrity, execute, initializeDatabase, queryFirst, repairNotificationDatabase } from '../db/db';
 import NotificationService from '../services/notificationService';
 
@@ -175,7 +175,11 @@ export default function Index() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingEmoji}>📚</Text>
+        <Image 
+          source={require('../assets/images/Logo.png')} 
+          style={styles.loadingLogo}
+          resizeMode="contain"
+        />
         <Text style={styles.loadingText}>PageStreak</Text>
       </View>
     );
@@ -184,7 +188,11 @@ export default function Index() {
   // This component will only briefly show while navigation is happening
   return (
     <View style={styles.loadingContainer}>
-      <Text style={styles.loadingEmoji}>📚</Text>
+      <Image 
+        source={require('../assets/images/Logo.png')} 
+        style={styles.loadingLogo}
+        resizeMode="contain"
+      />
       <Text style={styles.loadingText}>Loading...</Text>
     </View>
   );
@@ -197,8 +205,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
   },
-  loadingEmoji: {
-    fontSize: 64,
+  loadingLogo: {
+    width: 80,
+    height: 80,
     marginBottom: 16,
   },
   loadingText: {

@@ -2,7 +2,15 @@
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 import BookCard from '../../../components/BookCard';
 import DailyProgressCard from '../../../components/DailyProgressCard';
@@ -159,7 +167,14 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
 
         <View style={styles.header}>
-          <Text style={styles.title}>{t('home.title')}</Text>
+          <View style={styles.titleContainer}>
+            <Image 
+              source={require('../../../assets/images/Logo.png')} 
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>{t('home.title')}</Text>
+          </View>
           {userPreferences && (
             <Text style={styles.subtitle}>{t('home.welcomeBack', { username: userPreferences.username })}</Text>
           )}
@@ -291,11 +306,20 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     alignItems: 'center',
   },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 4,
+  },
+  headerLogo: {
+    width: 32,
+    height: 32,
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#1E293B',
-    marginBottom: 4,
     textAlign: 'center',
   },
   subtitle: {

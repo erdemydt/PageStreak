@@ -266,7 +266,7 @@ const resources = {
         title: '📖 Book Library',
         subtitle: 'Discover and track your reading journey',
         addBookManually: 'Add Book Manually',
-        searchButton: '� Search Books',
+        searchButton: '🔍 Search Books',
         failedToLoad: 'Failed to load books. Please try again.',
         saving: 'Saving...',
         addBook: 'Add Book',

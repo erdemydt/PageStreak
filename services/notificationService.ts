@@ -208,7 +208,21 @@ export class NotificationService {
   }
 
   /**
+   * Check if this is a fresh app installation (no notification preferences exist yet)
+   */
+  async isFirstInstallation(): Promise<boolean> {
+    try {
+      const prefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
+      return !prefs;
+    } catch (error) {
+      // If we can't check, assume it's not a first install
+      return false;
+    }
+  }
+
+  /**
    * Create default notification preferences
+   * On first install, automatically request permissions and enable notifications if granted
    */
   private async createDefaultNotificationPreferences(): Promise<void> {
     try {
@@ -226,16 +240,55 @@ export class NotificationService {
         )
       `);
       
-      // Then insert or replace default values
+      // Check if this is a first-time installation
+      const existingPrefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
+      const isFirstInstall = !existingPrefs;
+      
+      // On first install, try to request notification permissions
+      let notificationsEnabled = true; // Default to true
+      let dailyRemindersEnabled = true; // Default to true
+      
+      if (isFirstInstall) {
+        console.log('🔔 First app installation detected, requesting notification permissions...');
+        
+        try {
+          const hasPermission = await this.requestPermissions();
+          if (hasPermission) {
+            console.log('✅ Notification permissions granted on first install');
+            notificationsEnabled = true;
+            dailyRemindersEnabled = true;
+          } else {
+            console.log('❌ Notification permissions denied on first install');
+            notificationsEnabled = false;
+            dailyRemindersEnabled = false;
+          }
+        } catch (permissionError) {
+          console.error('⚠️ Error requesting permissions on first install:', permissionError);
+          // Default to enabled in database, but they'll need to enable in system settings
+          notificationsEnabled = true;
+          dailyRemindersEnabled = true;
+        }
+      }
+      
+      // Insert or replace default values with permission-based settings
       await execute(`
         INSERT OR REPLACE INTO notification_preferences (
           id, notifications_enabled, daily_reminder_enabled, daily_reminder_hours_after_last_open,
           daily_reminder_title, daily_reminder_body, created_at, updated_at
-        ) VALUES (1, 1, 1, 5, 'Time to read! 📚', 
+        ) VALUES (1, ?, ?, 5, 'Time to read! 📚', 
           'You haven''t reached your daily reading goal yet. Keep your streak going!',
           datetime('now'), datetime('now'))
-      `);
-      console.log('🔔 Created default notification preferences');
+      `, [notificationsEnabled ? 1 : 0, dailyRemindersEnabled ? 1 : 0]);
+      
+      if (isFirstInstall) {
+        console.log('🔔 Created default notification preferences for first install:', {
+          notifications_enabled: notificationsEnabled,
+          daily_reminder_enabled: dailyRemindersEnabled,
+          daily_reminder_hours_after_last_open: 5
+        });
+      } else {
+        console.log('🔔 Updated existing notification preferences');
+      }
     } catch (error) {
       console.error('❌ Error creating default notification preferences:', error);
       throw error;

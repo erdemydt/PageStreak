@@ -430,22 +430,16 @@ async function createOrUpdateNotificationPreferencesTable(): Promise<void> {
     }
   }
 
-  // Ensure default preferences exist
+  // Ensure default preferences exist (will handle first-time permission request)
   try {
     const existingPrefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
     if (!existingPrefs) {
-      await execute(`
-        INSERT INTO notification_preferences (
-          id, notifications_enabled, daily_reminder_enabled, daily_reminder_hours_after_last_open,
-          daily_reminder_title, daily_reminder_body, created_at, updated_at
-        ) VALUES (1, 1, 1, 5, 'Time to read! 📚', 
-          'You haven''t reached your daily reading goal yet. Keep your streak going!',
-          datetime('now'), datetime('now'))
-      `);
-      console.log('🔔 Created default notification preferences');
+      // Don't create defaults here - let NotificationService handle first-time setup
+      // This ensures permission request happens at the right time
+      console.log('🔔 No notification preferences found - will be created by NotificationService when needed');
     }
   } catch (error) {
-    console.error('⚠️  Failed to create default notification preferences:', error);
+    console.error('⚠️  Failed to check notification preferences:', error);
   }
 
   console.log('✅ Created/verified notification_preferences table');

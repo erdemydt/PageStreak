@@ -12,9 +12,9 @@ export default function RootLayout() {
       try {
         await NotificationService.onAppStateChange('active');
         
-        // Request permissions on first app launch (silently, no modal yet)
-        const hasPermission = await NotificationService.requestPermissions();
-        console.log(`🔔 Notification permissions: ${hasPermission ? 'granted' : 'denied'}`);
+        // Don't request permissions here - let the first-time setup handle it
+        // This prevents duplicate permission requests
+        console.log('🔔 Notification service app state tracking initialized');
       } catch (error) {
         console.error('❌ Error initializing notifications:', error);
       }

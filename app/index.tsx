@@ -51,6 +51,14 @@ export default function Index() {
       try {
         await NotificationService.reset();
         
+        // Get or create notification preferences (this will handle first-time permission request)
+        const notificationPrefs = await NotificationService.getNotificationPreferences();
+        console.log('🔔 Notification preferences initialized:', {
+          enabled: notificationPrefs?.notifications_enabled,
+          reminders: notificationPrefs?.daily_reminder_enabled,
+          hours: notificationPrefs?.daily_reminder_hours_after_last_open
+        });
+        
         // Sync system permissions with database preferences
         await NotificationService.syncPermissionsWithDatabase();
         

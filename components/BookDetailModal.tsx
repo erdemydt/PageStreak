@@ -11,6 +11,7 @@ import {
     View
 } from 'react-native';
 import { EnhancedBook, queryFirst } from '../db/db';
+import { getEnhancedBookProgress } from '../utils/readingProgress';
 import BookStatusModal, { BookStatus } from './BookStatusModal';
 interface BookDetailModalProps {
   visible: boolean;
@@ -35,6 +36,12 @@ export default function BookDetailModal({
   // State to hold the first reading date
   const [firstReadingDate, setFirstReadingDate] = useState<string | null>(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [progressData, setProgressData] = useState<{
+    pagesRead: number;
+    percentage: number;
+    isComplete: boolean;
+    source: 'sessions' | 'current_page' | 'none';
+  }>({ pagesRead: 0, percentage: 0, isComplete: false, source: 'none' });
   
   // Animation values for status modal
   const statusModalFadeAnim = useRef(new Animated.Value(0)).current;
@@ -43,8 +50,16 @@ export default function BookDetailModal({
   useEffect(() => {
     if (book && visible) {
       loadFirstReadingDate();
+      loadProgressData();
     }
   }, [book, visible]);
+
+  const loadProgressData = async () => {
+    if (!book) return;
+    
+    const progress = await getEnhancedBookProgress(book.id, book.page, book.current_page || 0);
+    setProgressData(progress);
+  };
 
   const loadFirstReadingDate = async () => {
     if (!book) return;
@@ -113,8 +128,8 @@ export default function BookDetailModal({
   };
 
   const getReadingProgress = () => {
-    if (book?.current_page && book?.page && book.current_page > 0) {
-      return Math.round((book.current_page / book.page) * 100);
+    if (book?.reading_status === 'currently_reading' && progressData.percentage > 0) {
+      return progressData.percentage;
     }
     return null;
   };
@@ -233,17 +248,43 @@ export default function BookDetailModal({
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>{t("components.bookDetailModal.readingProgress")}</Text>
                 <View style={styles.progressContainer}>
-                  <View style={styles.progressBar}>
-                    <View 
-                      style={[
-                        styles.progressFill, 
-                        { width: `${progress}%` }
-                      ]} 
-                    />
+                  <View style={styles.progressHeader}>
+                    <View style={styles.progressStats}>
+                      <Text style={styles.progressPercentage}>{progress}%</Text>
+                      <Text style={styles.progressLabel}>Complete</Text>
+                    </View>
+                    <View style={styles.progressStats}>
+                      <Text style={styles.progressValue}>{progressData.pagesRead}</Text>
+                      <Text style={styles.progressLabel}>Pages Read</Text>
+                    </View>
+                    <View style={styles.progressStats}>
+                      <Text style={styles.progressValue}>{book.page - progressData.pagesRead}</Text>
+                      <Text style={styles.progressLabel}>Remaining</Text>
+                    </View>
                   </View>
-                  <Text style={styles.progressText}>
-                    {t("components.bookDetailModal.progressText", { pagesRead: book.current_page, totalPages: book.page, percentage: progress }) }
-                  </Text>
+                  
+                  <View style={styles.progressBarContainer}>
+                    <View style={styles.progressBar}>
+                      <View 
+                        style={[
+                          styles.progressFill, 
+                          { width: `${progress}%` },
+                          progress >= 100 && styles.progressComplete
+                        ]} 
+                      />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.progressFooter}>
+                    <Text style={styles.progressText}>
+                      {progressData.pagesRead} of {book.page} pages
+                    </Text>
+                    {progressData.source === 'sessions' && (
+                      <View style={styles.trackingBadge}>
+                        <Text style={styles.trackingText}>📊 Session Tracked</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
             )}
@@ -488,26 +529,77 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     backgroundColor: '#F8FAFC',
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  progressStats: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  progressPercentage: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#3B82F6',
+    marginBottom: 2,
+  },
+  progressValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  progressLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  progressBarContainer: {
+    marginBottom: 16,
   },
   progressBar: {
-    height: 8,
+    height: 10,
     backgroundColor: '#E2E8F0',
-    borderRadius: 4,
+    borderRadius: 5,
     overflow: 'hidden',
-    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#3B82F6',
-    borderRadius: 4,
+    borderRadius: 5,
+  },
+  progressComplete: {
+    backgroundColor: '#10B981',
+  },
+  progressFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   progressText: {
     fontSize: 14,
     color: '#64748B',
     fontWeight: '500',
-    textAlign: 'center',
+  },
+  trackingBadge: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  trackingText: {
+    fontSize: 11,
+    color: '#1E40AF',
+    fontWeight: '600',
   },
   statsGrid: {
     flexDirection: 'row',

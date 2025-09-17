@@ -15,4 +15,23 @@ export type UserPreferences = {
   weekly_reading_rate_increase_minutes_percentage?: number;
 };
 
+// Reading Session type for tracking reading progress
+export type ReadingSession = {
+  id: number;
+  book_id: number;
+  minutes_read: number;
+  pages_read?: number; // Optional: pages read in this session
+  date: string; // YYYY-MM-DD format
+  created_at: string;
+  notes?: string;
+};
+
+// Progress calculation result type
+export type BookProgress = {
+  pagesRead: number;
+  percentage: number;
+  isComplete: boolean;
+  source: 'sessions' | 'current_page' | 'none';
+};
+
 export type Step = 1 | 2 | 3;

@@ -10,7 +10,7 @@ export type DBResult<T = any> = SQLiteExecuteAsyncResult<T>;
 let isInitialized = false;
 
 // Current database schema version
-const CURRENT_DB_VERSION = 2;
+const CURRENT_DB_VERSION = 3;
 
 // Type for column definitions
 type ColumnDefinition = {
@@ -50,6 +50,7 @@ export type ReadingSession = {
   id: number;
   book_id: number;
   minutes_read: number;
+  pages_read?: number; // Optional: pages read in this session
   date: string; // YYYY-MM-DD format
   created_at: string;
   notes?: string;
@@ -347,7 +348,8 @@ async function createOrUpdateReadingSessionsTable(): Promise<void> {
 
   // Define all required columns
   const requiredColumns: ColumnDefinition[] = [
-    { name: 'notes', type: 'TEXT' }
+    { name: 'notes', type: 'TEXT' },
+    { name: 'pages_read', type: 'INTEGER' } // New optional column for pages read in this session
   ];
 
   // Add missing columns

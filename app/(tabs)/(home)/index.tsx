@@ -44,6 +44,7 @@ export default function HomeScreen() {
   const [showReadingLogger, setShowReadingLogger] = useState(false);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [readingStreak, setReadingStreak] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Load data on mount and when screen comes into focus
   useEffect(() => {
@@ -154,12 +155,16 @@ export default function HomeScreen() {
   const progressPercentage = yearlyGoal > 0 ? Math.min((booksRead / yearlyGoal) * 100, 100) : 0;
 
   const renderBook = ({ item }: { item: EnhancedBook }) => (
-    <BookCard book={item} compact={true} />
+    <BookCard book={item} compact={true} refreshTrigger={refreshTrigger} />
   );
 
   const handleReadingLoggerSuccess = () => {
     loadTodayProgress();
     loadReadingStreak();
+    // Refresh books data to trigger BookCard re-renders with updated progress
+    loadData();
+    // Increment refresh trigger to force BookCard re-renders
+    setRefreshTrigger(prev => prev + 1);
   };
   const topPart = () => 
      (
@@ -266,6 +271,7 @@ export default function HomeScreen() {
 
     <View style={styles.container}>
       <FlatList
+        key={`books-list-${refreshTrigger}`}
         data={books.slice(0, 4)} // Show only recent 4 books
         keyExtractor={item => item.id.toString()}
         renderItem={renderBook}

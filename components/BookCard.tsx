@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { EnhancedBook } from '../db/db';
+import { getEnhancedBookProgress } from '../utils/readingProgress';
 
 interface BookCardProps {
   book: EnhancedBook;
@@ -13,6 +16,7 @@ interface BookCardProps {
   readingTimeMinutes?: number;
   compact?: boolean;
   smaller?: boolean;
+  refreshTrigger?: number;
 }
 
 export default function BookCard({ 
@@ -25,9 +29,31 @@ export default function BookCard({
   showReadingTime = false,
   readingTimeMinutes = 0,
   compact = false,
-  smaller = false 
+  smaller = false,
+  refreshTrigger = 0
 }: BookCardProps) {
   const { t } = useTranslation();
+  const [progressData, setProgressData] = useState<{
+    pagesRead: number;
+    percentage: number;
+    isComplete: boolean;
+    source: 'sessions' | 'current_page' | 'none';
+  }>({ pagesRead: 0, percentage: 0, isComplete: false, source: 'none' });
+
+  useEffect(() => {
+    const loadProgress = async () => {
+      const progress = await getEnhancedBookProgress(book.id, book.page, book.current_page || 0);
+      setProgressData(progress);
+    };
+    
+    if (book.reading_status === 'currently_reading') {
+      loadProgress();
+    } else {
+      // Reset progress data for non-currently-reading books
+      setProgressData({ pagesRead: 0, percentage: 0, isComplete: false, source: 'none' });
+    }
+  }, [book.id, book.page, book.current_page, book.reading_status, refreshTrigger]);
+  
   const formatReadingTime = (minutes: number) => {
     if (minutes < 60) {
       return `${minutes} ${t('components.readingTimeLogger.minutesShort')}`;
@@ -71,16 +97,105 @@ export default function BookCard({
   };
 
   const getReadingProgress = () => {
-    if (book.current_page && book.page && book.current_page > 0) {
-      return Math.round((book.current_page / book.page) * 100);
+    if (book.reading_status === 'currently_reading' && progressData.percentage > 0) {
+      return progressData.percentage;
     }
     return null;
   };
 
   const progress = getReadingProgress();
 
-  if (compact) {
+  const getProgressColor = (percentage: number) => {
+    if (percentage >= 100) return '#10B981'; // Green - Complete
+    if (percentage >= 75) return '#F59E0B'; // Orange - Almost done
+    if (percentage >= 50) return '#3B82F6'; // Blue - Good progress
+    if (percentage >= 25) return '#c3f65cff'; // Purple - Getting started
+    return '#f1c9e2ff'; // Gray - Just started/no progress
+  };
+
+  const ProgressBorder = ({ children, percentage, marginBottom = 12 }: {
+    children: React.ReactNode;
+    percentage: number;
+    marginBottom?: number;
+  }) => {
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const borderRadius = 12;
+    const strokeWidth = 3;
+    const padding = strokeWidth / 2;
+    const progressColor = getProgressColor(percentage);
+    
+    // Calculate the rounded rectangle path - adjusted to exclude marginBottom
+    const createRoundedRectPath = (width: number, height: number, radius: number) => {
+      const w = width - 2 * padding;
+      const h = height - 2 * padding - marginBottom; // Subtract marginBottom from height
+      const r = radius;
+      
+      // Start from top-left, going clockwise
+      return `
+        M ${padding + r} ${padding}
+        L ${padding + w - r} ${padding}
+        Q ${padding + w} ${padding} ${padding + w} ${padding + r}
+        L ${padding + w} ${padding + h - r}
+        Q ${padding + w} ${padding + h} ${padding + w - r} ${padding + h}
+        L ${padding + r} ${padding + h}
+        Q ${padding} ${padding + h} ${padding} ${padding + h - r}
+        L ${padding} ${padding + r}
+        Q ${padding} ${padding} ${padding + r} ${padding}
+        Z
+      `.trim();
+    };
+    
+    // Calculate path perimeter for stroke animation
+    const calculatePerimeter = (width: number, height: number, radius: number) => {
+      const w = width - 2 * padding;
+      const h = height - 2 * padding - marginBottom; // Subtract marginBottom from height
+      const r = radius;
+      
+      // Perimeter = 2(w + h) - 8r + 2πr
+      return 2 * (w + h) - 8 * r + 2 * Math.PI * r;
+    };
+    
+    const handleLayout = (event: any) => {
+      const { width, height } = event.nativeEvent.layout;
+      setDimensions({ width, height });
+    };
+    
+    const pathData = dimensions.width > 0 ? createRoundedRectPath(dimensions.width, dimensions.height, borderRadius) : '';
+    const perimeter = dimensions.width > 0 ? calculatePerimeter(dimensions.width, dimensions.height, borderRadius) : 0;
+    const dashOffset = perimeter * (1 - percentage / 100);
+    
     return (
+      <View style={styles.progressBorderContainer} onLayout={handleLayout}>
+        {/* SVG Progress Overlay */}
+        {dimensions.width > 0 && percentage > 0 && (
+          <Svg
+            width={dimensions.width}
+            height={dimensions.height - marginBottom} // Adjust SVG height to exclude marginBottom
+            style={styles.progressBorderSvg}
+            pointerEvents="none"
+          >
+            <Path
+              d={pathData}
+              stroke={progressColor}
+              strokeWidth={strokeWidth}
+              strokeDasharray={perimeter}
+              strokeDashoffset={dashOffset}
+              strokeLinecap="round"
+              fill="none"
+            />
+          </Svg>
+        )}
+        
+        {/* Content */}
+        <View style={styles.progressBorderContent}>
+          {children}
+        </View>
+      </View>
+    );
+  };
+
+  if (compact) {
+    const compactCard = (
       <TouchableOpacity style={styles.compactCard} onPress={onPress}>
         <View style={styles.compactCoverContainer}>
           {book.cover_url ? (
@@ -107,10 +222,16 @@ export default function BookCard({
         </View>
       </TouchableOpacity>
     );
+
+    return progress !== null && book.reading_status === 'currently_reading' ? (
+      <ProgressBorder percentage={progress} marginBottom={8}>
+        {compactCard}
+      </ProgressBorder>
+    ) : compactCard;
   }
 
   if (smaller) {
-    return (
+    const smallerCard = (
       <TouchableOpacity style={styles.smallerCard} onPress={onPress}>
         <View style={styles.smallerCoverContainer}>
           {book.cover_url ? (
@@ -162,9 +283,16 @@ export default function BookCard({
         )}
       </TouchableOpacity>
     );
+
+    return progress !== null && book.reading_status === 'currently_reading' ? (
+      <ProgressBorder percentage={progress} marginBottom={8}>
+        {smallerCard}
+      </ProgressBorder>
+    ) : smallerCard;
   }
 
-  return (
+  // Main card
+  const mainCard = (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.cardContent}>
         <View style={styles.coverContainer}>
@@ -231,20 +359,6 @@ export default function BookCard({
             </View>
           )}
           
-          {progress !== null && book.reading_status === 'currently_reading' && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View 
-                  style={[
-                    styles.progressFill, 
-                    { width: `${progress}%` }
-                  ]} 
-                />
-              </View>
-              <Text style={styles.progressText}>{progress}% {t('components.bookCard.complete')}</Text>
-            </View>
-          )}
-          
           {book.rating && (
             <View style={styles.ratingContainer}>
               <Text style={styles.rating}>⭐ {book.rating.toFixed(1)}</Text>
@@ -266,6 +380,12 @@ export default function BookCard({
       </View>
     </TouchableOpacity>
   );
+
+  return progress !== null && book.reading_status === 'currently_reading' ? (
+    <ProgressBorder percentage={progress}>
+      {mainCard}
+    </ProgressBorder>
+  ) : mainCard;
 }
 
 const styles = StyleSheet.create({
@@ -360,26 +480,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#FFFFFF',
     opacity: 0.8,
-  },
-  progressContainer: {
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 4,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#3B82F6',
-    borderRadius: 2,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
   },
   ratingContainer: {
     marginBottom: 8,
@@ -553,5 +653,17 @@ const styles = StyleSheet.create({
   },
   smallerDeleteButtonText: {
     fontSize: 12,
+  },
+  // Progress Border Styles
+  progressBorderContainer: {
+    position: 'relative',
+  },
+  progressBorderSvg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  progressBorderContent: {
+    padding: 3,
   },
 });

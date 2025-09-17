@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import WeeklyStatsView from '../../../components/WeeklyStatsView';
 import { EnhancedBook, execute, queryAll, ReadingSession } from '../../../db/db';
+import { getEnhancedBookProgress, syncBookCurrentPageFromSessions } from '../../../utils/readingProgress';
 interface WeekDay {
   date: string;
   day: string;
@@ -35,7 +36,7 @@ interface EditSessionModalProps {
   visible: boolean;
   session: SessionWithBook | null;
   onClose: () => void;
-  onSave: (sessionId: number, minutes: number, notes: string) => void;
+  onSave: (sessionId: number, minutes: number, notes: string, pages?: number) => void;
   onDelete: (sessionId: number) => void;
 }
 
@@ -43,19 +44,67 @@ const { width: screenWidth } = Dimensions.get('window');
 
 function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditSessionModalProps) {
   const [minutes, setMinutes] = useState('');
+  const [pages, setPages] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [bookData, setBookData] = useState<EnhancedBook | null>(null);
+  const [remainingPages, setRemainingPages] = useState<number>(0);
   const { t } = useTranslation();
 
   useEffect(() => {
+    const loadBookData = async () => {
+      if (session) {
+        try {
+          const books = await queryAll<EnhancedBook>(
+            'SELECT * FROM enhanced_books WHERE id = ?',
+            [session.book_id]
+          );
+          if (books.length > 0) {
+            setBookData(books[0]);
+          }
+        } catch (error) {
+          console.error('Error loading book data:', error);
+        }
+      }
+    };
+
     if (session) {
       setMinutes(session.minutes_read.toString());
+      setPages(session.pages_read ? session.pages_read.toString() : '');
       setNotes(session.notes || '');
+      loadBookData();
     } else {
       setMinutes('');
+      setPages('');
       setNotes('');
+      setBookData(null);
     }
   }, [session]);
+
+  const calculateRemainingPages = async () => {
+    if (!bookData || !session) {
+      setRemainingPages(0);
+      return;
+    }
+    
+    try {
+      const progress = await getEnhancedBookProgress(bookData.id, bookData.page, bookData.current_page || 0);
+      const remaining = bookData.page - progress.pagesRead;
+      // Add back the pages from the current session being edited, since we can modify them
+      const sessionPages = session.pages_read || 0;
+      setRemainingPages(Math.max(0, remaining + sessionPages));
+    } catch (error) {
+      console.error('Error calculating remaining pages:', error);
+      const sessionPages = session.pages_read || 0;
+      setRemainingPages(bookData.page - (bookData.current_page || 0) + sessionPages);
+    }
+  };
+
+  useEffect(() => {
+    if (bookData) {
+      calculateRemainingPages();
+    }
+  }, [bookData]);
 
   const handleSave = async () => {
     if (!session || !minutes.trim() || isNaN(Number(minutes)) || Number(minutes) <= 0) {
@@ -63,9 +112,29 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
       return;
     }
 
+    // Validate pages if provided
+    if (pages.trim() && (isNaN(Number(pages)) || Number(pages) <= 0)) {
+      Alert.alert(t('components.readingLogsEditModal.invalidInput'), t('components.readingTimeLogger.enterValidPages'));
+      return;
+    }
+
+    // Validate pages don't exceed remaining pages
+    if (pages.trim() && Number(pages) > remainingPages) {
+      Alert.alert(
+        t('components.readingTimeLogger.tooManyPages'),
+        t('components.readingTimeLogger.tooManyPagesMessage', {
+          pages: Number(pages),
+          remaining: remainingPages,
+          bookName: bookData?.name || 'Unknown Book'
+        })
+      );
+      return;
+    }
+
     setLoading(true);
     try {
-      await onSave(session.id, Number(minutes), notes.trim());
+      const pagesValue = pages.trim() ? Number(pages) : undefined;
+      await onSave(session.id, Number(minutes), notes.trim(), pagesValue);
       onClose();
     } catch (error) {
       Alert.alert(t('components.readingLogsEditModal.updateError'), t('components.readingLogsEditModal.updateErrorMessage'));
@@ -76,7 +145,7 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
 
   const handleDelete = () => {
     if (!session) return;
-    
+
     Alert.alert(
       t('components.readingLogsEditModal.deleteConfirmTitle'),
       t('components.readingLogsEditModal.deleteConfirmMessage'),
@@ -131,6 +200,76 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
             />
           </View>
 
+          {/* Pages Input */}
+          <View style={styles.modalSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.modalSectionTitle}>{t('components.readingTimeLogger.pagesRead')}</Text>
+              <View style={styles.optionalBadge}>
+                <Text style={styles.optionalText}>{t('components.readingTimeLogger.optional')}</Text>
+              </View>
+            </View>
+            {bookData && (
+              <Text style={styles.sectionSubtitle}>
+                {t('components.readingTimeLogger.trackPagesDescription')}
+              </Text>
+            )}
+            
+            {bookData && (
+              <View style={styles.remainingPagesInfo}>
+                <Text style={styles.remainingPagesText}>
+                  {(session.pages_read || 0) > 0 
+                    ? t('components.readingTimeLogger.remainingPagesForEdit', { 
+                        remaining: remainingPages, 
+                        total: bookData.page,
+                        current: session.pages_read || 0
+                      })
+                    : t('components.readingTimeLogger.remainingPages', { 
+                        remaining: remainingPages, 
+                        total: bookData.page 
+                      })
+                  }
+                </Text>
+              </View>
+            )}
+            
+            <TextInput
+              style={styles.modalInput}
+              value={pages}
+              onChangeText={setPages}
+              keyboardType="numeric"
+              placeholder={bookData ? t('components.readingTimeLogger.enterPagesPlaceholder', { max: remainingPages }) : t('components.readingTimeLogger.selectBookFirst')}
+              editable={!!bookData && remainingPages > 0}
+            />
+            
+            {bookData && pages.trim() && !isNaN(Number(pages)) && Number(pages) > 0 && Number(pages) <= remainingPages && (
+              <View style={styles.progressPreview}>
+                <Text style={styles.progressPreviewText}>
+                  {(session.pages_read || 0) > 0 
+                    ? t('components.readingTimeLogger.progressPreviewForEdit', { 
+                        pages: Number(pages),
+                        oldPages: session.pages_read || 0,
+                        bookName: bookData.name,
+                        total: bookData.page 
+                      })
+                    : t('components.readingTimeLogger.progressPreview', { 
+                        pages: Number(pages), 
+                        bookName: bookData.name, 
+                        total: bookData.page 
+                      })
+                  }
+                </Text>
+              </View>
+            )}
+
+            {pages.trim() && Number(pages) > remainingPages && (
+              <View style={styles.warningContainer}>
+                <Text style={styles.warningText}>
+                  {t('components.readingTimeLogger.tooManyPagesWarning', { remaining: remainingPages })}
+                </Text>
+              </View>
+            )}
+          </View>
+
           <View style={styles.modalSection}>
             <Text style={styles.modalSectionTitle}>{t('components.readingLogsEditModal.notesLabel')}</Text>
             <TextInput
@@ -179,30 +318,30 @@ const generateRandomReadingData = async (): Promise<void> => {
     // Generate 20 random reading sessions
     const sessions = [];
     const today = new Date();
-    
+
     for (let i = 0; i < 20; i++) {
       // Generate random date within the last 30 days
       const daysBack = Math.floor(Math.random() * 30);
       const sessionDate = new Date(today);
       sessionDate.setDate(today.getDate() - daysBack);
-      
+
       // Generate random time between 1-5 PM (13:00-17:00)
       const hour = 13 + Math.floor(Math.random() * 4); // 13, 14, 15, or 16
       const minute = Math.floor(Math.random() * 60);
       sessionDate.setHours(hour, minute, 0, 0);
-      
+
       // Random reading time between 1-20 minutes
       const minutesRead = 1 + Math.floor(Math.random() * 20);
-      
+
       // Random book selection
       const randomBook = currentlyReadingBooks[Math.floor(Math.random() * currentlyReadingBooks.length)];
-      
+
       // Format date as YYYY-MM-DD
       const dateString = sessionDate.toISOString().split('T')[0];
-      
+
       // Create session with timestamp including hour
       const createdAt = sessionDate.toISOString();
-      
+
       sessions.push({
         book_id: randomBook.id,
         minutes_read: minutesRead,
@@ -240,9 +379,9 @@ export default function ReadingLogs() {
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionWithBook | null>(null);
-  
+
   const [isWeeklyView, setIsWeeklyView] = useState(false);
-  
+
   const { t } = useTranslation();
 
   const getLocalizedWeekday = (date: Date): string => {
@@ -282,12 +421,12 @@ export default function ReadingLogs() {
   const getWeekDates = (startDate: Date): WeekDay[] => {
     const dates: WeekDay[] = [];
     const today = new Date().toISOString().split('T')[0];
-    
+
     for (let i = 0; i < 7; i++) {
       const date = new Date(startDate);
       date.setDate(startDate.getDate() + i);
       const dateString = date.toISOString().split('T')[0];
-      
+
       dates.push({
         date: dateString,
         day: getLocalizedWeekday(date),
@@ -305,7 +444,7 @@ export default function ReadingLogs() {
       const weekStart = getWeekStart(currentWeekStart);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
-      
+
       const startDateString = weekStart.toISOString().split('T')[0];
       const endDateString = weekEnd.toISOString().split('T')[0];
 
@@ -320,7 +459,7 @@ export default function ReadingLogs() {
 
       // Initialize week data
       const weekDates = getWeekDates(weekStart);
-      
+
       // Group sessions by date
       const sessionsByDate = sessions.reduce((acc, session) => {
         if (!acc[session.date]) {
@@ -366,12 +505,31 @@ export default function ReadingLogs() {
     setEditModalVisible(true);
   };
 
-  const handleUpdateSession = async (sessionId: number, minutes: number, notes: string) => {
+  const handleUpdateSession = async (sessionId: number, minutes: number, notes: string, pages?: number) => {
     try {
-      await execute(
-        `UPDATE reading_sessions SET minutes_read = ?, notes = ? WHERE id = ?`,
-        [minutes, notes || null, sessionId]
+      // Get the session to find the book_id
+      const sessions = await queryAll<ReadingSession>(
+        'SELECT * FROM reading_sessions WHERE id = ?',
+        [sessionId]
       );
+
+      if (sessions.length === 0) {
+        throw new Error('Session not found');
+      }
+
+      const session = sessions[0];
+
+      // Update the session
+      await execute(
+        `UPDATE reading_sessions SET minutes_read = ?, notes = ?, pages_read = ? WHERE id = ?`,
+        [minutes, notes || null, pages || null, sessionId]
+      );
+
+      // If pages were updated, sync the book's current page from all sessions
+      if (pages !== undefined) {
+        await syncBookCurrentPageFromSessions(session.book_id);
+      }
+
       loadWeekData();
       Alert.alert(t('components.readingLogsEditModal.updateSuccess'), t('components.readingLogsEditModal.updateSuccessMessage'));
     } catch (error) {
@@ -382,7 +540,26 @@ export default function ReadingLogs() {
 
   const handleDeleteSession = async (sessionId: number) => {
     try {
+      // Get the session to find the book_id before deleting
+      const sessions = await queryAll<ReadingSession>(
+        'SELECT * FROM reading_sessions WHERE id = ?',
+        [sessionId]
+      );
+
+      if (sessions.length === 0) {
+        throw new Error('Session not found');
+      }
+
+      const session = sessions[0];
+
+      // Delete the session
       await execute(`DELETE FROM reading_sessions WHERE id = ?`, [sessionId]);
+
+      // If the session had pages, sync the book's current page from remaining sessions
+      if (session.pages_read) {
+        await syncBookCurrentPageFromSessions(session.book_id);
+      }
+
       loadWeekData();
       Alert.alert(t('components.readingLogsEditModal.deleteSuccess'), t('components.readingLogsEditModal.deleteSuccessMessage'));
     } catch (error) {
@@ -415,11 +592,9 @@ export default function ReadingLogs() {
 
   if (loading) {
     return (
-
       <View style={[styles.container, styles.centered]}>
         <Text style={styles.loadingText}>{t('components.readingLogs.loadingText')}</Text>
       </View>
-
     );
   }
 
@@ -432,10 +607,10 @@ export default function ReadingLogs() {
             style={[styles.toggleButton, !isWeeklyView ? styles.toggleButtonActive : undefined]}
             onPress={() => setIsWeeklyView(false)}
           >
-            <Ionicons 
-              name="calendar" 
-              size={16} 
-              color={!isWeeklyView ? '#FFFFFF' : '#64748B'} 
+            <Ionicons
+              name="calendar"
+              size={16}
+              color={!isWeeklyView ? '#FFFFFF' : '#64748B'}
             />
             <Text style={[styles.toggleText, !isWeeklyView ? styles.toggleTextActive : undefined]}>
               {t('components.readingLogs.dailyView')}
@@ -445,17 +620,17 @@ export default function ReadingLogs() {
             style={[styles.toggleButton, isWeeklyView ? styles.toggleButtonActive : undefined]}
             onPress={() => setIsWeeklyView(true)}
           >
-            <Ionicons 
-              name="analytics" 
-              size={16} 
-              color={isWeeklyView ? '#FFFFFF' : '#64748B'} 
+            <Ionicons
+              name="analytics"
+              size={16}
+              color={isWeeklyView ? '#FFFFFF' : '#64748B'}
             />
             <Text style={[styles.toggleText, isWeeklyView ? styles.toggleTextActive : undefined]}>
               {t('components.readingLogs.analytics')}
             </Text>
           </TouchableOpacity>
         </View>
-      
+
         <WeeklyStatsView
           weekStart={getWeekStart(currentWeekStart)}
           onNavigateWeek={navigateWeek}
@@ -468,47 +643,49 @@ export default function ReadingLogs() {
   return (
     <View style={styles.container}>
       {/* View Mode Toggle */}
-        <View style={styles.viewModeToggle}>
-          <TouchableOpacity
-            style={[styles.toggleButton, !isWeeklyView ? styles.toggleButtonActive : undefined]}
-            onPress={() => setIsWeeklyView(false)}
-          >
-            <Ionicons 
-              name="calendar" 
-              size={16} 
-              color={!isWeeklyView ? '#FFFFFF' : '#64748B'} 
-            />
-            <Text style={[styles.toggleText, !isWeeklyView ? styles.toggleTextActive : undefined]}>
-              {t('components.readingLogs.dailyView')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.toggleButton, isWeeklyView ? styles.toggleButtonActive : undefined]}
-            onPress={() => setIsWeeklyView(true)}
-          >
-            <Ionicons 
-              name="analytics" 
-              size={16} 
-              color={isWeeklyView ? '#FFFFFF' : '#64748B'} 
-            />
-            <Text style={[styles.toggleText, isWeeklyView ? styles.toggleTextActive : undefined]}>
-              {t('components.readingLogs.analytics')}
-            </Text>
-          </TouchableOpacity>
-        </View>      {/* Header */}
+      <View style={styles.viewModeToggle}>
+        <TouchableOpacity
+          style={[styles.toggleButton, !isWeeklyView ? styles.toggleButtonActive : undefined]}
+          onPress={() => setIsWeeklyView(false)}
+        >
+          <Ionicons
+            name="calendar"
+            size={16}
+            color={!isWeeklyView ? '#FFFFFF' : '#64748B'}
+          />
+          <Text style={[styles.toggleText, !isWeeklyView ? styles.toggleTextActive : undefined]}>
+            {t('components.readingLogs.dailyView')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.toggleButton, isWeeklyView ? styles.toggleButtonActive : undefined]}
+          onPress={() => setIsWeeklyView(true)}
+        >
+          <Ionicons
+            name="analytics"
+            size={16}
+            color={isWeeklyView ? '#FFFFFF' : '#64748B'}
+          />
+          <Text style={[styles.toggleText, isWeeklyView ? styles.toggleTextActive : undefined]}>
+            {t('components.readingLogs.analytics')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.weekNavigation}>
           <TouchableOpacity onPress={() => navigateWeek('prev')} style={styles.navButton}>
             <Text style={styles.navButtonText}>←</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity onPress={goToCurrentWeek} style={styles.weekInfo}>
             <Text style={styles.weekRange}>
               {formatDate(weekStart)} - {formatDate(weekEnd)}
             </Text>
             <Text style={styles.weekTotal}>{weekTotal} {t('components.readingLogs.minutesThisWeek')}</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity onPress={() => navigateWeek('next')} style={styles.navButton}>
             <Text style={styles.navButtonText}>→</Text>
           </TouchableOpacity>
@@ -518,8 +695,8 @@ export default function ReadingLogs() {
       {/* Development Only: Random Data Button */}
       {__DEV__ && (
         <View style={styles.devButtonContainer}>
-          <TouchableOpacity 
-            style={styles.devButton} 
+          <TouchableOpacity
+            style={styles.devButton}
             onPress={handleGenerateRandomData}
           >
             <Ionicons name="flask" size={16} color="#FFFFFF" />
@@ -529,7 +706,7 @@ export default function ReadingLogs() {
       )}
 
       {/* Week Grid */}
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
@@ -778,7 +955,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginTop: 4,
   },
-  
+
   // Modal Styles
   modalContainer: {
     flex: 1,
@@ -872,7 +1049,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  
+
   // Development button styles
   devButtonContainer: {
     paddingHorizontal: 20,
@@ -893,5 +1070,77 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  // Pages input styles
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  optionalBadge: {
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: '#0EA5E9',
+  },
+  optionalText: {
+    fontSize: 10,
+    color: '#0EA5E9',
+    fontWeight: '600',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  // Remaining pages info
+  remainingPagesInfo: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  remainingPagesText: {
+    fontSize: 12,
+    color: '#0369A1',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  // Progress preview styles
+  progressPreview: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#0EA5E9',
+    marginTop: 12,
+  },
+  progressPreviewText: {
+    fontSize: 12,
+    color: '#0369A1',
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  // Warning styles
+  warningContainer: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginTop: 12,
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#DC2626',
+    lineHeight: 16,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

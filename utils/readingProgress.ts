@@ -1,5 +1,105 @@
 import { execute, queryAll, queryFirst } from '../db/db';
 
+/**
+ * Calculate book completion percentage based on cumulative pages read from sessions
+ * This provides more accurate progress tracking than just current_page
+ */
+export const calculateBookProgressFromSessions = async (bookId: number, totalPages: number): Promise<{
+  pagesRead: number;
+  percentage: number;
+  isComplete: boolean;
+}> => {
+  try {
+    // Get total pages read from all sessions for this book
+    const result = await queryFirst<{total_pages: number}>(
+      'SELECT COALESCE(SUM(pages_read), 0) as total_pages FROM reading_sessions WHERE book_id = ? AND pages_read IS NOT NULL',
+      [bookId]
+    );
+    
+    const pagesRead = result?.total_pages || 0;
+    const percentage = totalPages > 0 ? Math.min(Math.round((pagesRead / totalPages) * 100), 100) : 0;
+    const isComplete = percentage >= 100;
+    
+    return {
+      pagesRead,
+      percentage,
+      isComplete
+    };
+  } catch (error) {
+    console.error('Error calculating book progress from sessions:', error);
+    return { pagesRead: 0, percentage: 0, isComplete: false };
+  }
+};
+
+/**
+ * Get enhanced reading progress that combines both current_page and session-based tracking
+ * Falls back to current_page if no page sessions are recorded
+ */
+export const getEnhancedBookProgress = async (bookId: number, totalPages: number, currentPage: number = 0): Promise<{
+  pagesRead: number;
+  percentage: number;
+  isComplete: boolean;
+  source: 'sessions' | 'current_page' | 'none';
+}> => {
+  try {
+    // First try to get progress from sessions
+    const sessionProgress = await calculateBookProgressFromSessions(bookId, totalPages);
+    
+    if (sessionProgress.pagesRead > 0) {
+      return {
+        ...sessionProgress,
+        source: 'sessions'
+      };
+    }
+    
+    // Fall back to current_page if available
+    if (currentPage > 0 && totalPages > 0) {
+      const percentage = Math.min(Math.round((currentPage / totalPages) * 100), 100);
+      return {
+        pagesRead: currentPage,
+        percentage,
+        isComplete: percentage >= 100,
+        source: 'current_page'
+      };
+    }
+    
+    // No progress data available
+    return {
+      pagesRead: 0,
+      percentage: 0,
+      isComplete: false,
+      source: 'none'
+    };
+  } catch (error) {
+    console.error('Error getting enhanced book progress:', error);
+    return { pagesRead: 0, percentage: 0, isComplete: false, source: 'none' };
+  }
+};
+
+/**
+ * Update book's current_page based on cumulative pages from sessions
+ * This keeps the current_page field in sync with session-based tracking
+ */
+export const syncBookCurrentPageFromSessions = async (bookId: number): Promise<void> => {
+  try {
+    const result = await queryFirst<{total_pages: number}>(
+      'SELECT COALESCE(SUM(pages_read), 0) as total_pages FROM reading_sessions WHERE book_id = ? AND pages_read IS NOT NULL',
+      [bookId]
+    );
+    
+    const totalPagesRead = result?.total_pages || 0;
+    
+    if (totalPagesRead > 0) {
+      await execute(
+        'UPDATE enhanced_books SET current_page = ? WHERE id = ?',
+        [totalPagesRead, bookId]
+      );
+    }
+  } catch (error) {
+    console.error('Error syncing book current page from sessions:', error);
+  }
+};
+
 export const initializeReadingSessions = async () => {
   try {
     // Create reading_sessions table if it doesn't exist

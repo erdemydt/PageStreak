@@ -10,6 +10,7 @@ import {
     View
 } from 'react-native';
 import { queryAll, queryFirst } from '../db/db';
+import { dateToLocalDateString, getTodayDateString } from '../utils/dateUtils';
 
 interface WeeklyStats {
   weekStart: string;
@@ -87,8 +88,8 @@ export default function WeeklyStatsView({
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
       
-      const startDateString = weekStart.toISOString().split('T')[0];
-      const endDateString = weekEnd.toISOString().split('T')[0];
+      const startDateString = dateToLocalDateString(weekStart);
+      const endDateString = dateToLocalDateString(weekEnd);
 
       // Get all sessions for the week with book info
       const sessions = await queryAll<{
@@ -174,7 +175,7 @@ export default function WeeklyStatsView({
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStart);
       date.setDate(weekStart.getDate() + i);
-      const dateString = date.toISOString().split('T')[0];
+      const dateString = dateToLocalDateString(date);
       
       const daySessions = sessions.filter(session => session.date === dateString);
       const dayMinutes = daySessions.reduce((sum, session) => sum + session.minutes_read, 0);
@@ -207,7 +208,7 @@ export default function WeeklyStatsView({
     let streakThisWeek = 0;
 
     // Calculate current streak (from today backwards)
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDateString();
     let checkDate = today;
     
     for (const day of dailyTotals) {
@@ -215,7 +216,7 @@ export default function WeeklyStatsView({
         currentStreak++;
         const checkDateObj = new Date(checkDate);
         checkDateObj.setDate(checkDateObj.getDate() - 1);
-        checkDate = checkDateObj.toISOString().split('T')[0];
+        checkDate = dateToLocalDateString(checkDateObj);
       } else {
         break;
       }

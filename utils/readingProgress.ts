@@ -1,4 +1,5 @@
 import { execute, queryAll, queryFirst } from '../db/db';
+import { dateToLocalDateString, getTodayDateString } from './dateUtils';
 
 /**
  * Calculate book completion percentage based on cumulative pages read from sessions
@@ -123,7 +124,7 @@ export const initializeReadingSessions = async () => {
 
 export const getTodayReadingMinutes = async (): Promise<number> => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDateString();
     const result = await queryFirst<{total_minutes: number}>(
       'SELECT COALESCE(SUM(minutes_read), 0) as total_minutes FROM reading_sessions WHERE date = ?',
       [today]
@@ -184,7 +185,7 @@ export const getWeeklyReadingMinutes = async (): Promise<number[]> => {
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
-      weekDates.push(date.toISOString().split('T')[0]);
+      weekDates.push(dateToLocalDateString(date));
     }
     
     const weeklyData = await Promise.all(

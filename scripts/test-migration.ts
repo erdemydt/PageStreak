@@ -8,6 +8,7 @@
  */
 
 import { execute, initializeDatabase, queryAll, queryFirst } from '../db/db';
+import { getTodayDateString } from '../utils/dateUtils';
 import {
     calculateBookProgressFromSessions,
     getEnhancedBookProgress,
@@ -35,7 +36,7 @@ export async function testDatabaseMigration() {
     
     // 3. Test creating reading sessions with pages_read
     console.log('📝 Creating reading sessions with page tracking...');
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDateString();
     
     // Session 1: 30 minutes, 15 pages
     await execute(

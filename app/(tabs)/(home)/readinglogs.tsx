@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import WeeklyStatsView from '../../../components/WeeklyStatsView';
 import { EnhancedBook, execute, queryAll, ReadingSession } from '../../../db/db';
+import { dateToLocalDateString, getTodayDateString } from '../../../utils/dateUtils';
 import { getEnhancedBookProgress, syncBookCurrentPageFromSessions } from '../../../utils/readingProgress';
 interface WeekDay {
   date: string;
@@ -336,8 +337,8 @@ const generateRandomReadingData = async (): Promise<void> => {
       // Random book selection
       const randomBook = currentlyReadingBooks[Math.floor(Math.random() * currentlyReadingBooks.length)];
 
-      // Format date as YYYY-MM-DD
-      const dateString = sessionDate.toISOString().split('T')[0];
+      // Format date as YYYY-MM-DD using local timezone
+      const dateString = dateToLocalDateString(sessionDate);
 
       // Create session with timestamp including hour
       const createdAt = sessionDate.toISOString();
@@ -417,15 +418,15 @@ export default function ReadingLogs() {
     const diff = day === 0 ? -6 : -(day - 1);
     return new Date(d.setDate(d.getDate() + diff));
   };
-
+  
   const getWeekDates = (startDate: Date): WeekDay[] => {
     const dates: WeekDay[] = [];
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDateString();
 
     for (let i = 0; i < 7; i++) {
       const date = new Date(startDate);
       date.setDate(startDate.getDate() + i);
-      const dateString = date.toISOString().split('T')[0];
+      const dateString = dateToLocalDateString(date);
 
       dates.push({
         date: dateString,
@@ -445,8 +446,8 @@ export default function ReadingLogs() {
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
 
-      const startDateString = weekStart.toISOString().split('T')[0];
-      const endDateString = weekEnd.toISOString().split('T')[0];
+      const startDateString = dateToLocalDateString(weekStart);
+      const endDateString = dateToLocalDateString(weekEnd);
 
       // Get all sessions for the week with book info
       const sessions = await queryAll<SessionWithBook>(`
@@ -468,7 +469,7 @@ export default function ReadingLogs() {
         acc[session.date].push(session);
         return acc;
       }, {} as Record<string, SessionWithBook[]>);
-
+      console.log('Sessions by date:', sessionsByDate);
       // Add sessions to week data and calculate totals
       weekDates.forEach(day => {
         day.sessions = sessionsByDate[day.date] || [];

@@ -14,6 +14,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { EnhancedBook, execute, queryAll } from '../db/db';
 import NotificationService from '../services/notificationService';
+import { getTodayDateString } from '../utils/dateUtils';
 import { getEnhancedBookProgress, syncBookCurrentPageFromSessions } from '../utils/readingProgress';
 
 
@@ -116,7 +117,7 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
 
     setLoading(true);
     try {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const today = getTodayDateString(); // YYYY-MM-DD format
       const pagesRead = pages.trim() ? Number(pages) : null;
 
       // Insert the reading session
@@ -133,7 +134,7 @@ export default function ReadingTimeLogger({ visible, onClose, onSuccess }: Readi
 
       // Handle book completion if finish book is checked
       if (finishBook) {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayDateString();
         await execute(
           `UPDATE enhanced_books 
            SET reading_status = 'read', 

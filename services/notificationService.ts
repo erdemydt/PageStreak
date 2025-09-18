@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { AppUsageTracking, checkNotificationDatabaseIntegrity, execute, NotificationPreferences, queryFirst, repairNotificationDatabase } from '../db/db';
+import { dateToLocalDateString, getTodayDateString } from '../utils/dateUtils';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -555,7 +556,7 @@ export class NotificationService {
    */
   async isDailyGoalMet(): Promise<boolean> {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayDateString();
       
       // Get user's current daily reading goal with fallback for missing columns
       let userPrefs;
@@ -628,7 +629,7 @@ export class NotificationService {
     formattedTime: string;
   }> {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayDateString();
       
       // Get user's daily reading goal
       let userPrefs;
@@ -769,7 +770,7 @@ export class NotificationService {
   private async trackAppOpened(): Promise<void> {
     try {
       const now = new Date();
-      const today = now.toISOString().split('T')[0];
+      const today = dateToLocalDateString(now);
       
       // Check if we have a record for today
       const existing = await queryFirst<AppUsageTracking>(
@@ -810,7 +811,7 @@ export class NotificationService {
         
         // Try to track again
         const now = new Date();
-        const today = now.toISOString().split('T')[0];
+        const today = dateToLocalDateString(now);
         await execute(
           `INSERT INTO app_usage_tracking (last_opened_at, session_count_today, date) 
            VALUES (?, 1, ?)`,
@@ -830,7 +831,7 @@ export class NotificationService {
   private async trackAppClosed(): Promise<void> {
     try {
       const now = new Date();
-      const today = now.toISOString().split('T')[0];
+      const today = dateToLocalDateString(now);
       
       // Update the most recent record for today
       await execute(
@@ -857,7 +858,7 @@ export class NotificationService {
         `);
         
         const now = new Date();
-        const today = now.toISOString().split('T')[0];
+        const today = dateToLocalDateString(now);
         
         // Try to insert a basic tracking record
         await execute(

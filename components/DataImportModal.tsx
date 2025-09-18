@@ -1,22 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import {
-    BackupValidationResult,
-    getBackupInfo,
-    importDataFromBackup,
-    ImportOptions,
-    pickBackupFile,
-    validateBackupFile,
+  BackupValidationResult,
+  getBackupInfo,
+  importDataFromBackup,
+  ImportOptions,
+  pickBackupFile,
+  validateBackupFile,
 } from '../services/dataBackupService';
 
 interface DataImportModalProps {
@@ -28,6 +29,7 @@ interface DataImportModalProps {
 type ImportStep = 'select' | 'validate' | 'configure' | 'import' | 'complete';
 
 export default function DataImportModal({ visible, onClose, onSuccess }: DataImportModalProps) {
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState<ImportStep>('select');
   const [selectedFileUri, setSelectedFileUri] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<BackupValidationResult | null>(null);
@@ -62,14 +64,14 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
 
   const handleFileSelect = async () => {
     setIsProcessing(true);
-    setProcessingMessage('Selecting file...');
+    setProcessingMessage(t('dataBackup.import.steps.select.buttons.selectFile'));
 
     try {
       const result = await pickBackupFile();
       
       if (result.success && result.fileUri) {
         setSelectedFileUri(result.fileUri);
-        setProcessingMessage('Validating backup file...');
+        setProcessingMessage(t('dataBackup.import.steps.validate.validating'));
         
         // Validate the file
         const validation = await validateBackupFile(result.fileUri);
@@ -84,18 +86,18 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
           setCurrentStep('validate');
         } else {
           Alert.alert(
-            'Invalid Backup File',
+            t('dataBackup.import.steps.validate.invalid'),
             `The selected file is not a valid PageStreak backup:\n\n${validation.errors.join('\n')}`,
-            [{ text: 'OK', onPress: () => setCurrentStep('select') }]
+            [{ text: t('dataBackup.import.buttons.ok'), onPress: () => setCurrentStep('select') }]
           );
         }
       } else {
         if (result.error && !result.error.includes('cancelled')) {
-          Alert.alert('File Selection Failed', result.error);
+          Alert.alert(t('dataBackup.import.messages.failedToSelect'), result.error);
         }
       }
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to select file');
+      Alert.alert(t('dataBackup.import.messages.error'), error instanceof Error ? error.message : t('dataBackup.import.messages.failedToSelect'));
     } finally {
       setIsProcessing(false);
       setProcessingMessage('');
@@ -105,11 +107,11 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
   const handleValidationNext = () => {
     if (validationResult?.warnings.length) {
       Alert.alert(
-        'Backup Warnings',
-        `The backup file has some warnings:\n\n${validationResult.warnings.join('\n')}\n\nDo you want to continue?`,
+        t('dataBackup.import.steps.validate.warnings'),
+        t('dataBackup.import.steps.validate.warningsMessage', { warnings: validationResult.warnings.join('\n') }),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Continue', onPress: () => setCurrentStep('configure') },
+          { text: t('dataBackup.import.buttons.cancel'), style: 'cancel' },
+          { text: t('dataBackup.import.buttons.continue'), onPress: () => setCurrentStep('configure') },
         ]
       );
     } else {
@@ -122,7 +124,7 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
 
     setIsProcessing(true);
     setProcessingProgress(0);
-    setProcessingMessage('Starting import...');
+    setProcessingMessage(t('dataBackup.import.steps.import.importing'));
     setCurrentStep('import');
 
     try {
@@ -130,11 +132,11 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
       if (importOptions.mode === 'replace') {
         const confirmed = await new Promise<boolean>((resolve) => {
           Alert.alert(
-            'Replace All Data?',
-            'This will DELETE all your current data and replace it with the backup. This action cannot be undone. Are you sure?',
+            t('dataBackup.import.messages.replaceConfirmTitle'),
+            t('dataBackup.import.messages.replaceConfirmMessage'),
             [
-              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Replace All Data', style: 'destructive', onPress: () => resolve(true) },
+              { text: t('dataBackup.import.buttons.cancel'), style: 'cancel', onPress: () => resolve(false) },
+              { text: t('dataBackup.import.buttons.replace'), style: 'destructive', onPress: () => resolve(true) },
             ]
           );
         });
@@ -160,11 +162,11 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
         setCurrentStep('complete');
         onSuccess?.(result.imported);
       } else {
-        Alert.alert('Import Failed', result.error || 'An unknown error occurred');
+        Alert.alert(t('dataBackup.import.messages.error'), result.error || t('dataBackup.import.messages.unknownError'));
         setCurrentStep('configure');
       }
     } catch (error) {
-      Alert.alert('Import Failed', error instanceof Error ? error.message : 'An unknown error occurred');
+      Alert.alert(t('dataBackup.import.messages.error'), error instanceof Error ? error.message : t('dataBackup.import.messages.unknownError'));
       setCurrentStep('configure');
     } finally {
       setIsProcessing(false);
@@ -177,25 +179,25 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
     <View style={styles.stepContainer}>
       <View style={styles.stepHeader}>
         <Ionicons name="document" size={48} color="#6C63FF" />
-        <Text style={styles.stepTitle}>Select Backup File</Text>
+        <Text style={styles.stepTitle}>{t('dataBackup.import.steps.select.title')}</Text>
         <Text style={styles.stepDescription}>
-          Choose a PageStreak backup file (.json) to restore your data
+          {t('dataBackup.import.steps.select.subtitle')}
         </Text>
       </View>
 
       <View style={styles.instructionsCard}>
-        <Text style={styles.instructionsTitle}>Supported Files</Text>
+        <Text style={styles.instructionsTitle}>{t('dataBackup.import.steps.select.instructions.title')}</Text>
         <View style={styles.instructionItem}>
           <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-          <Text style={styles.instructionText}>PageStreak backup files (.json)</Text>
+          <Text style={styles.instructionText}>{t('dataBackup.import.steps.select.instructions.fileType')}</Text>
         </View>
         <View style={styles.instructionItem}>
           <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-          <Text style={styles.instructionText}>Files from PageStreak v1.0 and later</Text>
+          <Text style={styles.instructionText}>{t('dataBackup.import.steps.select.instructions.version')}</Text>
         </View>
         <View style={styles.instructionItem}>
           <Ionicons name="information-circle" size={16} color="#F59E0B" />
-          <Text style={styles.instructionText}>Files created with Export Data feature</Text>
+          <Text style={styles.instructionText}>{t('dataBackup.import.steps.select.instructions.source')}</Text>
         </View>
       </View>
 
@@ -212,7 +214,7 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
         ) : (
           <>
             <Ionicons name="folder-open" size={20} color="#FFFFFF" />
-            <Text style={styles.primaryButtonText}>Choose File</Text>
+            <Text style={styles.primaryButtonText}>{t('dataBackup.import.steps.select.buttons.selectFile')}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -223,7 +225,7 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
     <View style={styles.stepContainer}>
       <View style={styles.stepHeader}>
         <Ionicons name="checkmark-circle" size={48} color="#10B981" />
-        <Text style={styles.stepTitle}>Backup Validated</Text>
+        <Text style={styles.stepTitle}>{t('dataBackup.import.steps.validate.valid')}</Text>
         <Text style={styles.stepDescription}>
           Your backup file is valid and ready to import
         </Text>
@@ -231,34 +233,34 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
 
       {backupInfo && (
         <View style={styles.backupInfoCard}>
-          <Text style={styles.backupInfoTitle}>Backup Information</Text>
+          <Text style={styles.backupInfoTitle}>{t('dataBackup.import.steps.validate.backupInfo.title')}</Text>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Created:</Text>
+            <Text style={styles.infoLabel}>{t('dataBackup.import.steps.validate.backupInfo.created')}</Text>
             <Text style={styles.infoValue}>
               {new Date(backupInfo.createdAt).toLocaleDateString()}
             </Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Books:</Text>
+            <Text style={styles.infoLabel}>{t('dataBackup.import.steps.validate.backupInfo.books')}</Text>
             <Text style={styles.infoValue}>{backupInfo.totalBooks}</Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Reading Sessions:</Text>
+            <Text style={styles.infoLabel}>{t('dataBackup.import.steps.validate.backupInfo.sessions')}</Text>
             <Text style={styles.infoValue}>{backupInfo.totalSessions}</Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>File Size:</Text>
+            <Text style={styles.infoLabel}>{t('dataBackup.import.steps.validate.backupInfo.fileSize')}</Text>
             <Text style={styles.infoValue}>{backupInfo.fileSize}</Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>User Preferences:</Text>
+            <Text style={styles.infoLabel}>{t('dataBackup.import.steps.validate.backupInfo.userPreferences')}</Text>
             <Text style={styles.infoValue}>
-              {backupInfo.hasUserPreferences ? 'Included' : 'Not included'}
+              {backupInfo.hasUserPreferences ? t('dataBackup.import.steps.validate.backupInfo.included') : t('dataBackup.import.steps.validate.backupInfo.notIncluded')}
             </Text>
           </View>
         </View>
@@ -268,7 +270,7 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
         <View style={styles.warningCard}>
           <Ionicons name="warning" size={20} color="#F59E0B" />
           <View style={styles.warningContent}>
-            <Text style={styles.warningTitle}>Warnings</Text>
+            <Text style={styles.warningTitle}>{t('dataBackup.import.steps.validate.warnings')}</Text>
             {validationResult.warnings.map((warning, index) => (
               <Text key={index} style={styles.warningText}>• {warning}</Text>
             ))}
@@ -281,14 +283,14 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
           style={styles.secondaryButton}
           onPress={() => setCurrentStep('select')}
         >
-          <Text style={styles.secondaryButtonText}>Choose Different File</Text>
+          <Text style={styles.secondaryButtonText}>{t('dataBackup.import.steps.configure.buttons.chooseDifferentFile')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={handleValidationNext}
         >
-          <Text style={styles.primaryButtonText}>Continue</Text>
+          <Text style={styles.primaryButtonText}>{t('dataBackup.import.buttons.continue')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -298,14 +300,14 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
     <View style={styles.stepContainer}>
       <View style={styles.stepHeader}>
         <Ionicons name="settings" size={48} color="#6C63FF" />
-        <Text style={styles.stepTitle}>Import Options</Text>
+        <Text style={styles.stepTitle}>{t('dataBackup.import.steps.configure.title')}</Text>
         <Text style={styles.stepDescription}>
-          Choose how you want to import your data
+          {t('dataBackup.import.steps.configure.subtitle')}
         </Text>
       </View>
 
       <View style={styles.optionsCard}>
-        <Text style={styles.optionsTitle}>Import Mode</Text>
+        <Text style={styles.optionsTitle}>{t('dataBackup.import.steps.configure.importMode')}</Text>
         
         <TouchableOpacity
           style={[
@@ -325,11 +327,11 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
                 styles.optionTitle,
                 importOptions.mode === 'merge' && styles.optionTitleSelected
               ]}>
-                Merge Data (Recommended)
+                {t('dataBackup.import.steps.configure.options.merge')} (Recommended)
               </Text>
             </View>
             <Text style={styles.optionDescription}>
-              Add backup data to your existing data. Duplicate entries will be updated.
+              {t('dataBackup.import.steps.configure.options.mergeDescription')}
             </Text>
           </View>
           <View style={[
@@ -360,11 +362,11 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
                 styles.optionTitle,
                 importOptions.mode === 'replace' && styles.optionTitleSelected
               ]}>
-                Replace All Data
+                {t('dataBackup.import.steps.configure.options.replace')}
               </Text>
             </View>
             <Text style={styles.optionDescription}>
-              Delete all current data and replace with backup. This cannot be undone.
+              {t('dataBackup.import.steps.configure.options.replaceDescription')}
             </Text>
           </View>
           <View style={[
@@ -382,7 +384,7 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
         <View style={styles.dangerCard}>
           <Ionicons name="warning" size={20} color="#EF4444" />
           <Text style={styles.dangerText}>
-            Warning: This will permanently delete all your current books, reading sessions, and progress. Make sure to export your current data first if you want to keep it.
+            {t('dataBackup.import.steps.configure.warningText')}
           </Text>
         </View>
       )}
@@ -392,7 +394,7 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
           style={styles.secondaryButton}
           onPress={() => setCurrentStep('validate')}
         >
-          <Text style={styles.secondaryButtonText}>Back</Text>
+          <Text style={styles.secondaryButtonText}>{t('dataBackup.import.steps.configure.buttons.back')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -400,7 +402,7 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
           onPress={handleImport}
         >
           <Text style={styles.primaryButtonText}>
-            {importOptions.mode === 'replace' ? 'Replace Data' : 'Import Data'}
+            {importOptions.mode === 'replace' ? t('dataBackup.import.buttons.replace') : t('dataBackup.import.buttons.import')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -411,9 +413,9 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
     <View style={styles.stepContainer}>
       <View style={styles.stepHeader}>
         <ActivityIndicator size="large" color="#6C63FF" />
-        <Text style={styles.stepTitle}>Importing Data</Text>
+        <Text style={styles.stepTitle}>{t('dataBackup.import.steps.import.importingTitle')}</Text>
         <Text style={styles.stepDescription}>
-          Please wait while we import your backup data
+          {t('dataBackup.import.steps.import.importingDescription')}
         </Text>
       </View>
 
@@ -428,7 +430,7 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
       <View style={styles.importWarning}>
         <Ionicons name="information-circle" size={20} color="#F59E0B" />
         <Text style={styles.importWarningText}>
-          Please don't close the app or navigate away during the import process.
+          {t('dataBackup.import.steps.import.importWarning')}
         </Text>
       </View>
     </View>
@@ -438,27 +440,27 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
     <View style={styles.stepContainer}>
       <View style={styles.stepHeader}>
         <Ionicons name="checkmark-circle" size={48} color="#10B981" />
-        <Text style={styles.stepTitle}>Import Complete!</Text>
+        <Text style={styles.stepTitle}>{t('dataBackup.import.steps.import.completeTitle')}</Text>
         <Text style={styles.stepDescription}>
-          Your data has been successfully imported
+          {t('dataBackup.import.steps.import.completeDescription')}
         </Text>
       </View>
 
       {importResult && (
         <View style={styles.successCard}>
-          <Text style={styles.successTitle}>Import Summary</Text>
+          <Text style={styles.successTitle}>{t('dataBackup.import.steps.import.importSummary')}</Text>
           
           <View style={styles.successRow}>
             <Ionicons name="library" size={20} color="#10B981" />
             <Text style={styles.successText}>
-              {importResult.books} books imported
+              {t('dataBackup.import.steps.import.booksImported', { count: importResult.books })}
             </Text>
           </View>
           
           <View style={styles.successRow}>
             <Ionicons name="time" size={20} color="#10B981" />
             <Text style={styles.successText}>
-              {importResult.sessions} reading sessions imported
+              {t('dataBackup.import.steps.import.sessionsImported', { count: importResult.sessions })}
             </Text>
           </View>
         </View>
@@ -468,7 +470,7 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
         style={styles.primaryButton}
         onPress={handleClose}
       >
-        <Text style={styles.primaryButtonText}>Done</Text>
+        <Text style={styles.primaryButtonText}>{t('dataBackup.import.buttons.finish')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -506,7 +508,7 @@ export default function DataImportModal({ visible, onClose, onSuccess }: DataImp
           >
             <Ionicons name="close" size={24} color="#6C63FF" />
           </TouchableOpacity>
-          <Text style={styles.title}>Import Data</Text>
+          <Text style={styles.title}>{t('dataBackup.import.title')}</Text>
           <View style={styles.placeholder} />
         </View>
 

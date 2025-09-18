@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { queryAll } from '../db/db';
+import { dateToLocalDateString, getTodayDateString } from '../utils/dateUtils';
 interface ReadingCalendarProps {
   onDatePress?: (date: string, minutes: number) => void;
 }
@@ -32,8 +33,8 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
       const lastDay = new Date(year, month + 1, 0);
       
       // Get reading data for the month
-      const startDate = firstDay.toISOString().split('T')[0];
-      const endDate = lastDay.toISOString().split('T')[0];
+      const startDate = dateToLocalDateString(firstDay);
+      const endDate = dateToLocalDateString(lastDay);
       
       const readingData = await queryAll<{date: string, total_minutes: number}>(
         `SELECT date, SUM(minutes_read) as total_minutes 
@@ -55,7 +56,7 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
 
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
-        const dateString = date.toISOString().split('T')[0];
+        const dateString = dateToLocalDateString(date);
         const minutes = dataMap.get(dateString) || 0;
         
         monthDataArray.push({
@@ -97,7 +98,7 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
   };
 
   const isToday = (dateString: string) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDateString();
     return dateString === today;
   };
   const { t } = useTranslation();

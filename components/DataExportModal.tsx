@@ -1,15 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { BackupOptions, exportAndSaveBackup } from '../services/dataBackupService';
 
@@ -20,6 +21,7 @@ interface DataExportModalProps {
 }
 
 export default function DataExportModal({ visible, onClose, onSuccess }: DataExportModalProps) {
+  const { t } = useTranslation();
   const [exportOptions, setExportOptions] = useState<BackupOptions>({
     includeBooks: true,
     includeReadingSessions: true,
@@ -36,7 +38,7 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
   const handleExport = async () => {
     setIsExporting(true);
     setExportProgress(0);
-    setExportMessage('Preparing export...');
+    setExportMessage(t('dataBackup.export.messages.preparing'));
 
     try {
       const result = await exportAndSaveBackup(
@@ -51,8 +53,8 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
         if (result.userSaved) {
           // User successfully saved the file to their chosen location
           Alert.alert(
-            'Export Successful',
-            'Your backup has been saved to your chosen location successfully!',
+            t('dataBackup.export.messages.success'),
+            t('dataBackup.export.messages.successMessage'),
             [
               {
                 text: 'OK',
@@ -66,8 +68,8 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
         } else {
           // File was created but user didn't save it or save was cancelled
           Alert.alert(
-            'Backup Created',
-            'Your backup file has been created. You can find it in the app\'s documents folder.',
+            t('dataBackup.export.messages.backupCreated'),
+            t('dataBackup.export.messages.backupCreatedMessage'),
             [
               {
                 text: 'OK',
@@ -80,10 +82,10 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
           );
         }
       } else {
-        Alert.alert('Export Failed', result.error || 'An unknown error occurred');
+        Alert.alert(t('dataBackup.export.messages.exportFailed'), result.error || t('dataBackup.export.messages.unknownError'));
       }
     } catch (error) {
-      Alert.alert('Export Failed', error instanceof Error ? error.message : 'An unknown error occurred');
+      Alert.alert(t('dataBackup.export.messages.exportFailed'), error instanceof Error ? error.message : t('dataBackup.export.messages.unknownError'));
     } finally {
       setIsExporting(false);
       setExportProgress(0);
@@ -100,13 +102,13 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
 
   const getEstimatedSize = () => {
     // Simple estimation based on selected options
-    let estimation = 'Small (< 1MB)';
+    let estimation = t('dataBackup.export.size.small');
     const selectedCount = Object.values(exportOptions).filter(Boolean).length;
     
     if (selectedCount >= 4 && exportOptions.includeAppUsage) {
-      estimation = 'Large (1-5MB)';
+      estimation = t('dataBackup.export.size.large');
     } else if (selectedCount >= 3) {
-      estimation = 'Medium (100KB-1MB)';
+      estimation = t('dataBackup.export.size.medium');
     }
     
     return estimation;
@@ -124,15 +126,15 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color="#6C63FF" />
           </TouchableOpacity>
-          <Text style={styles.title}>Export Data</Text>
+          <Text style={styles.title}>{t('dataBackup.export.title')}</Text>
           <View style={styles.placeholder} />
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>What to Export</Text>
+            <Text style={styles.sectionTitle}>{t('dataBackup.export.whatToExport')}</Text>
             <Text style={styles.sectionSubtitle}>
-              Choose which data you want to include in your backup file
+              {t('dataBackup.export.subtitle')}
             </Text>
 
             <View style={styles.optionsList}>
@@ -140,8 +142,8 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
                 <View style={styles.optionLeft}>
                   <Ionicons name="library" size={20} color="#6C63FF" />
                   <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>Books</Text>
-                    <Text style={styles.optionDescription}>Your book collection and metadata</Text>
+                    <Text style={styles.optionTitle}>{t('dataBackup.export.options.includeBooks')}</Text>
+                    <Text style={styles.optionDescription}>{t('dataBackup.export.options.includeBooksDescription')}</Text>
                   </View>
                 </View>
                 <Switch
@@ -156,8 +158,8 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
                 <View style={styles.optionLeft}>
                   <Ionicons name="time" size={20} color="#10B981" />
                   <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>Reading Sessions</Text>
-                    <Text style={styles.optionDescription}>Your reading logs and progress</Text>
+                    <Text style={styles.optionTitle}>{t('dataBackup.export.options.includeReadingSessions')}</Text>
+                    <Text style={styles.optionDescription}>{t('dataBackup.export.options.includeReadingSessionsDescription')}</Text>
                   </View>
                 </View>
                 <Switch
@@ -172,8 +174,8 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
                 <View style={styles.optionLeft}>
                   <Ionicons name="person" size={20} color="#F59E0B" />
                   <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>User Preferences</Text>
-                    <Text style={styles.optionDescription}>Your profile and reading goals</Text>
+                    <Text style={styles.optionTitle}>{t('dataBackup.export.options.includeUserPreferences')}</Text>
+                    <Text style={styles.optionDescription}>{t('dataBackup.export.options.includeUserPreferencesDescription')}</Text>
                   </View>
                 </View>
                 <Switch
@@ -188,8 +190,8 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
                 <View style={styles.optionLeft}>
                   <Ionicons name="trending-up" size={20} color="#8B5CF6" />
                   <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>Weekly Progress</Text>
-                    <Text style={styles.optionDescription}>Your weekly reading achievements</Text>
+                    <Text style={styles.optionTitle}>{t('dataBackup.export.options.includeWeeklyProgress')}</Text>
+                    <Text style={styles.optionDescription}>{t('dataBackup.export.options.includeWeeklyProgressDescription')}</Text>
                   </View>
                 </View>
                 <Switch
@@ -204,8 +206,8 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
                 <View style={styles.optionLeft}>
                   <Ionicons name="notifications" size={20} color="#EF4444" />
                   <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>Notification Settings</Text>
-                    <Text style={styles.optionDescription}>Your notification preferences</Text>
+                    <Text style={styles.optionTitle}>{t('dataBackup.export.options.includeNotificationPreferences')}</Text>
+                    <Text style={styles.optionDescription}>{t('dataBackup.export.options.includeNotificationPreferencesDescription')}</Text>
                   </View>
                 </View>
                 <Switch
@@ -220,8 +222,8 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
                 <View style={styles.optionLeft}>
                   <Ionicons name="analytics" size={20} color="#64748B" />
                   <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>App Usage Data</Text>
-                    <Text style={styles.optionDescription}>Your app usage statistics (optional)</Text>
+                    <Text style={styles.optionTitle}>{t('dataBackup.export.options.includeAppUsage')}</Text>
+                    <Text style={styles.optionDescription}>{t('dataBackup.export.options.includeAppUsageDescription')}</Text>
                   </View>
                 </View>
                 <Switch
@@ -235,19 +237,19 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Export Information</Text>
+            <Text style={styles.sectionTitle}>{t('dataBackup.export.exportInformation')}</Text>
             
             <View style={styles.infoCard}>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Estimated Size:</Text>
+                <Text style={styles.infoLabel}>{t('dataBackup.export.estimatedSize')}</Text>
                 <Text style={styles.infoValue}>{getEstimatedSize()}</Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Format:</Text>
+                <Text style={styles.infoLabel}>{t('dataBackup.export.format')}</Text>
                 <Text style={styles.infoValue}>JSON</Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Compatibility:</Text>
+                <Text style={styles.infoLabel}>{t('dataBackup.export.compatibility')}</Text>
                 <Text style={styles.infoValue}>PageStreak v1.0+</Text>
               </View>
             </View>
@@ -255,14 +257,14 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
             <View style={styles.warningCard}>
               <Ionicons name="information-circle" size={20} color="#F59E0B" />
               <Text style={styles.warningText}>
-                Keep your backup file safe! It contains your personal reading data. You'll be able to choose where to save the backup file on your device.
+                {t('dataBackup.export.messages.warning')}
               </Text>
             </View>
           </View>
 
           {isExporting && (
             <View style={styles.progressSection}>
-              <Text style={styles.progressTitle}>Exporting Data...</Text>
+              <Text style={styles.progressTitle}>{t('dataBackup.export.exportingData')}</Text>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${exportProgress}%` }]} />
               </View>
@@ -277,7 +279,7 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
             onPress={onClose}
             disabled={isExporting}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t('dataBackup.export.buttons.cancel')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -290,7 +292,7 @@ export default function DataExportModal({ visible, onClose, onSuccess }: DataExp
             ) : (
               <>
                 <Ionicons name="download" size={20} color="#FFFFFF" />
-                <Text style={styles.exportButtonText}>Export & Save</Text>
+                <Text style={styles.exportButtonText}>{t('dataBackup.export.exportAndSave')}</Text>
               </>
             )}
           </TouchableOpacity>

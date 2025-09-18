@@ -449,6 +449,91 @@ const resources = {
         openSettings: 'Open Settings',
         failedToSendTestNotification: 'Failed to send test notification',
         notificationsDisabledInSystem: 'Notifications are disabled in system settings.',
+        dataBackup: 'Data Backup & Restore',
+      },
+
+      dataBackup: {
+        export: {
+          title: 'Export Data',
+          subtitle: 'Choose which data you want to include in your backup file',
+          buttonSubtitle: 'Download your books and reading progress',
+          options: {
+            includeBooks: 'Books Library',
+            includeReadingSessions: 'Reading Sessions',
+            includeUserPreferences: 'User Preferences',
+            includeWeeklyProgress: 'Weekly Progress',
+            includeNotificationPreferences: 'Notification Settings',
+            includeAppUsage: 'App Usage Data',
+            compressed: 'Compress Backup',
+          },
+          buttons: {
+            export: 'Export Data',
+            cancel: 'Cancel',
+            save: 'Save',
+            share: 'Share',
+          },
+          messages: {
+            preparing: 'Preparing export...',
+            exporting: 'Exporting data...',
+            success: 'Export Successful',
+            successMessage: 'Your data has been exported successfully. Would you like to save or share the backup file?',
+            exportComplete: 'Export Complete',
+            exportCompleteMessage: 'Your data has been exported successfully! The backup file is ready to be shared or saved.',
+            shareFailed: 'Share Failed',
+            shareFailedMessage: 'Could not share the backup file, but it has been saved locally.',
+            warning: 'Keep your backup file safe! It contains your personal reading data. You can import it later to restore your progress.',
+          },
+        },
+        import: {
+          title: 'Import Data',
+          buttonSubtitle: 'Restore from a backup file',
+          steps: {
+            select: {
+              title: 'Select Backup File',
+              subtitle: 'Choose a PageStreak backup file (.json) to restore your data',
+              instructions: {
+                fileType: 'PageStreak backup files (.json)',
+                source: 'Files created with Export Data feature',
+              },
+              buttons: {
+                selectFile: 'Select File',
+              },
+            },
+            validate: {
+              validating: 'Validating backup file...',
+              valid: 'Your backup file is valid and ready to import',
+              invalid: 'Invalid Backup File',
+              warnings: 'Backup Warnings',
+              warningsMessage: 'The backup file has some warnings:\n\n{{warnings}}\n\nDo you want to continue?',
+            },
+            configure: {
+              title: 'Configure Import',
+              options: {
+                merge: 'Merge Data',
+                replace: 'Replace Data',
+                validateIntegrity: 'Validate Data Integrity',
+              },
+            },
+            import: {
+              importing: 'Importing data...',
+              success: 'Import Successful',
+            },
+          },
+          buttons: {
+            import: 'Import Data',
+            replace: 'Replace Data',
+            cancel: 'Cancel',
+            continue: 'Continue',
+            finish: 'Finish',
+          },
+          messages: {
+            error: 'Error',
+            failedToSelect: 'Failed to select file',
+            importSuccess: 'Data imported successfully!',
+            importComplete: 'Import Complete',
+            importSuccessMessage: 'Successfully imported {{books}} books and {{sessions}} reading sessions!',
+          },
+        },
       },
 
       navigation: {
@@ -459,6 +544,10 @@ const resources = {
       },
 
       intro: {
+        appWelcome: {
+          title: 'Welcome to PageStreak!',
+          subtitle: 'Let\'s set up your reading journey in just a few steps',
+        },
         welcome: {
           title: 'Nice to meet you!',
           subtitle: 'What should we call you on your reading journey?',
@@ -509,6 +598,9 @@ const resources = {
           label: 'minutes per day',
           hint: 'We\'ll help you gradually increase your reading time to reach this goal!',
           dateLabel: 'Target Date:',
+          selectDate: 'Select Your Target Date',
+          selectedDate: 'Selected Date',
+          tapToSelectDate: 'Tap to select date',
           currentWeeklyIncrease: 'Current Weekly Increase Needed: {{percentage}}% ({{classification}})',
         },
         buttons: {
@@ -1090,6 +1182,91 @@ const resources = {
         openSettings: 'Ayarları Aç',
         failedToSendTestNotification: 'Test bildirimi gönderilemedi',
         notificationsDisabledInSystem: 'Sistem ayarlarında bildirimler devre dışı.',
+        dataBackup: 'Veri Yedekleme ve Geri Yükleme',
+      },
+
+      dataBackup: {
+        export: {
+          title: 'Veri Dışa Aktar',
+          subtitle: 'Yedek dosyanıza hangi verileri dahil etmek istediğinizi seçin',
+          buttonSubtitle: 'Kitaplarınızı ve okuma ilerlemenizi indirin',
+          options: {
+            includeBooks: 'Kitap Kütüphanesi',
+            includeReadingSessions: 'Okuma Seansları',
+            includeUserPreferences: 'Kullanıcı Tercihleri',
+            includeWeeklyProgress: 'Haftalık İlerleme',
+            includeNotificationPreferences: 'Bildirim Ayarları',
+            includeAppUsage: 'Uygulama Kullanım Verileri',
+            compressed: 'Yedek Sıkıştır',
+          },
+          buttons: {
+            export: 'Veri Dışa Aktar',
+            cancel: 'İptal',
+            save: 'Kaydet',
+            share: 'Paylaş',
+          },
+          messages: {
+            preparing: 'Dışa aktarma hazırlanıyor...',
+            exporting: 'Veriler dışa aktarılıyor...',
+            success: 'Dışa Aktarma Başarılı',
+            successMessage: 'Verileriniz başarıyla dışa aktarıldı. Yedek dosyayı kaydetmek veya paylaşmak ister misiniz?',
+            exportComplete: 'Dışa Aktarma Tamamlandı',
+            exportCompleteMessage: 'Verileriniz başarıyla dışa aktarıldı! Yedek dosya paylaşılmaya veya kaydedilmeye hazır.',
+            shareFailed: 'Paylaşım Başarısız',
+            shareFailedMessage: 'Yedek dosya paylaşılamadı, ancak yerel olarak kaydedildi.',
+            warning: 'Yedek dosyanızı güvende tutun! Kişisel okuma verilerinizi içerir. Daha sonra ilerlemenizi geri yüklemek için içe aktarabilirsiniz.',
+          },
+        },
+        import: {
+          title: 'Veri İçe Aktar',
+          buttonSubtitle: 'Yedek dosyadan geri yükle',
+          steps: {
+            select: {
+              title: 'Yedek Dosya Seç',
+              subtitle: 'Verilerinizi geri yüklemek için bir PageStreak yedek dosyası (.json) seçin',
+              instructions: {
+                fileType: 'PageStreak yedek dosyaları (.json)',
+                source: 'Veri Dışa Aktar özelliği ile oluşturulan dosyalar',
+              },
+              buttons: {
+                selectFile: 'Dosya Seç',
+              },
+            },
+            validate: {
+              validating: 'Yedek dosya doğrulanıyor...',
+              valid: 'Yedek dosyanız geçerli ve içe aktarılmaya hazır',
+              invalid: 'Geçersiz Yedek Dosyası',
+              warnings: 'Yedek Uyarıları',
+              warningsMessage: 'Yedek dosyada bazı uyarılar var:\n\n{{warnings}}\n\nDevam etmek istiyor musunuz?',
+            },
+            configure: {
+              title: 'İçe Aktarmayı Yapılandır',
+              options: {
+                merge: 'Veri Birleştir',
+                replace: 'Veri Değiştir',
+                validateIntegrity: 'Veri Bütünlüğünü Doğrula',
+              },
+            },
+            import: {
+              importing: 'Veriler içe aktarılıyor...',
+              success: 'İçe Aktarma Başarılı',
+            },
+          },
+          buttons: {
+            import: 'Veri İçe Aktar',
+            replace: 'Veri Değiştir',
+            cancel: 'İptal',
+            continue: 'Devam Et',
+            finish: 'Bitir',
+          },
+          messages: {
+            error: 'Hata',
+            failedToSelect: 'Dosya seçilemedi',
+            importSuccess: 'Veriler başarıyla içe aktarıldı!',
+            importComplete: 'İçe Aktarma Tamamlandı',
+            importSuccessMessage: '{{books}} kitap ve {{sessions}} okuma seansı başarıyla içe aktarıldı!',
+          },
+        },
       },
 
       navigation: {
@@ -1100,6 +1277,10 @@ const resources = {
       },
 
       intro: {
+        appWelcome: {
+          title: 'PageStreak\'e Hoş Geldiniz!',
+          subtitle: 'Okuma yolculuğunuzu sadece birkaç adımda ayarlayalım',
+        },
         welcome: {
           title: 'Tanıştığımıza memnun oldum!',
           subtitle: 'Okuma yolculuğunuzda size nasıl hitap edelim?',
@@ -1150,6 +1331,9 @@ const resources = {
           label: 'dakika/gün',
           hint: 'Bu hedefe ulaşmanız için okuma sürenizi kademeli olarak artırmanıza yardımcı olacağız!',
           dateLabel: 'Hedef Tarih:',
+          selectDate: 'Hedef Tarihinizi Seçin',
+          selectedDate: 'Seçilen Tarih',
+          tapToSelectDate: 'Tarih seçmek için dokunun',
           currentWeeklyIncrease: 'Gerekli Haftalık Artış: %{{percentage}} ({{classification}})',
         },
         buttons: {

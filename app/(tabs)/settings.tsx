@@ -11,6 +11,8 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import DataExportModal from '../../components/DataExportModal';
+import DataImportModal from '../../components/DataImportModal';
 import LanguageSelector from '../../components/LanguageSelector';
 import NotificationSettings from '../../components/NotificationSettings';
 import NotificationTester from '../../components/NotificationTester';
@@ -30,6 +32,8 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     loadUserPreferences();
@@ -78,6 +82,28 @@ export default function SettingsScreen() {
           },
         },
       ]
+    );
+  };
+
+  const handleExportSuccess = (filePath: string) => {
+    Alert.alert(
+      t('dataBackup.export.messages.exportComplete'),
+      t('dataBackup.export.messages.exportCompleteMessage'),
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleImportSuccess = (importedData: { books: number; sessions: number }) => {
+    Alert.alert(
+      t('dataBackup.import.messages.importComplete'),
+      t('dataBackup.import.messages.importSuccessMessage', { books: importedData.books, sessions: importedData.sessions }),
+      [{ 
+        text: 'OK',
+        onPress: () => {
+          // Reload user preferences to reflect any changes
+          loadUserPreferences();
+        }
+      }]
     );
   };
 
@@ -139,6 +165,42 @@ export default function SettingsScreen() {
             </View>
           )}
 
+          {/* Data Backup & Restore Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('settings.dataBackup')}</Text>
+            <View style={styles.backupCard}>
+              <TouchableOpacity 
+                style={styles.backupOption}
+                onPress={() => setShowExportModal(true)}
+              >
+                <View style={styles.backupOptionLeft}>
+                  <Ionicons name="download" size={24} color="#6C63FF" />
+                  <View style={styles.backupOptionInfo}>
+                    <Text style={styles.backupOptionTitle}>{t('dataBackup.export.title')}</Text>
+                    <Text style={styles.backupOptionSubtitle}>{t('dataBackup.export.buttonSubtitle')}</Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#6C63FF" />
+              </TouchableOpacity>
+
+              <View style={styles.divider} />
+
+              <TouchableOpacity 
+                style={styles.backupOption}
+                onPress={() => setShowImportModal(true)}
+              >
+                <View style={styles.backupOptionLeft}>
+                  <Ionicons name="cloud-upload" size={24} color="#10B981" />
+                  <View style={styles.backupOptionInfo}>
+                    <Text style={styles.backupOptionTitle}>{t('dataBackup.import.title')}</Text>
+                    <Text style={styles.backupOptionSubtitle}>{t('dataBackup.import.buttonSubtitle')}</Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#10B981" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* App Info Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('settings.about')}</Text>
@@ -185,6 +247,20 @@ export default function SettingsScreen() {
         </ScrollView>
       </View>
       </View>
+
+      {/* Data Export Modal */}
+      <DataExportModal
+        visible={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onSuccess={handleExportSuccess}
+      />
+
+      {/* Data Import Modal */}
+      <DataImportModal
+        visible={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={handleImportSuccess}
+      />
     </View>
   );
 }
@@ -348,5 +424,45 @@ const styles = StyleSheet.create({
   logoutSubtitle: {
     fontSize: 14,
     color: '#9CA3AF',
+  },
+  backupCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  backupOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+  },
+  backupOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  backupOptionInfo: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  backupOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  backupOptionSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 20,
   },
 });

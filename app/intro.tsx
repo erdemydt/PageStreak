@@ -533,52 +533,81 @@ export default function IntroScreen() {
 
 
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <TouchableOpacity
-          style={styles.datePickerButton}
-          onPress={() => setShowDatePicker(true)}
-          disabled={loading}
-        >
-          <Text style={styles.datePickerButtonText}>
-            📅 {goalDate.toLocaleDateString('en-US', { 
-              weekday: 'long',
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </Text>
-        </TouchableOpacity>
-        
-        {showDatePicker && (
-          <DateTimePicker
-            value={goalDate}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'default' : 'default'}
-            minimumDate={new Date()}
-            maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
-            onChange={(event, date) => {
-              // On Android, hide picker regardless of user action
-              if (Platform.OS === 'android') {
-                setShowDatePicker(false);
-              }
-              
-              // Only update date if user didn't cancel (event.type !== 'dismissed')
-              if (date && event.type !== 'dismissed') {
-                setGoalDate(date);
-                // Clear error if date is valid
-                if (error && date >= new Date(new Date().setHours(0, 0, 0, 0))) {
-                  setError(null);
+        {Platform.OS === 'ios' ? (
+          // iOS: Show inline date picker that's always visible
+          <View style={styles.iosDatePickerContainer}>
+            <Text style={styles.dateSelectionTitle}>{t('intro.targetGoal.selectDate')}</Text>
+            <DateTimePicker
+              value={goalDate}
+              mode="date"
+              display="compact"
+              minimumDate={new Date()}
+              maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
+              onChange={(event, date) => {
+                if (date && event.type !== 'dismissed') {
+                  setGoalDate(date);
+                  // Clear error if date is valid
+                  if (error && date >= new Date(new Date().setHours(0, 0, 0, 0))) {
+                    setError(null);
+                  }
                 }
-              }
-              
-              // On iOS, hide picker after selection
-              if (Platform.OS === 'ios' && event.type === 'set') {
-                setShowDatePicker(false);
-              }
-            }}
-          />
+              }}
+              style={styles.iosDatePicker}
+            />
+            <Text style={styles.selectedDateText}>
+              {t('intro.targetGoal.selectedDate')}: {goalDate.toLocaleDateString('en-US', { 
+                weekday: 'long',
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </Text>
+          </View>
+        ) : (
+          // Android: Show button that opens modal date picker
+          <View style={styles.androidDatePickerContainer}>
+            <Text style={styles.dateSelectionTitle}>{t('intro.targetGoal.selectDate')}</Text>
+            <TouchableOpacity
+              style={[styles.datePickerButton, !goalDate && styles.datePickerButtonUnselected]}
+              onPress={() => setShowDatePicker(true)}
+              disabled={loading}
+            >
+              <Text style={[styles.datePickerButtonText, !goalDate && styles.datePickerButtonTextUnselected]}>
+                📅 {goalDate ? goalDate.toLocaleDateString('en-US', { 
+                  weekday: 'long',
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                }) : t('intro.targetGoal.tapToSelectDate')}
+              </Text>
+            </TouchableOpacity>
+            
+            {showDatePicker && (
+              <DateTimePicker
+                value={goalDate || new Date()}
+                mode="date"
+                display="default"
+                minimumDate={new Date()}
+                maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 5))}
+                onChange={(event, date) => {
+                  // Always hide picker on Android
+                  setShowDatePicker(false);
+                  
+                  // Only update date if user didn't cancel
+                  if (date && event.type !== 'dismissed') {
+                    setGoalDate(date);
+                    // Clear error if date is valid
+                    if (error && date >= new Date(new Date().setHours(0, 0, 0, 0))) {
+                      setError(null);
+                    }
+                  }
+                }}
+              />
+            )}
+          </View>
         )}
         
-        <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 16, color: '#64748B' }}>
+        <Text style={styles.weeklyIncreaseText}>
           {t('intro.targetGoal.currentWeeklyIncrease', { 
             percentage: calculateNeededWeeklyPercentageIncrease(), 
             classification: classifyPercentageIncrease(Number(calculateNeededWeeklyPercentageIncrease())) 
@@ -682,9 +711,9 @@ export default function IntroScreen() {
               style={styles.welcomeLogo}
               resizeMode="contain"
             />
-            <Text style={styles.welcomeTitle}>Welcome to PageStreak!</Text>
+            <Text style={styles.welcomeTitle}>{t('intro.appWelcome.title')}</Text>
             <Text style={styles.welcomeSubtitle}>
-              Let's set up your reading journey in just a few steps
+              {t('intro.appWelcome.subtitle')}
             </Text>
           </View>
 
@@ -1020,24 +1049,73 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   datePickerButton: {
-    backgroundColor: '#F8FAFC',
-    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 18,
     paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#6C63FF',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#6C63FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+    minHeight: 60,
+    justifyContent: 'center',
   },
   datePickerButtonText: {
     fontSize: 16,
     color: '#1E293B',
     fontWeight: '600',
     textAlign: 'center',
+    lineHeight: 24,
+  },
+  iosDatePickerContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  androidDatePickerContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dateSelectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  iosDatePicker: {
+    width: '100%',
+    marginVertical: 10,
+  },
+  selectedDateText: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 10,
+    fontWeight: '500',
+  },
+  datePickerButtonUnselected: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#CBD5E1',
+    borderStyle: 'dashed',
+    shadowOpacity: 0.05,
+  },
+  datePickerButtonTextUnselected: {
+    color: '#64748B',
+    fontWeight: '500',
+    fontStyle: 'italic',
+  },
+  weeklyIncreaseText: {
+    textAlign: 'center',
+    marginTop: 10,
+    fontSize: 16,
+    color: '#64748B',
+    fontWeight: '500',
   },
 });

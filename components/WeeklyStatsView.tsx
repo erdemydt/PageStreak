@@ -2,12 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { queryAll, queryFirst } from '../db/db';
 import { dateToLocalDateString, getTodayDateString } from '../utils/dateUtils';
@@ -407,7 +407,7 @@ export default function WeeklyStatsView({
               return (
                 <View key={day.date} style={styles.barContainer}>
                   <View style={styles.barColumn}>
-                    <Text style={styles.barValue}>{day.minutes > 0 ? day.minutes : ''}</Text>
+                    <Text style={styles.barValue}>{day.minutes > 0 ? ` ${day.minutes} ${t('components.readingLogs.minutesSuffix')}` : ''}</Text>
                     <View style={[styles.bar, { height: Math.max(barHeight, 4) }]}>
                       <View 
                         style={[
@@ -430,7 +430,7 @@ export default function WeeklyStatsView({
                   <Text style={styles.barLabel}>{day.dayName}</Text>
                   <View style={styles.barFooter}>
                     <Text style={styles.sessionsCount}>
-                      {day.sessions > 0 ? `${day.sessions} ${t('components.weeklyStats.sessions')}` : ''}
+                      {day.sessions > 0 ? `${day.sessions} 📝` : ''}
                     </Text>
                   </View>
                 </View>
@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sessionsCount: {
-    fontSize: 9,
+    fontSize: 10,
     color: '#94A3B8',
     textAlign: 'center',
   },

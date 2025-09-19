@@ -469,7 +469,7 @@ export default function ReadingLogs() {
         acc[session.date].push(session);
         return acc;
       }, {} as Record<string, SessionWithBook[]>);
-      console.log('Sessions by date:', sessionsByDate);
+ 
       // Add sessions to week data and calculate totals
       weekDates.forEach(day => {
         day.sessions = sessionsByDate[day.date] || [];

@@ -658,6 +658,12 @@ const resources = {
           tapToSelectDate: 'Tap to select date',
           currentWeeklyIncrease: 'Current Weekly Increase Needed: {{percentage}}% ({{classification}})',
         },
+        features: {
+          title: 'You\'re all set to:',
+          trackProgress: 'Track your reading progress',
+          achieveGoal: 'Achieve your yearly goal',
+          viewStatistics: 'View detailed statistics',
+        },
         buttons: {
           back: '← Back',
           continue: 'Continue →',
@@ -1445,6 +1451,12 @@ const resources = {
           selectedDate: 'Seçilen Tarih',
           tapToSelectDate: 'Tarih seçmek için dokunun',
           currentWeeklyIncrease: 'Gerekli Haftalık Artış: %{{percentage}} ({{classification}})',
+        },
+        features: {
+          title: 'Şunları yapmaya hazırsınız:',
+          trackProgress: 'Okuma ilerlemenizi takip etmek',
+          achieveGoal: 'Yıllık hedefinizi başarmak',
+          viewStatistics: 'Detaylı istatistikleri görüntülemek',
         },
         buttons: {
           back: '← Geri',

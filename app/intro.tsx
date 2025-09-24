@@ -415,7 +415,7 @@ export default function IntroScreen() {
   );
 
   const renderStep3 = () => (
-    <>
+    <View style={styles.step3Container}>
       <View style={styles.stepHeader}>
         <Text style={styles.stepEmoji}>📚</Text>
         <Text style={styles.stepTitle}>{t('intro.genres.title')}</Text>
@@ -424,7 +424,12 @@ export default function IntroScreen() {
         </Text>
       </View>
 
-      <ScrollView style={styles.genresContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.genresContainer} 
+        contentContainerStyle={styles.genresScrollContent}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+      >
         <View style={styles.genresGrid}>
           {genres.map((genre) => (
             <TouchableOpacity
@@ -446,7 +451,7 @@ export default function IntroScreen() {
           ))}
         </View>
       </ScrollView>
-    </>
+    </View>
   );
 
   const renderStep4 = () => (
@@ -743,19 +748,19 @@ export default function IntroScreen() {
 
           {currentStep === 5 && (
             <View style={styles.featuresContainer}>
-              <Text style={styles.featuresTitle}>You're all set to:</Text>
+              <Text style={styles.featuresTitle}>{t('intro.features.title')}</Text>
               <View style={styles.featuresList}>
                 <View style={styles.featureItem}>
                   <Text style={styles.featureEmoji}>📖</Text>
-                  <Text style={styles.featureText}>Track your reading progress</Text>
+                  <Text style={styles.featureText}>{t('intro.features.trackProgress')}</Text>
                 </View>
                 <View style={styles.featureItem}>
                   <Text style={styles.featureEmoji}>🎯</Text>
-                  <Text style={styles.featureText}>Achieve your yearly goal</Text>
+                  <Text style={styles.featureText}>{t('intro.features.achieveGoal')}</Text>
                 </View>
                 <View style={styles.featureItem}>
                   <Text style={styles.featureEmoji}>📊</Text>
-                  <Text style={styles.featureText}>View detailed statistics</Text>
+                  <Text style={styles.featureText}>{t('intro.features.viewStatistics')}</Text>
                 </View>
               </View>
             </View>
@@ -776,6 +781,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 40,
+    minHeight: '100%',
   },
   headerContainer: {
     alignItems: 'center',
@@ -852,12 +858,14 @@ const styles = StyleSheet.create({
     elevation: 8,
     marginBottom: 24,
     minHeight: 300,
-
+    maxHeight: 500, // Allow more height for better content display
+    flex: 1,
   },
   stepContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
   },
   stepHeader: {
     alignItems: 'center',
@@ -930,9 +938,17 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 2,
   },
-  genresContainer: {
-    maxHeight: 200,
+  step3Container: {
+    flex: 1,
     width: '100%',
+  },
+  genresContainer: {
+    flex: 1,
+    width: '100%',
+  },
+  genresScrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   genresGrid: {
     flexDirection: 'row',

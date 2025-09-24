@@ -18,6 +18,7 @@ import {
 import WeeklyStatsView from '../../../components/WeeklyStatsView';
 import { EnhancedBook, execute, queryAll, ReadingSession } from '../../../db/db';
 import { dateToLocalDateString, getTodayDateString } from '../../../utils/dateUtils';
+import { isDevModeEnabled } from '../../../utils/devMode';
 import { getEnhancedBookProgress, syncBookCurrentPageFromSessions } from '../../../utils/readingProgress';
 interface WeekDay {
   date: string;
@@ -296,7 +297,7 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
 const generateRandomReadingData = async (): Promise<void> => {
   try {
     // Check if we're in development mode
-    if (!__DEV__) {
+    if (!isDevModeEnabled()) {
       console.log('⚠️ Random data generation is only available in development mode');
       return;
     }
@@ -694,7 +695,7 @@ export default function ReadingLogs() {
       </View>
 
       {/* Development Only: Random Data Button */}
-      {__DEV__ && (
+      {isDevModeEnabled() && (
         <View style={styles.devButtonContainer}>
           <TouchableOpacity
             style={styles.devButton}

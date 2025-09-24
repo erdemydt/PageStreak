@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#D8F0F0"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.erdemydt.PageStreak"

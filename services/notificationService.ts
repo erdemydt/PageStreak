@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { AppUsageTracking, checkNotificationDatabaseIntegrity, execute, NotificationPreferences, queryFirst, repairNotificationDatabase } from '../db/db';
 import { dateToLocalDateString, getTodayDateString } from '../utils/dateUtils';
+import { isDevModeEnabled } from '../utils/devMode';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -32,7 +33,7 @@ export class NotificationService {
    * Check if we're in development mode
    */
   private isDevelopment(): boolean {
-    return __DEV__ || Constants.expoConfig?.extra?.isDevelopment === true;
+    return isDevModeEnabled() || Constants.expoConfig?.extra?.isDevelopment === true;
   }
 
   /**

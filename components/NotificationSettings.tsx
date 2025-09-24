@@ -3,18 +3,19 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
-  AppState,
-  Linking,
-  Platform,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    AppState,
+    Linking,
+    Platform,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { NotificationPreferences } from '../db/db';
 import NotificationService from '../services/notificationService';
+import { isDevModeEnabled } from '../utils/devMode';
 
 export default function NotificationSettings() {
   const { t } = useTranslation();
@@ -186,7 +187,7 @@ export default function NotificationSettings() {
       }
 
       // Check if in development mode for different behavior
-      if (__DEV__) {
+      if (isDevModeEnabled()) {
         // In development, schedule a 1-minute test
         await NotificationService.scheduleTestNotification(1);
         Alert.alert(t('settings.devTestScheduled'), t('settings.devTestScheduledMessage'));
@@ -364,16 +365,16 @@ export default function NotificationSettings() {
               </View>
 
               {/* Test Notification Button */}
-              {__DEV__  &&(<TouchableOpacity
+              {isDevModeEnabled() && (<TouchableOpacity
                 style={styles.testButton}
                 onPress={handleTestNotification}
                 disabled={saving}
               >
                 <Ionicons name="send" size={18} color="#FFFFFF" />
                 <Text style={styles.testButtonText}>
-                  {__DEV__ ? t('settings.sendTestDev') : t('settings.sendTest')}
+                  {isDevModeEnabled() ? t('settings.sendTestDev') : t('settings.sendTest')}
                 </Text>
-                {__DEV__ && <Text style={styles.devBadge}>DEV</Text>}
+                {isDevModeEnabled() && <Text style={styles.devBadge}>DEV</Text>}
               </TouchableOpacity>)}
             </View>
           )}

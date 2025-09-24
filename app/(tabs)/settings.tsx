@@ -3,13 +3,13 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
-  Keyboard,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    Keyboard,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import DataExportModal from '../../components/DataExportModal';
 import DataImportModal from '../../components/DataImportModal';
@@ -17,6 +17,7 @@ import LanguageSelector from '../../components/LanguageSelector';
 import NotificationSettings from '../../components/NotificationSettings';
 import NotificationTester from '../../components/NotificationTester';
 import { queryFirst } from '../../db/db';
+import { isDevModeEnabled } from '../../utils/devMode';
 import { logoutUser } from '../../utils/migration';
 
 type UserPreferences = {
@@ -158,7 +159,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* Development Notification Tester - Only show in development */}
-          {__DEV__ && (
+          {isDevModeEnabled() && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>🧪 Development Tools</Text>
               <NotificationTester />

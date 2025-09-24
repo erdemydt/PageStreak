@@ -238,7 +238,8 @@ export const logoutUser = async () => {
         minutes_read INTEGER NOT NULL,
         date TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        notes TEXT
+        notes TEXT,
+        pages_read INTEGER
       )
     `);
 

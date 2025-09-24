@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import NotificationService from '../services/notificationService';
+import { isDevModeEnabled } from '../utils/devMode';
 
 const NotificationTester: React.FC = () => {
   const { t } = useTranslation();
@@ -16,7 +17,7 @@ const NotificationTester: React.FC = () => {
   }, []);
 
   const checkIfDevelopment = () => {
-    setIsDev(__DEV__);
+    setIsDev(isDevModeEnabled());
   };
 
   const loadNotificationStatus = async () => {

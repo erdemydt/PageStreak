@@ -1,0 +1,753 @@
+{
+  "app": "pagestreak",
+  "schemaVersion": 1,
+  "createdAt": "2025-09-19T14:30:00.000Z",
+  "deviceInfo": {
+    "platform": "mobile",
+    "version": "1.0.0"
+  },
+  "tables": {
+    "enhanced_books": [
+      {
+        "id": 1,
+        "name": "The art of game design",
+        "author": "Jesse Schell",
+        "page": 610,
+        "isbn": "1281795364",
+        "cover_id": 9317386,
+        "cover_url": "https://covers.openlibrary.org/b/id/9317386-M.jpg",
+        "first_publish_year": 2008,
+        "publisher": "Elsevier/Morgan Kaufmann",
+        "language": "eng",
+        "description": null,
+        "subjects": "[\"Computer games\",\"Design\",\"Game design\",\"Computer game design\",\"Computer games, design\"]",
+        "open_library_key": "/works/OL13618121W",
+        "author_key": null,
+        "rating": 4.2,
+        "date_added": "2025-08-15T09:20:12.748Z",
+        "date_started": "2025-08-15T09:20:12.748Z",
+        "date_finished": "2025-09-10T18:45:00.000Z",
+        "current_page": 610,
+        "reading_status": "read",
+        "notes": "Excellent comprehensive guide to game design principles. The lens-based approach is particularly helpful."
+      },
+      {
+        "id": 2,
+        "name": "Milli İrade",
+        "author": "Mustafa B. Bozkurt",
+        "page": 300,
+        "isbn": null,
+        "cover_id": null,
+        "cover_url": null,
+        "first_publish_year": null,
+        "publisher": null,
+        "language": "tur",
+        "description": null,
+        "subjects": null,
+        "open_library_key": null,
+        "author_key": null,
+        "rating": 4.5,
+        "date_added": "2025-08-20T21:08:54.027Z",
+        "date_started": "2025-08-20T21:08:54.027Z",
+        "date_finished": null,
+        "current_page": 185,
+        "reading_status": "currently_reading",
+        "notes": "Türk siyasi tarihine dair önemli bir eser. Çok detaylı ve analitik."
+      },
+      {
+        "id": 3,
+        "name": "Hamlet, ein Tendenzdrama Sheakspeare's gegen die skeptische und kosmopolitische Weltanschauung des Michael de Montaigne",
+        "author": "G. F. Stedefeld",
+        "page": 94,
+        "isbn": null,
+        "cover_id": null,
+        "cover_url": null,
+        "first_publish_year": 1871,
+        "publisher": "Gebrüder Paetel",
+        "language": "ger",
+        "description": null,
+        "subjects": null,
+        "open_library_key": "/works/OL33164848W",
+        "author_key": null,
+        "rating": 3.8,
+        "date_added": "2025-09-05T13:55:37.433Z",
+        "date_started": "2025-09-05T13:55:37.433Z",
+        "date_finished": "2025-09-15T20:30:00.000Z",
+        "current_page": 94,
+        "reading_status": "read",
+        "notes": "Interesting academic analysis of Hamlet. Dense but insightful historical perspective."
+      },
+      {
+        "id": 4,
+        "name": "Nutuk",
+        "author": "Mustafa Kemal Ataturk",
+        "page": 589,
+        "isbn": "9786059011938",
+        "cover_id": 12205042,
+        "cover_url": "https://covers.openlibrary.org/b/id/12205042-M.jpg",
+        "first_publish_year": 2000,
+        "publisher": "Cumhuriyet Kitaplar?",
+        "language": "tur",
+        "description": null,
+        "subjects": null,
+        "open_library_key": "/works/OL26208111W",
+        "author_key": null,
+        "rating": 5,
+        "date_added": "2025-08-25T13:55:51.223Z",
+        "date_started": "2025-08-25T13:55:51.223Z",
+        "date_finished": null,
+        "current_page": 245,
+        "reading_status": "currently_reading",
+        "notes": "Türkiye Cumhuriyeti'nin kuruluş hikayesi. Tarih severlerin mutlaka okuması gereken bir eser."
+      },
+      {
+        "id": 5,
+        "name": "Ezbere Yaşayanlar Vazgeçemediğimiz Alışkanlıklarımızın Kökenleri",
+        "author": "Emrah Safa Gürkan",
+        "page": 400,
+        "isbn": "6258431135",
+        "cover_id": 14062522,
+        "cover_url": "https://covers.openlibrary.org/b/id/14062522-M.jpg",
+        "first_publish_year": 2022,
+        "publisher": "Kronik Kitap",
+        "language": "tur",
+        "description": null,
+        "subjects": null,
+        "open_library_key": "/works/OL27775175W",
+        "author_key": null,
+        "rating": 4.3,
+        "date_added": "2025-09-01T13:56:50.002Z",
+        "date_started": "2025-09-01T13:56:50.002Z",
+        "date_finished": null,
+        "current_page": 120,
+        "reading_status": "currently_reading",
+        "notes": "Çok ilginç bir perspektif. Alışkanlıklarımızın tarihsel kökenlerini inceliyor."
+      },
+      {
+        "id": 6,
+        "name": "Atomic Habits",
+        "author": "James Clear",
+        "page": 321,
+        "isbn": "ISBN 22",
+        "cover_id": 12539702,
+        "cover_url": "https://covers.openlibrary.org/b/id/12539702-M.jpg",
+        "first_publish_year": 2016,
+        "publisher": "Lifestyle Publishing",
+        "language": "eng",
+        "description": null,
+        "subjects": "[\"Habit\",\"Habit breaking\",\"Behavior modification\",\"Self-actualization (psychology)\",\"Business\"]",
+        "open_library_key": "/works/OL17930368W",
+        "author_key": null,
+        "rating": 4.6,
+        "date_added": "2025-08-28T13:56:59.913Z",
+        "date_started": "2025-08-28T13:56:59.913Z",
+        "date_finished": "2025-09-18T19:20:00.000Z",
+        "current_page": 321,
+        "reading_status": "read",
+        "notes": "Life-changing book! The 1% better approach really works. Already implementing several techniques."
+      },
+      {
+        "id": 7,
+        "name": "The development of secularism in Turkey",
+        "author": "Niyazi Berkes",
+        "page": 564,
+        "isbn": "9781315022581",
+        "cover_id": 14944286,
+        "cover_url": "https://covers.openlibrary.org/b/id/14944286-M.jpg",
+        "first_publish_year": 1964,
+        "publisher": "Routledge",
+        "language": "eng",
+        "description": null,
+        "subjects": "[\"Islam and state\",\"History\"]",
+        "open_library_key": "/works/OL18453199W",
+        "author_key": null,
+        "rating": 4.1,
+        "date_added": "2025-09-12T13:58:08.153Z",
+        "date_started": "2025-09-12T13:58:08.153Z",
+        "date_finished": null,
+        "current_page": 78,
+        "reading_status": "currently_reading",
+        "notes": "Academic but accessible. Important for understanding modern Turkey's development."
+      },
+      {
+        "id": 8,
+        "name": "Sapiens: A Brief History of Humankind",
+        "author": "Yuval Noah Harari",
+        "page": 464,
+        "isbn": "9780062316097",
+        "cover_id": 8239257,
+        "cover_url": "https://covers.openlibrary.org/b/id/8239257-M.jpg",
+        "first_publish_year": 2011,
+        "publisher": "Harper",
+        "language": "eng",
+        "description": null,
+        "subjects": "[\"Human evolution\",\"Civilization\",\"History\",\"Anthropology\"]",
+        "open_library_key": "/works/OL17069895W",
+        "author_key": null,
+        "rating": 4.4,
+        "date_added": "2025-08-10T10:30:00.000Z",
+        "date_started": "2025-08-10T10:30:00.000Z",
+        "date_finished": "2025-08-30T22:15:00.000Z",
+        "current_page": 464,
+        "reading_status": "read",
+        "notes": "Mind-blowing perspective on human history. Changed how I think about civilization."
+      },
+      {
+        "id": 9,
+        "name": "Clean Code: A Handbook of Agile Software Craftsmanship",
+        "author": "Robert C. Martin",
+        "page": 464,
+        "isbn": "9780132350884",
+        "cover_id": 7484625,
+        "cover_url": "https://covers.openlibrary.org/b/id/7484625-M.jpg",
+        "first_publish_year": 2008,
+        "publisher": "Prentice Hall",
+        "language": "eng",
+        "description": null,
+        "subjects": "[\"Software engineering\",\"Programming\",\"Computer science\"]",
+        "open_library_key": "/works/OL8527378W",
+        "author_key": null,
+        "rating": 4.7,
+        "date_added": "2025-09-08T14:20:00.000Z",
+        "date_started": "2025-09-08T14:20:00.000Z",
+        "date_finished": null,
+        "current_page": 156,
+        "reading_status": "currently_reading",
+        "notes": "Essential for any developer. Every chapter has actionable insights."
+      },
+      {
+        "id": 10,
+        "name": "The Pragmatic Programmer",
+        "author": "David Thomas, Andrew Hunt",
+        "page": 352,
+        "isbn": "9780135957059",
+        "cover_id": 8739161,
+        "cover_url": "https://covers.openlibrary.org/b/id/8739161-M.jpg",
+        "first_publish_year": 1999,
+        "publisher": "Addison-Wesley Professional",
+        "language": "eng",
+        "description": null,
+        "subjects": "[\"Software engineering\",\"Programming\",\"Computer science\"]",
+        "open_library_key": "/works/OL543500W",
+        "author_key": null,
+        "rating": null,
+        "date_added": "2025-09-18T16:45:00.000Z",
+        "date_started": null,
+        "date_finished": null,
+        "current_page": 0,
+        "reading_status": "want_to_read",
+        "notes": "Next on my programming books list. Heard great things about it."
+      }
+    ],
+    "reading_sessions": [
+      {
+        "id": 1,
+        "book_id": 8,
+        "minutes_read": 45,
+        "date": "2025-08-10",
+        "created_at": "2025-08-10 10:30:00",
+        "notes": "Started with the Cognitive Revolution chapter",
+        "pages_read": 35
+      },
+      {
+        "id": 2,
+        "book_id": 8,
+        "minutes_read": 30,
+        "date": "2025-08-11",
+        "created_at": "2025-08-11 19:15:00",
+        "notes": null,
+        "pages_read": 22
+      },
+      {
+        "id": 3,
+        "book_id": 8,
+        "minutes_read": 60,
+        "date": "2025-08-12",
+        "created_at": "2025-08-12 21:00:00",
+        "notes": "Agricultural Revolution - fascinating insights",
+        "pages_read": 45
+      },
+      {
+        "id": 4,
+        "book_id": 8,
+        "minutes_read": 25,
+        "date": "2025-08-13",
+        "created_at": "2025-08-13 20:30:00",
+        "notes": null,
+        "pages_read": 18
+      },
+      {
+        "id": 5,
+        "book_id": 8,
+        "minutes_read": 40,
+        "date": "2025-08-14",
+        "created_at": "2025-08-14 18:45:00",
+        "notes": null,
+        "pages_read": 28
+      },
+      {
+        "id": 6,
+        "book_id": 1,
+        "minutes_read": 35,
+        "date": "2025-08-15",
+        "created_at": "2025-08-15 09:20:00",
+        "notes": "Starting the design fundamentals",
+        "pages_read": 25
+      },
+      {
+        "id": 7,
+        "book_id": 8,
+        "minutes_read": 50,
+        "date": "2025-08-15",
+        "created_at": "2025-08-15 22:00:00",
+        "notes": null,
+        "pages_read": 38
+      },
+      {
+        "id": 8,
+        "book_id": 1,
+        "minutes_read": 45,
+        "date": "2025-08-16",
+        "created_at": "2025-08-16 20:15:00",
+        "notes": null,
+        "pages_read": 
+        32
+      },
+      {
+        "id": 9,
+        "book_id": 8,
+        "minutes_read": 35,
+        "date": "2025-08-17",
+        "created_at": "2025-08-17 19:30:00",
+        "notes": null,
+        "pages_read": 26
+      },
+      {
+        "id": 10,
+        "book_id": 1,
+        "minutes_read": 55,
+        "date": "2025-08-18",
+        "created_at": "2025-08-18 14:20:00",
+        "notes": "Game mechanics chapter is excellent",
+        "pages_read": 40
+      },
+      {
+        "id": 11,
+        "book_id": 8,
+        "minutes_read": 30,
+        "date": "2025-08-19",
+        "created_at": "2025-08-19 21:45:00",
+        "notes": null,
+        "pages_read": 22
+      },
+      {
+        "id": 12,
+        "book_id": 2,
+        "minutes_read": 25,
+        "date": "2025-08-20",
+        "created_at": "2025-08-20 21:08:00",
+        "notes": "İlk bölüm, tarihsel arka plan",
+        "pages_read": 18
+      },
+      {
+        "id": 13,
+        "book_id": 1,
+        "minutes_read": 40,
+        "date": "2025-08-21",
+        "created_at": "2025-08-21 16:30:00",
+        "notes": null,
+        "pages_read": 30
+      },
+      {
+        "id": 14,
+        "book_id": 8,
+        "minutes_read": 45,
+        "date": "2025-08-22",
+        "created_at": "2025-08-22 20:00:00",
+        "notes": "The Unification of Humankind",
+        "pages_read": 34
+      },
+      {
+        "id": 15,
+        "book_id": 2,
+        "minutes_read": 35,
+        "date": "2025-08-23",
+        "created_at": "2025-08-23 19:15:00",
+        "notes": null,
+        "pages_read": 25
+      },
+      {
+        "id": 16,
+        "book_id": 1,
+        "minutes_read": 50,
+        "date": "2025-08-24",
+        "created_at": "2025-08-24 15:45:00",
+        "notes": "Player psychology section",
+        "pages_read": 38
+      },
+      {
+        "id": 17,
+        "book_id": 4,
+        "minutes_read": 40,
+        "date": "2025-08-25",
+        "created_at": "2025-08-25 13:55:00",
+        "notes": "Başlangıç bölümü",
+        "pages_read": 28
+      },
+      {
+        "id": 18,
+        "book_id": 8,
+        "minutes_read": 55,
+        "date": "2025-08-26",
+        "created_at": "2025-08-26 21:30:00",
+        "notes": null,
+        "pages_read": 42
+      },
+      {
+        "id": 19,
+        "book_id": 1,
+        "minutes_read": 30,
+        "date": "2025-08-27",
+        "created_at": "2025-08-27 18:20:00",
+        "notes": null,
+        "pages_read": 22
+      },
+      {
+        "id": 20,
+        "book_id": 6,
+        "minutes_read": 45,
+        "date": "2025-08-28",
+        "created_at": "2025-08-28 13:56:00",
+        "notes": "Introduction to habit formation",
+        "pages_read": 32
+      },
+      {
+        "id": 21,
+        "book_id": 2,
+        "minutes_read": 30,
+        "date": "2025-08-29",
+        "created_at": "2025-08-29 20:45:00",
+        "notes": null,
+        "pages_read": 22
+      },
+      {
+        "id": 22,
+        "book_id": 8,
+        "minutes_read": 60,
+        "date": "2025-08-30",
+        "created_at": "2025-08-30 22:15:00",
+        "notes": "Finished! What an incredible journey through history",
+        "pages_read": 48
+      },
+      {
+        "id": 23,
+        "book_id": 4,
+        "minutes_read": 35,
+        "date": "2025-08-31",
+        "created_at": "2025-08-31 19:30:00",
+        "notes": null,
+        "pages_read": 25
+      },
+      {
+        "id": 24,
+        "book_id": 5,
+        "minutes_read": 25,
+        "date": "2025-09-01",
+        "created_at": "2025-09-01 13:56:00",
+        "notes": "İlk bölüm - giriş",
+        "pages_read": 18
+      },
+      {
+        "id": 25,
+        "book_id": 1,
+        "minutes_read": 40,
+        "date": "2025-09-02",
+        "created_at": "2025-09-02 17:15:00",
+        "notes": null,
+        "pages_read": 30
+      },
+      {
+        "id": 26,
+        "book_id": 6,
+        "minutes_read": 50,
+        "date": "2025-09-03",
+        "created_at": "2025-09-03 20:30:00",
+        "notes": "The 4 Laws of Behavior Change",
+        "pages_read": 38
+      },
+      {
+        "id": 27,
+        "book_id": 2,
+        "minutes_read": 45,
+        "date": "2025-09-04",
+        "created_at": "2025-09-04 21:00:00",
+        "notes": null,
+        "pages_read": 32
+      },
+      {
+        "id": 28,
+        "book_id": 3,
+        "minutes_read": 30,
+        "date": "2025-09-05",
+        "created_at": "2025-09-05 13:55:00",
+        "notes": "Starting this academic text",
+        "pages_read": 22
+      },
+      {
+        "id": 29,
+        "book_id": 1,
+        "minutes_read": 55,
+        "date": "2025-09-06",
+        "created_at": "2025-09-06 16:45:00",
+        "notes": "Playtesting chapter is very practical",
+        "pages_read": 42
+      },
+      {
+        "id": 30,
+        "book_id": 4,
+        "minutes_read": 40,
+        "date": "2025-09-07",
+        "created_at": "2025-09-07 18:20:00",
+        "notes": null,
+        "pages_read": 28
+      },
+      {
+        "id": 31,
+        "book_id": 9,
+        "minutes_read": 35,
+        "date": "2025-09-08",
+        "created_at": "2025-09-08 14:20:00",
+        "notes": "Starting with clean code fundamentals",
+        "pages_read": 25
+      },
+      {
+        "id": 32,
+        "book_id": 6,
+        "minutes_read": 45,
+        "date": "2025-09-09",
+        "created_at": "2025-09-09 19:45:00",
+        "notes": null,
+        "pages_read": 34
+      },
+      {
+        "id": 33,
+        "book_id": 1,
+        "minutes_read": 50,
+        "date": "2025-09-10",
+        "created_at": "2025-09-10 18:45:00",
+        "notes": "Finished! Comprehensive and practical",
+        "pages_read": 38
+      },
+      {
+        "id": 34,
+        "book_id": 5,
+        "minutes_read": 30,
+        "date": "2025-09-11",
+        "created_at": "2025-09-11 20:15:00",
+        "notes": null,
+        "pages_read": 22
+      },
+      {
+        "id": 35,
+        "book_id": 7,
+        "minutes_read": 25,
+        "date": "2025-09-12",
+        "created_at": "2025-09-12 13:58:00",
+        "notes": "Beginning with historical context",
+        "pages_read": 18
+      },
+      {
+        "id": 36,
+        "book_id": 3,
+        "minutes_read": 40,
+        "date": "2025-09-13",
+        "created_at": "2025-09-13 21:30:00",
+        "notes": null,
+        "pages_read": 30
+      },
+      {
+        "id": 37,
+        "book_id": 9,
+        "minutes_read": 45,
+        "date": "2025-09-14",
+        "created_at": "2025-09-14 17:00:00",
+        "notes": "Functions chapter - very detailed",
+        "pages_read": 32
+      },
+      {
+        "id": 38,
+        "book_id": 3,
+        "minutes_read": 55,
+        "date": "2025-09-15",
+        "created_at": "2025-09-15 20:30:00",
+        "notes": "Finished this challenging academic work",
+        "pages_read": 42
+      },
+      {
+        "id": 39,
+        "book_id": 2,
+        "minutes_read": 35,
+        "date": "2025-09-16",
+        "created_at": "2025-09-16 19:45:00",
+        "notes": null,
+        "pages_read": 25
+      },
+      {
+        "id": 40,
+        "book_id": 4,
+        "minutes_read": 50,
+        "date": "2025-09-17",
+        "created_at": "2025-09-17 20:30:00",
+        "notes": null,
+        "pages_read": 38
+      },
+      {
+        "id": 41,
+        "book_id": 6,
+        "minutes_read": 60,
+        "date": "2025-09-18",
+        "created_at": "2025-09-18 19:20:00",
+        "notes": "Finished! Implementing daily habits now",
+        "pages_read": 45
+      },
+      {
+        "id": 42,
+        "book_id": 5,
+        "minutes_read": 40,
+        "date": "2025-09-19",
+        "created_at": "2025-09-19 11:30:00",
+        "notes": null,
+        "pages_read": 30
+      },
+      {
+        "id": 43,
+        "book_id": 7,
+        "minutes_read": 35,
+        "date": "2025-09-19",
+        "created_at": "2025-09-19 21:15:00",
+        "notes": null,
+        "pages_read": 25
+      },
+      {
+        "id": 44,
+        "book_id": 9,
+        "minutes_read": 30,
+        "date": "2025-09-19",
+        "created_at": "2025-09-19 15:45:00",
+        "notes": null,
+        "pages_read": 22
+      }
+    ],
+    "weekly_progress": [
+      {
+        "id": 1,
+        "weeks_passed": 1,
+        "target_reading_minutes": 210,
+        "achived_reading_minutes": 285,
+        "date_created": "2025-08-17T23:59:59.000Z"
+      },
+      {
+        "id": 2,
+        "weeks_passed": 2,
+        "target_reading_minutes": 210,
+        "achived_reading_minutes": 320,
+        "date_created": "2025-08-24T23:59:59.000Z"
+      },
+      {
+        "id": 3,
+        "weeks_passed": 3,
+        "target_reading_minutes": 210,
+        "achived_reading_minutes": 275,
+        "date_created": "2025-08-31T23:59:59.000Z"
+      },
+      {
+        "id": 4,
+        "weeks_passed": 4,
+        "target_reading_minutes": 210,
+        "achived_reading_minutes": 295,
+        "date_created": "2025-09-07T23:59:59.000Z"
+      },
+      {
+        "id": 5,
+        "weeks_passed": 5,
+        "target_reading_minutes": 210,
+        "achived_reading_minutes": 315,
+        "date_created": "2025-09-14T23:59:59.000Z"
+      },
+      {
+        "id": 6,
+        "weeks_passed": 6,
+        "target_reading_minutes": 210,
+        "achived_reading_minutes": 280,
+        "date_created": "2025-09-19T23:59:59.000Z"
+      }
+    ],
+    "user_preferences": [
+      {
+        "id": 1,
+        "username": "BookLover",
+        "yearly_book_goal": 24,
+        "preferred_genres": "[\"History\", \"Technology\", \"Self-improvement\", \"Philosophy\"]",
+        "created_at": "2025-08-10T10:00:00.000Z",
+        "updated_at": "2025-09-19T14:30:00.000Z",
+        "weekly_reading_goal": 210,
+        "initial_reading_rate_minutes_per_day": 30,
+        "end_reading_rate_goal_minutes_per_day": 60,
+        "end_reading_rate_goal_date": "2025-12-31",
+        "current_reading_rate_minutes_per_day": 45,
+        "current_reading_rate_last_updated": "2025-09-19T14:30:00.000Z",
+        "weekly_reading_rate_increase_minutes": 15,
+        "weekly_reading_rate_increase_minutes_percentage": 0.05
+      }
+    ],
+    "notification_preferences": [
+      {
+        "id": 1,
+        "notifications_enabled": true,
+        "daily_reminder_enabled": true,
+        "daily_reminder_hours_after_last_open": 6,
+        "daily_reminder_title": "📚 Time to read!",
+        "daily_reminder_body": "Keep your reading streak alive! Your daily goal awaits.",
+        "created_at": "2025-08-10T10:00:00.000Z",
+        "updated_at": "2025-09-15T18:20:00.000Z"
+      }
+    ],
+    "app_usage_tracking": [
+      {
+        "id": 1,
+        "last_opened_at": "2025-08-10T10:00:00.000Z",
+        "last_closed_at": "2025-08-10T11:15:00.000Z",
+        "session_count_today": 2,
+        "date": "2025-08-10"
+      },
+      {
+        "id": 2,
+        "last_opened_at": "2025-08-11T19:00:00.000Z",
+        "last_closed_at": "2025-08-11T19:45:00.000Z",
+        "session_count_today": 1,
+        "date": "2025-08-11"
+      },
+      {
+        "id": 3,
+        "last_opened_at": "2025-08-12T20:45:00.000Z",
+        "last_closed_at": "2025-08-12T22:00:00.000Z",
+        "session_count_today": 2,
+        "date": "2025-08-12"
+      },
+      {
+        "id": 4,
+        "last_opened_at": "2025-09-18T07:20:00.000Z",
+        "last_closed_at": "2025-09-18T21:30:00.000Z",
+        "session_count_today": 3,
+        "date": "2025-09-18"
+      },
+      {
+        "id": 5,
+        "last_opened_at": "2025-09-19T11:15:00.000Z",
+        "last_closed_at": "2025-09-19T21:45:00.000Z",
+        "session_count_today": 4,
+        "date": "2025-09-19"
+      }
+    ]
+  }
+}

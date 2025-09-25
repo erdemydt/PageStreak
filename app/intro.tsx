@@ -416,10 +416,10 @@ export default function IntroScreen() {
 
   const renderStep3 = () => (
     <View style={styles.step3Container}>
-      <View style={styles.stepHeader}>
-        <Text style={styles.stepEmoji}>📚</Text>
-        <Text style={styles.stepTitle}>{t('intro.genres.title')}</Text>
-        <Text style={styles.stepSubtitle}>
+      <View style={styles.step3Header}>
+        <Text style={styles.step3Emoji}>📚</Text>
+        <Text style={styles.step3Title}>{t('intro.genres.title')}</Text>
+        <Text style={styles.step3Subtitle}>
           {t('intro.genres.subtitle')}
         </Text>
       </View>
@@ -427,8 +427,9 @@ export default function IntroScreen() {
       <ScrollView 
         style={styles.genresContainer} 
         contentContainerStyle={styles.genresScrollContent}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         nestedScrollEnabled={true}
+        bounces={true}
       >
         <View style={styles.genresGrid}>
           {genres.map((genre) => (
@@ -497,11 +498,11 @@ export default function IntroScreen() {
   );
 
   const renderStep5 = () => (
-    <View style={{ flex: 1, gap: 0, width: '100%' , justifyContent: 'center', alignItems: 'center' }}>
-      <View style={styles.stepHeader}>
-        <Text style={styles.stepEmoji}>🚀</Text>
-        <Text style={styles.stepTitle}>{t('intro.targetGoal.title')}</Text>
-        <Text style={styles.stepSubtitle}>
+    <View style={styles.step5Container}>
+      <View style={styles.step5Header}>
+        <Text style={styles.step5Emoji}>🚀</Text>
+        <Text style={styles.step5Title}>{t('intro.targetGoal.title')}</Text>
+        <Text style={styles.step5Subtitle}>
           {t('intro.targetGoal.subtitle')}
         </Text>
       </View>
@@ -531,13 +532,9 @@ export default function IntroScreen() {
         <Text style={styles.goalLabel}>{t('intro.targetGoal.label')}</Text>
       </View>
 
-      <View style={styles.stepHeader }>
-        <Text style={styles.stepEmoji}></Text>
-        <Text style={styles.stepTitle}>{t('intro.targetGoal.dateLabel')}</Text>
-      </View>
-
-
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={styles.dateSection}>
+        <Text style={styles.dateSectionTitle}>{t('intro.targetGoal.dateLabel')}</Text>
+        
         {Platform.OS === 'ios' ? (
           // iOS: Show inline date picker that's always visible
           <View style={styles.iosDatePickerContainer}>
@@ -611,14 +608,14 @@ export default function IntroScreen() {
             )}
           </View>
         )}
-        
-        <Text style={styles.weeklyIncreaseText}>
-          {t('intro.targetGoal.currentWeeklyIncrease', { 
-            percentage: calculateNeededWeeklyPercentageIncrease(), 
-            classification: classifyPercentageIncrease(Number(calculateNeededWeeklyPercentageIncrease())) 
-          })}
-        </Text>
       </View>
+
+      <Text style={styles.weeklyIncreaseText}>
+        {t('intro.targetGoal.currentWeeklyIncrease', { 
+          percentage: calculateNeededWeeklyPercentageIncrease(), 
+          classification: classifyPercentageIncrease(Number(calculateNeededWeeklyPercentageIncrease())) 
+        })}
+      </Text>
 
       <Text style={styles.goalHint}>
         🎯 {t('intro.targetGoal.hint')}
@@ -724,10 +721,10 @@ export default function IntroScreen() {
 
           {renderProgressBar()}
 
-          <View style={styles.card}>
+          <View style={currentStep === 3 ? styles.cardStep3 : styles.card}>
             <Animated.View
               style={[
-                styles.stepContainer,
+                currentStep === 3 ? styles.stepContainerStep3 : styles.stepContainer,
                 {
                   opacity: fadeAnimation,
                   transform: [{ translateY: slideAnimation }]
@@ -857,15 +854,32 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 8,
     marginBottom: 24,
-    minHeight: 300,
-    maxHeight: 500, // Allow more height for better content display
-    flex: 1,
+    minHeight: 350,
+    height: 'auto', // Let content determine height
+  },
+  cardStep3: {
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+    marginBottom: 24,
+    height: 480, // Fixed height for step 3 to enable scrolling
+    maxHeight: 480,
   },
   stepContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
+    minHeight: 280, // Ensure minimum height for content
+  },
+  stepContainerStep3: {
+    flex: 1, // Use full available height for step 3
+    width: '100%',
+    alignItems: 'center',
   },
   stepHeader: {
     alignItems: 'center',
@@ -932,23 +946,89 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   goalHint: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748B',
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 2,
+    paddingHorizontal: 10,
   },
   step3Container: {
     flex: 1,
     width: '100%',
+    maxHeight: '100%', // Ensure it doesn't overflow the card
+  },
+  step3Header: {
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingBottom: 10,
+  },
+  step3Emoji: {
+    fontSize: 40,
+    marginBottom: 10,
+  },
+  step3Title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  step3Subtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 20,
+  },
+  step5Container: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  dateSection: {
+    width: '100%',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  dateSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  step5Header: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  step5Emoji: {
+    fontSize: 36,
+    marginBottom: 8,
+  },
+  step5Title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  step5Subtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 15,
+    marginBottom: 5,
   },
   genresContainer: {
     flex: 1,
     width: '100%',
+    maxHeight: 300, // Limit height to enable scrolling
   },
   genresScrollContent: {
-    flexGrow: 1,
     paddingBottom: 20,
+    paddingTop: 10,
   },
   genresGrid: {
     flexDirection: 'row',
@@ -1066,19 +1146,19 @@ const styles = StyleSheet.create({
   },
   datePickerButton: {
     backgroundColor: '#FFFFFF',
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#6C63FF',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
     shadowColor: '#6C63FF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-    minHeight: 60,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    minHeight: 45,
     justifyContent: 'center',
   },
   datePickerButtonText: {
@@ -1091,18 +1171,18 @@ const styles = StyleSheet.create({
   iosDatePickerContainer: {
     width: '100%',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 5,
   },
   androidDatePickerContainer: {
     width: '100%',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 5,
   },
   dateSelectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#1E293B',
-    marginBottom: 16,
+    marginBottom: 10,
     textAlign: 'center',
   },
   iosDatePicker: {
@@ -1129,9 +1209,11 @@ const styles = StyleSheet.create({
   },
   weeklyIncreaseText: {
     textAlign: 'center',
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    fontSize: 14,
     color: '#64748B',
     fontWeight: '500',
+    paddingHorizontal: 10,
   },
 });

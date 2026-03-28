@@ -1,22 +1,26 @@
-
-import { Link, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Link, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  FlatList,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from 'react-native';
+    FlatList,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
-import BookCard from '../../../components/BookCard';
-import DailyProgressCard from '../../../components/DailyProgressCard';
-import ReadingTimeLogger from '../../../components/ReadingTimeLogger';
-import { EnhancedBook, queryAll, queryFirst } from '../../../db/db';
-import { getReadingStreak, getTodayReadingMinutes, initializeReadingSessions } from '../../../utils/readingProgress';
+import BookCard from "../../../components/BookCard";
+import DailyProgressCard from "../../../components/DailyProgressCard";
+import ReadingTimeLogger from "../../../components/ReadingTimeLogger";
+import { EnhancedBook, queryAll, queryFirst } from "../../../db/db";
+import { COLORS } from "../../../themes/colors";
+import {
+    getReadingStreak,
+    getTodayReadingMinutes,
+    initializeReadingSessions,
+} from "../../../utils/readingProgress";
 
 type UserPreferences = {
   id: number;
@@ -39,7 +43,8 @@ type ReadingSession = {
 export default function HomeScreen() {
   const { t } = useTranslation();
   const [books, setBooks] = useState<EnhancedBook[]>([]);
-  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
+  const [userPreferences, setUserPreferences] =
+    useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(false);
   const [showReadingLogger, setShowReadingLogger] = useState(false);
   const [todayMinutes, setTodayMinutes] = useState(0);
@@ -55,7 +60,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, [])
+    }, []),
   );
 
   const initializeApp = async () => {
@@ -67,7 +72,9 @@ export default function HomeScreen() {
     setLoading(true);
     try {
       // Load user preferences
-      const user = await queryFirst<UserPreferences>('SELECT * FROM user_preferences WHERE id = 1');
+      const user = await queryFirst<UserPreferences>(
+        "SELECT * FROM user_preferences WHERE id = 1",
+      );
       setUserPreferences(user);
 
       // Load today's reading progress
@@ -78,26 +85,33 @@ export default function HomeScreen() {
 
       // Load books - try enhanced books first, fallback to regular books
       try {
-        const enhancedBooks = await queryAll<EnhancedBook>('SELECT * FROM enhanced_books ORDER BY date_added DESC');
+        const enhancedBooks = await queryAll<EnhancedBook>(
+          "SELECT * FROM enhanced_books ORDER BY date_added DESC",
+        );
         setBooks(enhancedBooks);
       } catch (e) {
         // Fallback to regular books table
         try {
-          const regularBooks = await queryAll<{ id: number, name: string, author: string, page: number }>('SELECT * FROM books ORDER BY id DESC');
-          const mappedBooks: EnhancedBook[] = regularBooks.map(book => ({
+          const regularBooks = await queryAll<{
+            id: number;
+            name: string;
+            author: string;
+            page: number;
+          }>("SELECT * FROM books ORDER BY id DESC");
+          const mappedBooks: EnhancedBook[] = regularBooks.map((book) => ({
             ...book,
-            reading_status: 'read' as const,
+            reading_status: "read" as const,
             date_added: new Date().toISOString(),
             current_page: book.page,
           }));
           setBooks(mappedBooks);
         } catch (bookError) {
-          console.log('No books table found');
+          console.log("No books table found");
           setBooks([]);
         }
       }
     } catch (e) {
-      console.error('Failed to load data:', e);
+      console.error("Failed to load data:", e);
     } finally {
       setLoading(false);
     }
@@ -108,7 +122,7 @@ export default function HomeScreen() {
       const minutes = await getTodayReadingMinutes();
       setTodayMinutes(minutes);
     } catch (e) {
-      console.error('Error loading today progress:', e);
+      console.error("Error loading today progress:", e);
       setTodayMinutes(0);
     }
   };
@@ -118,22 +132,30 @@ export default function HomeScreen() {
       // Get the user's daily goal with fallback for missing columns
       let user;
       let dailyGoal = 30; // Default fallback
-      
+
       try {
-        user = await queryFirst<UserPreferences>('SELECT current_reading_rate_minutes_per_day FROM user_preferences WHERE id = 1');
+        user = await queryFirst<UserPreferences>(
+          "SELECT current_reading_rate_minutes_per_day FROM user_preferences WHERE id = 1",
+        );
         dailyGoal = user?.current_reading_rate_minutes_per_day || 30;
       } catch (columnError) {
         // If the column doesn't exist, fall back to basic user check
-        console.log('📝 current_reading_rate_minutes_per_day column not found, using default goal');
+        console.log(
+          "📝 current_reading_rate_minutes_per_day column not found, using default goal",
+        );
         try {
-          const basicUser = await queryFirst<UserPreferences>('SELECT id FROM user_preferences WHERE id = 1');
+          const basicUser = await queryFirst<UserPreferences>(
+            "SELECT id FROM user_preferences WHERE id = 1",
+          );
           if (!basicUser) {
             // No user exists yet
             setReadingStreak(0);
             return;
           }
         } catch (error) {
-          console.log('📝 user_preferences table not found, using default streak');
+          console.log(
+            "📝 user_preferences table not found, using default streak",
+          );
           setReadingStreak(0);
           return;
         }
@@ -142,17 +164,24 @@ export default function HomeScreen() {
       const streak = await getReadingStreak(dailyGoal);
       setReadingStreak(streak);
     } catch (e) {
-      console.error('Error calculating reading streak:', e);
+      console.error("Error calculating reading streak:", e);
       setReadingStreak(0);
     }
   };
 
   // Calculate reading progress - only count 'read' books
-  const booksRead = books.filter(book => book.reading_status === 'read').length;
-  const currentlyReading = books.filter(book => book.reading_status === 'currently_reading').length;
-  const wantToRead = books.filter(book => book.reading_status === 'want_to_read').length;
+  const booksRead = books.filter(
+    (book) => book.reading_status === "read",
+  ).length;
+  const currentlyReading = books.filter(
+    (book) => book.reading_status === "currently_reading",
+  ).length;
+  const wantToRead = books.filter(
+    (book) => book.reading_status === "want_to_read",
+  ).length;
   const yearlyGoal = userPreferences?.yearly_book_goal || 0;
-  const progressPercentage = yearlyGoal > 0 ? Math.min((booksRead / yearlyGoal) * 100, 100) : 0;
+  const progressPercentage =
+    yearlyGoal > 0 ? Math.min((booksRead / yearlyGoal) * 100, 100) : 0;
 
   const renderBook = ({ item }: { item: EnhancedBook }) => (
     <BookCard book={item} compact={true} refreshTrigger={refreshTrigger} />
@@ -164,126 +193,136 @@ export default function HomeScreen() {
     // Refresh books data to trigger BookCard re-renders with updated progress
     loadData();
     // Increment refresh trigger to force BookCard re-renders
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   };
-  const topPart = () => 
-     (
+  const topPart = () => (
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <View style={styles.header}>
+        <View style={styles.titleContainer}>
+          <Image
+            source={require("../../../assets/images/Logo.png")}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>{t("home.title")}</Text>
+        </View>
+        {userPreferences && (
+          <Text style={styles.subtitle}>
+            {t("home.welcomeBack", { username: userPreferences.username })}
+          </Text>
+        )}
+      </View>
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      {/* Daily Reading Progress Card */}
+      <DailyProgressCard
+        todayMinutes={todayMinutes}
+        goalMinutes={
+          userPreferences?.current_reading_rate_minutes_per_day || 30
+        }
+        streakDays={readingStreak}
+      />
 
-        <View style={styles.header}>
-          <View style={styles.titleContainer}>
-            <Image 
-              source={require('../../../assets/images/Logo.png')} 
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
-            <Text style={styles.title}>{t('home.title')}</Text>
+      {/* Log Reading Time Button */}
+      <View style={styles.actionContainer}>
+        <TouchableOpacity
+          style={styles.logTimeButton}
+          onPress={() => setShowReadingLogger(true)}
+        >
+          <Text style={styles.logTimeButtonText}>
+            {t("home.logReadingTime")}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={{ marginTop: 12, alignItems: "center" }}>
+          <Link href={"/readinglogs"}>
+            <Text style={{ color: COLORS.primary, fontWeight: "600" }}>
+              {t("home.viewReadingLogs")}
+            </Text>
+          </Link>
+        </TouchableOpacity>
+      </View>
+
+      {/* Reading Progress Card */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{t("home.readingJourney")}</Text>
+        <View style={styles.progressContainer}>
+          <View style={styles.progressStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{booksRead}</Text>
+              <Text style={styles.statLabel}>{t("home.booksRead")}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{currentlyReading}</Text>
+              <Text style={styles.statLabel}>{t("home.reading")}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{wantToRead}</Text>
+              <Text style={styles.statLabel}>{t("home.wantToRead")}</Text>
+            </View>
           </View>
-          {userPreferences && (
-            <Text style={styles.subtitle}>{t('home.welcomeBack', { username: userPreferences.username })}</Text>
+
+          {yearlyGoal > 0 && (
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBarBackground}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    { width: `${progressPercentage}%` },
+                  ]}
+                />
+              </View>
+              <Text style={styles.progressText}>
+                {booksRead >= yearlyGoal
+                  ? t("home.goalAchieved")
+                  : t("home.goalProgress", {
+                      remaining: yearlyGoal - booksRead,
+                      goal: yearlyGoal,
+                    })}
+              </Text>
+            </View>
           )}
         </View>
+      </View>
 
-        {/* Daily Reading Progress Card */}
-        <DailyProgressCard
-          todayMinutes={todayMinutes}
-          goalMinutes={userPreferences?.current_reading_rate_minutes_per_day || 30}
-          streakDays={readingStreak}
-        />
-
-        {/* Log Reading Time Button */}
-        <View style={styles.actionContainer}>
-          <TouchableOpacity
-            style={styles.logTimeButton}
-            onPress={() => setShowReadingLogger(true)}
-          >
-            <Text style={styles.logTimeButtonText}>{t('home.logReadingTime')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{ marginTop: 12, alignItems: 'center' }}>
-            <Link href={"/readinglogs"} >
-              <Text style={{ color: '#6C63FF', fontWeight: '600' }}>{t('home.viewReadingLogs')}</Text>
-            </Link>
-          </TouchableOpacity>
-
+      {/* Recent Books Section */}
+      <View style={styles.listSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            {t("home.recentBooks", { count: books.length })}
+          </Text>
+          <Link href={"/(books)" as any} asChild>
+            <TouchableOpacity style={styles.seeAllBtn}>
+              <Text style={styles.seeAllText}>{t("home.seeAll")}</Text>
+            </TouchableOpacity>
+          </Link>
         </View>
-
-        {/* Reading Progress Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t('home.readingJourney')}</Text>
-          <View style={styles.progressContainer}>
-            <View style={styles.progressStats}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{booksRead}</Text>
-                <Text style={styles.statLabel}>{t('home.booksRead')}</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{currentlyReading}</Text>
-                <Text style={styles.statLabel}>{t('home.reading')}</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{wantToRead}</Text>
-                <Text style={styles.statLabel}>{t('home.wantToRead')}</Text>
-              </View>
-            </View>
-
-            {yearlyGoal > 0 && (
-              <View style={styles.progressBarContainer}>
-                <View style={styles.progressBarBackground}>
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      { width: `${progressPercentage}%` }
-                    ]}
-                  />
-                </View>
-                <Text style={styles.progressText}>
-                  {booksRead >= yearlyGoal
-                    ? t('home.goalAchieved')
-                    : t('home.goalProgress', { remaining: yearlyGoal - booksRead, goal: yearlyGoal })
-                  }
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Recent Books Section */}
-        <View style={styles.listSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('home.recentBooks', { count: books.length })}</Text>
-            <Link href={"/(books)" as any} asChild>
-              <TouchableOpacity style={styles.seeAllBtn}>
-                <Text style={styles.seeAllText}>{t('home.seeAll')}</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </View>
-      </ScrollView>
-    )
+      </View>
+    </ScrollView>
+  );
   const TopPart = topPart;
 
   return (
-
     <View style={styles.container}>
       <FlatList
         key={`books-list-${refreshTrigger}`}
         data={books.slice(0, 4)} // Show only recent 4 books
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderBook}
         ListHeaderComponent={<TopPart />}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📚</Text>
-            <Text style={styles.emptyTitle}>{t('home.noBooksYet')}</Text>
-            <Text style={styles.emptySubtitle}>{t('home.startDiscovering')}</Text>
+            <Text style={styles.emptyTitle}>{t("home.noBooksYet")}</Text>
+            <Text style={styles.emptySubtitle}>
+              {t("home.startDiscovering")}
+            </Text>
             <Link href={"/(books)" as any} asChild>
               <TouchableOpacity style={styles.addFirstBookBtn}>
-                <Text style={styles.addFirstBookText}>{t('home.discoverBooks')}</Text>
+                <Text style={styles.addFirstBookText}>
+                  {t("home.discoverBooks")}
+                </Text>
               </TouchableOpacity>
             </Link>
           </View>
@@ -304,17 +343,17 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.neutral[50],
   },
   header: {
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginBottom: 4,
   },
@@ -324,22 +363,22 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: COLORS.neutral[800],
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748B',
-    textAlign: 'center',
+    color: COLORS.neutral[500],
+    textAlign: "center",
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     marginHorizontal: 20,
     marginTop: 16,
     padding: 20,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -347,56 +386,56 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: "700",
+    color: COLORS.neutral[800],
     marginBottom: 16,
   },
   progressContainer: {
     gap: 16,
   },
   progressStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
   },
   statItem: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#6C63FF',
+    fontWeight: "bold",
+    color: COLORS.primary,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
+    color: COLORS.neutral[500],
+    fontWeight: "500",
   },
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: COLORS.neutral[200],
   },
   progressBarContainer: {
     gap: 8,
   },
   progressBarBackground: {
     height: 8,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: COLORS.neutral[200],
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressBarFill: {
-    height: '100%',
-    backgroundColor: '#6C63FF',
+    height: "100%",
+    backgroundColor: COLORS.primary,
     borderRadius: 4,
   },
   progressText: {
     fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    fontWeight: '500',
+    color: COLORS.neutral[500],
+    textAlign: "center",
+    fontWeight: "500",
   },
   listSection: {
     flex: 1,
@@ -404,33 +443,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: "700",
+    color: COLORS.neutral[800],
   },
   seeAllBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: COLORS.neutral[100],
     borderRadius: 8,
   },
   seeAllText: {
     fontSize: 14,
-    color: '#6C63FF',
-    fontWeight: '600',
+    color: COLORS.primary,
+    fontWeight: "600",
   },
   list: {
     flex: 1,
   },
   emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 40,
   },
   emptyIcon: {
@@ -439,25 +478,25 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#64748B',
+    fontWeight: "600",
+    color: COLORS.neutral[500],
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
-    textAlign: 'center',
+    color: COLORS.neutral[400],
+    textAlign: "center",
     marginBottom: 20,
   },
   addFirstBookBtn: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
   },
   addFirstBookText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: COLORS.white,
+    fontWeight: "600",
     fontSize: 16,
   },
   actionContainer: {
@@ -465,20 +504,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   logTimeButton: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: COLORS.primary,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#6C63FF',
+    alignItems: "center",
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   logTimeButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });

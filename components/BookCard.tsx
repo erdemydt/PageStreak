@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { EnhancedBook } from '../db/db';
-import { getEnhancedBookProgress } from '../utils/readingProgress';
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
+import { EnhancedBook } from "../db/db";
+import { COLORS } from "../themes/colors";
+import { getStatusColor, getStatusText } from "../utils/bookStatus";
+import { getEnhancedBookProgress } from "../utils/readingProgress";
 
 interface BookCardProps {
   book: EnhancedBook;
@@ -19,10 +21,10 @@ interface BookCardProps {
   refreshTrigger?: number;
 }
 
-export default function BookCard({ 
-  book, 
-  onPress, 
-  onDelete, 
+export default function BookCard({
+  book,
+  onPress,
+  onDelete,
   onStatusChange,
   showDeleteButton = false,
   showStatusButton = false,
@@ -30,37 +32,54 @@ export default function BookCard({
   readingTimeMinutes = 0,
   compact = false,
   smaller = false,
-  refreshTrigger = 0
+  refreshTrigger = 0,
 }: BookCardProps) {
   const { t } = useTranslation();
   const [progressData, setProgressData] = useState<{
     pagesRead: number;
     percentage: number;
     isComplete: boolean;
-    source: 'sessions' | 'current_page' | 'none';
-  }>({ pagesRead: 0, percentage: 0, isComplete: false, source: 'none' });
+    source: "sessions" | "current_page" | "none";
+  }>({ pagesRead: 0, percentage: 0, isComplete: false, source: "none" });
 
   useEffect(() => {
     const loadProgress = async () => {
-      const progress = await getEnhancedBookProgress(book.id, book.page, book.current_page || 0);
+      const progress = await getEnhancedBookProgress(
+        book.id,
+        book.page,
+        book.current_page || 0,
+      );
       setProgressData(progress);
     };
-    
-    if (book.reading_status === 'currently_reading') {
+
+    if (book.reading_status === "currently_reading") {
       loadProgress();
     } else {
       // Reset progress data for non-currently-reading books
-      setProgressData({ pagesRead: 0, percentage: 0, isComplete: false, source: 'none' });
+      setProgressData({
+        pagesRead: 0,
+        percentage: 0,
+        isComplete: false,
+        source: "none",
+      });
     }
-  }, [book.id, book.page, book.current_page, book.reading_status, refreshTrigger]);
-  
+  }, [
+    book.id,
+    book.page,
+    book.current_page,
+    book.reading_status,
+    refreshTrigger,
+  ]);
+
   const formatReadingTime = (minutes: number) => {
     if (minutes < 60) {
-      return `${minutes} ${t('components.readingTimeLogger.minutesShort')}`;
+      return `${minutes} ${t("components.readingTimeLogger.minutesShort")}`;
     } else {
       const hours = Math.floor(minutes / 60);
       const remainingMinutes = minutes % 60;
-      return remainingMinutes > 0 ? `${hours} ${t('settings.hours')} ${remainingMinutes} ${t('components.readingTimeLogger.minutesShort')}` : `${hours} ${t('settings.hours')}`;
+      return remainingMinutes > 0
+        ? `${hours} ${t("settings.hours")} ${remainingMinutes} ${t("components.readingTimeLogger.minutesShort")}`
+        : `${hours} ${t("settings.hours")}`;
     }
   };
 
@@ -70,34 +89,11 @@ export default function BookCard({
     return date.toLocaleDateString();
   };
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'currently_reading':
-        return '#3B82F6';
-      case 'read':
-        return '#10B981';
-      case 'want_to_read':
-        return '#F59E0B';
-      default:
-        return '#64748B';
-    }
-  };
-
-  const getStatusText = (status?: string) => {
-    switch (status) {
-      case 'currently_reading':
-        return t('components.bookCard.currentlyReading');
-      case 'read':
-        return t('components.bookCard.read');
-      case 'want_to_read':
-        return t('components.bookCard.wantToRead');
-      default:
-        return t('components.bookCard.unknown');
-    }
-  };
-
   const getReadingProgress = () => {
-    if (book.reading_status === 'currently_reading' && progressData.percentage > 0) {
+    if (
+      book.reading_status === "currently_reading" &&
+      progressData.percentage > 0
+    ) {
       return progressData.percentage;
     }
     return null;
@@ -106,14 +102,18 @@ export default function BookCard({
   const progress = getReadingProgress();
 
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 100) return '#10B981'; // Green - Complete
-    if (percentage >= 75) return '#F59E0B'; // Orange - Almost done
-    if (percentage >= 50) return '#3B82F6'; // Blue - Good progress
-    if (percentage >= 25) return '#c3f65cff'; // Purple - Getting started
-    return '#f1c9e2ff'; // Gray - Just started/no progress
+    if (percentage >= 100) return COLORS.success; // Green - Complete
+    if (percentage >= 75) return COLORS.warning; // Orange - Almost done
+    if (percentage >= 50) return COLORS.primary; // Strong progress
+    if (percentage >= 25) return COLORS.state.progressLow; // Getting started
+    return COLORS.state.progressBase; // Very early progress
   };
 
-  const ProgressBorder = ({ children, percentage, marginBottom = 12 }: {
+  const ProgressBorder = ({
+    children,
+    percentage,
+    marginBottom = 12,
+  }: {
     children: React.ReactNode;
     percentage: number;
     marginBottom?: number;
@@ -123,13 +123,17 @@ export default function BookCard({
     const strokeWidth = 3;
     const padding = strokeWidth / 2;
     const progressColor = getProgressColor(percentage);
-    
+
     // Calculate the rounded rectangle path - adjusted to exclude marginBottom
-    const createRoundedRectPath = (width: number, height: number, radius: number) => {
+    const createRoundedRectPath = (
+      width: number,
+      height: number,
+      radius: number,
+    ) => {
       const w = width - 2 * padding;
       const h = height - 2 * padding - marginBottom; // Subtract marginBottom from height
       const r = radius;
-      
+
       // Start from top-left, going clockwise
       return `
         M ${padding + r} ${padding}
@@ -144,26 +148,40 @@ export default function BookCard({
         Z
       `.trim();
     };
-    
+
     // Calculate path perimeter for stroke animation
-    const calculatePerimeter = (width: number, height: number, radius: number) => {
+    const calculatePerimeter = (
+      width: number,
+      height: number,
+      radius: number,
+    ) => {
       const w = width - 2 * padding;
       const h = height - 2 * padding - marginBottom; // Subtract marginBottom from height
       const r = radius;
-      
+
       // Perimeter = 2(w + h) - 8r + 2πr
       return 2 * (w + h) - 8 * r + 2 * Math.PI * r;
     };
-    
+
     const handleLayout = (event: any) => {
       const { width, height } = event.nativeEvent.layout;
       setDimensions({ width, height });
     };
-    
-    const pathData = dimensions.width > 0 ? createRoundedRectPath(dimensions.width, dimensions.height, borderRadius) : '';
-    const perimeter = dimensions.width > 0 ? calculatePerimeter(dimensions.width, dimensions.height, borderRadius) : 0;
+
+    const pathData =
+      dimensions.width > 0
+        ? createRoundedRectPath(
+            dimensions.width,
+            dimensions.height,
+            borderRadius,
+          )
+        : "";
+    const perimeter =
+      dimensions.width > 0
+        ? calculatePerimeter(dimensions.width, dimensions.height, borderRadius)
+        : 0;
     const dashOffset = perimeter * (1 - percentage / 100);
-    
+
     return (
       <View style={styles.progressBorderContainer} onLayout={handleLayout}>
         {/* SVG Progress Overlay */}
@@ -185,11 +203,9 @@ export default function BookCard({
             />
           </Svg>
         )}
-        
+
         {/* Content */}
-        <View style={styles.progressBorderContent}>
-          {children}
-        </View>
+        <View style={styles.progressBorderContent}>{children}</View>
       </View>
     );
   };
@@ -202,7 +218,7 @@ export default function BookCard({
             <Image
               source={{ uri: book.cover_url }}
               style={styles.compactCover}
-              defaultSource={require('../assets/images/icon.png')}
+              defaultSource={require("../assets/images/icon.png")}
             />
           ) : (
             <View style={styles.compactCoverPlaceholder}>
@@ -210,24 +226,28 @@ export default function BookCard({
             </View>
           )}
         </View>
-        
+
         <View style={styles.compactInfo}>
           <Text style={styles.compactTitle} numberOfLines={2}>
             {book.name}
           </Text>
           <Text style={styles.compactAuthor} numberOfLines={1}>
-            {t('components.bookCard.by')} {book.author}
+            {t("components.bookCard.by")} {book.author}
           </Text>
-          <Text style={styles.compactPages}>{book.page} {t('components.bookCard.pages')}</Text>
+          <Text style={styles.compactPages}>
+            {book.page} {t("components.bookCard.pages")}
+          </Text>
         </View>
       </TouchableOpacity>
     );
 
-    return progress !== null && book.reading_status === 'currently_reading' ? (
+    return progress !== null && book.reading_status === "currently_reading" ? (
       <ProgressBorder percentage={progress} marginBottom={8}>
         {compactCard}
       </ProgressBorder>
-    ) : compactCard;
+    ) : (
+      compactCard
+    );
   }
 
   if (smaller) {
@@ -238,7 +258,7 @@ export default function BookCard({
             <Image
               source={{ uri: book.cover_url }}
               style={styles.smallerCover}
-              defaultSource={require('../assets/images/icon.png')}
+              defaultSource={require("../assets/images/icon.png")}
             />
           ) : (
             <View style={styles.smallerCoverPlaceholder}>
@@ -246,15 +266,15 @@ export default function BookCard({
             </View>
           )}
         </View>
-        
+
         <View style={styles.smallerInfo}>
           <Text style={styles.smallerTitle} numberOfLines={1}>
             {book.name}
           </Text>
           <Text style={styles.smallerAuthor} numberOfLines={1}>
-            {t('components.bookCard.by')} {book.author}
+            {t("components.bookCard.by")} {book.author}
           </Text>
-          
+
           <View style={styles.smallerMetadata}>
             <Text style={styles.smallerPages}>📄 {book.page}p</Text>
             {showReadingTime && readingTimeMinutes > 0 && (
@@ -263,32 +283,39 @@ export default function BookCard({
               </Text>
             )}
           </View>
-          
+
           {book.reading_status && (
-            <View style={[
-              styles.smallerStatusBadge, 
-              { backgroundColor: getStatusColor(book.reading_status) }
-            ]}>
+            <View
+              style={[
+                styles.smallerStatusBadge,
+                { backgroundColor: getStatusColor(book.reading_status) },
+              ]}
+            >
               <Text style={styles.smallerStatusText}>
-                {getStatusText(book.reading_status)}
+                {getStatusText(t, book.reading_status)}
               </Text>
             </View>
           )}
         </View>
-        
+
         {showDeleteButton && onDelete && (
-          <TouchableOpacity style={styles.smallerDeleteButton} onPress={onDelete}>
+          <TouchableOpacity
+            style={styles.smallerDeleteButton}
+            onPress={onDelete}
+          >
             <Text style={styles.smallerDeleteButtonText}>🗑️</Text>
           </TouchableOpacity>
         )}
       </TouchableOpacity>
     );
 
-    return progress !== null && book.reading_status === 'currently_reading' ? (
+    return progress !== null && book.reading_status === "currently_reading" ? (
       <ProgressBorder percentage={progress} marginBottom={8}>
         {smallerCard}
       </ProgressBorder>
-    ) : smallerCard;
+    ) : (
+      smallerCard
+    );
   }
 
   // Main card
@@ -300,7 +327,7 @@ export default function BookCard({
             <Image
               source={{ uri: book.cover_url }}
               style={styles.cover}
-              defaultSource={require('../assets/images/icon.png')}
+              defaultSource={require("../assets/images/icon.png")}
             />
           ) : (
             <View style={styles.coverPlaceholder}>
@@ -308,41 +335,43 @@ export default function BookCard({
             </View>
           )}
         </View>
-        
+
         <View style={styles.bookInfo}>
           <Text style={styles.title} numberOfLines={2}>
             {book.name}
           </Text>
           <Text style={styles.author} numberOfLines={1}>
-            {t('components.bookCard.by')} {book.author}
+            {t("components.bookCard.by")} {book.author}
           </Text>
-          
+
           <View style={styles.metadata}>
-            <Text style={styles.pages}>📄 {book.page} {t('components.bookCard.pages')}</Text>
+            <Text style={styles.pages}>
+              📄 {book.page} {t("components.bookCard.pages")}
+            </Text>
             {book.first_publish_year && (
               <Text style={styles.year}>📅 {book.first_publish_year}</Text>
             )}
           </View>
-          
+
           {book.publisher && (
             <Text style={styles.publisher} numberOfLines={1}>
               🏢 {book.publisher}
             </Text>
           )}
-          
+
           {book.reading_status && (
             <View style={styles.statusContainer}>
               <TouchableOpacity
                 style={[
-                  styles.statusBadge, 
+                  styles.statusBadge,
                   { backgroundColor: getStatusColor(book.reading_status) },
-                  showStatusButton && styles.statusBadgeClickable
+                  showStatusButton && styles.statusBadgeClickable,
                 ]}
                 onPress={showStatusButton ? onStatusChange : undefined}
                 disabled={!showStatusButton}
               >
                 <Text style={styles.statusText}>
-                  {getStatusText(book.reading_status)}
+                  {getStatusText(t, book.reading_status)}
                 </Text>
                 {showStatusButton && (
                   <Text style={styles.statusChangeIcon}> ⏷</Text>
@@ -350,28 +379,30 @@ export default function BookCard({
               </TouchableOpacity>
             </View>
           )}
-          
+
           {showReadingTime && readingTimeMinutes > 0 && (
             <View style={styles.readingTimeContainer}>
               <Text style={styles.readingTimeText}>
-                ⏱️ {formatReadingTime(readingTimeMinutes)} {t('components.bookCard.readingTime')}
+                ⏱️ {formatReadingTime(readingTimeMinutes)}{" "}
+                {t("components.bookCard.readingTime")}
               </Text>
             </View>
           )}
-          
+
           {book.rating && (
             <View style={styles.ratingContainer}>
               <Text style={styles.rating}>⭐ {book.rating.toFixed(1)}</Text>
             </View>
           )}
-          
+
           {book.date_finished && (
             <Text style={styles.dateFinished}>
-              {t('components.bookCard.finished')} {formatDate(book.date_finished)}
+              {t("components.bookCard.finished")}{" "}
+              {formatDate(book.date_finished)}
             </Text>
           )}
         </View>
-        
+
         {showDeleteButton && onDelete && (
           <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
             <Text style={styles.deleteButtonText}>🗑️</Text>
@@ -381,28 +412,28 @@ export default function BookCard({
     </TouchableOpacity>
   );
 
-  return progress !== null && book.reading_status === 'currently_reading' ? (
-    <ProgressBorder percentage={progress}>
-      {mainCard}
-    </ProgressBorder>
-  ) : mainCard;
+  return progress !== null && book.reading_status === "currently_reading" ? (
+    <ProgressBorder percentage={progress}>{mainCard}</ProgressBorder>
+  ) : (
+    mainCard
+  );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.neutral[100],
   },
   cardContent: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 16,
   },
   coverContainer: {
@@ -417,116 +448,116 @@ const styles = StyleSheet.create({
     width: 80,
     height: 120,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.neutral[100],
+    justifyContent: "center",
+    alignItems: "center",
   },
   coverPlaceholderText: {
-    fontSize: 32,
+    fontSize: 28,
   },
   bookInfo: {
     flex: 1,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.neutral[800],
     marginBottom: 4,
   },
   author: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '500',
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: "500",
     marginBottom: 8,
   },
   metadata: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
     marginBottom: 6,
   },
   pages: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 12,
+    color: COLORS.neutral[500],
   },
   year: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 12,
+    color: COLORS.neutral[500],
   },
   publisher: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 12,
+    color: COLORS.neutral[500],
     marginBottom: 8,
   },
   statusContainer: {
     marginBottom: 8,
   },
   statusBadge: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   statusBadgeClickable: {
     paddingHorizontal: 10,
   },
   statusText: {
     fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: COLORS.white,
+    fontWeight: "600",
   },
   statusChangeIcon: {
     fontSize: 10,
-    color: '#FFFFFF',
+    color: COLORS.white,
     opacity: 0.8,
   },
   ratingContainer: {
     marginBottom: 8,
   },
   rating: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#F59E0B',
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.warning,
   },
   readingTimeContainer: {
     marginBottom: 8,
   },
   readingTimeText: {
-    fontSize: 12,
-    color: '#8B5CF6',
-    fontWeight: '500',
+    fontSize: 11,
+    color: COLORS.primaryDark,
+    fontWeight: "500",
   },
   dateFinished: {
-    fontSize: 12,
-    color: '#10B981',
-    fontWeight: '500',
+    fontSize: 11,
+    color: COLORS.success,
+    fontWeight: "500",
   },
   deleteButton: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: COLORS.dangerLight,
     borderRadius: 8,
     padding: 8,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     minWidth: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   deleteButtonText: {
     fontSize: 16,
   },
   // Compact styles
   compactCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     marginBottom: 8,
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   compactCoverContainer: {
     marginRight: 12,
@@ -540,9 +571,9 @@ const styles = StyleSheet.create({
     width: 50,
     height: 75,
     borderRadius: 6,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.neutral[100],
+    justifyContent: "center",
+    alignItems: "center",
   },
   compactCoverPlaceholderText: {
     fontSize: 20,
@@ -551,37 +582,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   compactTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.neutral[800],
     marginBottom: 4,
   },
   compactAuthor: {
-    fontSize: 14,
-    color: '#6C63FF',
-    fontWeight: '500',
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: "500",
     marginBottom: 2,
   },
   compactPages: {
     fontSize: 12,
-    color: '#64748B',
-    fontStyle: 'italic',
+    color: COLORS.neutral[500],
+    fontStyle: "italic",
   },
   // Smaller styles
   smallerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderRadius: 8,
     marginBottom: 8,
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 2,
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 10,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.neutral[100],
   },
   smallerCoverContainer: {
     marginRight: 10,
@@ -595,9 +626,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 60,
     borderRadius: 4,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.neutral[100],
+    justifyContent: "center",
+    alignItems: "center",
   },
   smallerCoverPlaceholderText: {
     fontSize: 16,
@@ -606,60 +637,60 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   smallerTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.neutral[800],
     marginBottom: 2,
   },
   smallerAuthor: {
-    fontSize: 12,
-    color: '#6C63FF',
-    fontWeight: '500',
+    fontSize: 11,
+    color: COLORS.primary,
+    fontWeight: "500",
     marginBottom: 4,
   },
   smallerMetadata: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginBottom: 4,
   },
   smallerPages: {
     fontSize: 10,
-    color: '#64748B',
+    color: COLORS.neutral[500],
   },
   smallerReadingTime: {
     fontSize: 10,
-    color: '#8B5CF6',
-    fontWeight: '500',
+    color: COLORS.primaryDark,
+    fontWeight: "500",
   },
   smallerStatusBadge: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   smallerStatusText: {
     fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: COLORS.white,
+    fontWeight: "600",
   },
   smallerDeleteButton: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: COLORS.dangerLight,
     borderRadius: 6,
     padding: 6,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     minWidth: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   smallerDeleteButtonText: {
     fontSize: 12,
   },
   // Progress Border Styles
   progressBorderContainer: {
-    position: 'relative',
+    position: "relative",
   },
   progressBorderSvg: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
   },

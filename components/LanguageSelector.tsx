@@ -1,18 +1,20 @@
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useLanguage } from '../contexts/LanguageContext';
+import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useLanguage } from "../contexts/LanguageContext";
+import { COLORS } from "../themes/colors";
 
 const languages = [
-  { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'tr', name: 'Türkçe', flag: '🇹🇷' },
+  { code: "en", name: "English", flag: "🇺🇸" },
+  { code: "tr", name: "Türkçe", flag: "🇹🇷" },
 ];
 
 interface LanguageSelectorProps {
   showLabels?: boolean;
 }
 
-export default function LanguageSelector({ showLabels = true }: LanguageSelectorProps) {
+export default function LanguageSelector({
+  showLabels = true,
+}: LanguageSelectorProps) {
   const { currentLanguage, changeLanguage } = useLanguage();
 
   return (
@@ -30,15 +32,17 @@ export default function LanguageSelector({ showLabels = true }: LanguageSelector
           >
             <View style={styles.languageInfo}>
               <Text style={styles.flag}>{language.flag}</Text>
-              <Text style={[
-                styles.languageName,
-                currentLanguage === language.code && styles.selectedText,
-              ]}>
+              <Text
+                style={[
+                  styles.languageName,
+                  currentLanguage === language.code && styles.selectedText,
+                ]}
+              >
                 {language.name}
               </Text>
             </View>
             {currentLanguage === language.code && (
-              <Ionicons name="checkmark" size={20} color="#6C63FF" />
+              <Ionicons name="checkmark" size={20} color={COLORS.primary} />
             )}
           </TouchableOpacity>
         ))}
@@ -49,10 +53,10 @@ export default function LanguageSelector({ showLabels = true }: LanguageSelector
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -60,30 +64,30 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#374151',
+    fontWeight: "700",
+    color: COLORS.neutral[700],
     marginBottom: 16,
   },
   languageList: {
     gap: 8,
   },
   languageItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.neutral[50],
   },
   selectedLanguage: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#6C63FF',
+    backgroundColor: COLORS.state.primarySoft,
+    borderColor: COLORS.primary,
     borderWidth: 2,
   },
   languageInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   flag: {
     fontSize: 24,
@@ -91,10 +95,10 @@ const styles = StyleSheet.create({
   },
   languageName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: COLORS.neutral[700],
   },
   selectedText: {
-    color: '#6C63FF',
+    color: COLORS.primary,
   },
 });

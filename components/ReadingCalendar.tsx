@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { queryAll } from '../db/db';
-import { dateToLocalDateString, getTodayDateString } from '../utils/dateUtils';
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { queryAll } from "../db/db";
+import { COLORS } from "../themes/colors";
+import { dateToLocalDateString, getTodayDateString } from "../utils/dateUtils";
 interface ReadingCalendarProps {
   onDatePress?: (date: string, minutes: number) => void;
 }
@@ -27,26 +28,29 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
     try {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      
+
       // Get first and last day of the month
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
-      
+
       // Get reading data for the month
       const startDate = dateToLocalDateString(firstDay);
       const endDate = dateToLocalDateString(lastDay);
-      
-      const readingData = await queryAll<{date: string, total_minutes: number}>(
+
+      const readingData = await queryAll<{
+        date: string;
+        total_minutes: number;
+      }>(
         `SELECT date, SUM(minutes_read) as total_minutes 
          FROM reading_sessions 
          WHERE date BETWEEN ? AND ?
          GROUP BY date`,
-        [startDate, endDate]
+        [startDate, endDate],
       );
 
       // Create data map for easy lookup
       const dataMap = new Map();
-      readingData.forEach(item => {
+      readingData.forEach((item) => {
         dataMap.set(item.date, item.total_minutes);
       });
 
@@ -58,25 +62,25 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
         const date = new Date(year, month, day);
         const dateString = dateToLocalDateString(date);
         const minutes = dataMap.get(dateString) || 0;
-        
+
         monthDataArray.push({
           date: dateString,
           minutes,
-          hasData: minutes > 0
+          hasData: minutes > 0,
         });
       }
 
       setMonthData(monthDataArray);
     } catch (error) {
-      console.error('Error loading month data:', error);
+      console.error("Error loading month data:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
+  const navigateMonth = (direction: "prev" | "next") => {
     const newDate = new Date(currentDate);
-    if (direction === 'prev') {
+    if (direction === "prev") {
       newDate.setMonth(newDate.getMonth() - 1);
     } else {
       newDate.setMonth(newDate.getMonth() + 1);
@@ -85,16 +89,16 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
   };
 
   const getColorIntensity = (minutes: number) => {
-    if (minutes === 0) return '#F1F5F9';
-    if (minutes <= 15) return '#DDD6FE';
-    if (minutes <= 30) return '#C4B5FD';
-    if (minutes <= 60) return '#A78BFA';
-    if (minutes <= 90) return '#8B5CF6';
-    return '#7C3AED';
+    if (minutes === 0) return COLORS.neutral[100];
+    if (minutes <= 15) return COLORS.state.readingHeat1;
+    if (minutes <= 30) return COLORS.state.readingHeat2;
+    if (minutes <= 60) return COLORS.state.readingHeat3;
+    if (minutes <= 90) return COLORS.state.readingHeat4;
+    return COLORS.state.readingHeat5;
   };
 
   const formatMonthYear = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   };
 
   const isToday = (dateString: string) => {
@@ -105,17 +109,17 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigateMonth('prev')}
+        <TouchableOpacity
+          onPress={() => navigateMonth("prev")}
           style={styles.navButton}
         >
           <Text style={styles.navButtonText}>‹</Text>
         </TouchableOpacity>
-        
+
         <Text style={styles.monthTitle}>{formatMonthYear(currentDate)}</Text>
-        
-        <TouchableOpacity 
-          onPress={() => navigateMonth('next')}
+
+        <TouchableOpacity
+          onPress={() => navigateMonth("next")}
           style={styles.navButton}
         >
           <Text style={styles.navButtonText}>›</Text>
@@ -123,41 +127,54 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
       </View>
 
       <View style={styles.weekDaysHeader}>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <Text key={day} style={styles.weekDayLabel}>{day}</Text>
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <Text key={day} style={styles.weekDayLabel}>
+            {day}
+          </Text>
         ))}
       </View>
 
       <View style={styles.calendar}>
         {/* Empty cells for days before the first day of the month */}
-        {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay() }).map((_, index) => (
+        {Array.from({
+          length: new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth(),
+            1,
+          ).getDay(),
+        }).map((_, index) => (
           <View key={`empty-${index}`} style={styles.emptyDay} />
         ))}
-        
+
         {/* Calendar days */}
         {monthData.map((dayData, index) => {
           const dayNumber = index + 1;
           const backgroundColor = getColorIntensity(dayData.minutes);
-          
+
           return (
             <TouchableOpacity
               key={dayData.date}
               style={[
                 styles.day,
                 { backgroundColor },
-                isToday(dayData.date) && styles.today
+                isToday(dayData.date) && styles.today,
               ]}
               onPress={() => onDatePress?.(dayData.date, dayData.minutes)}
             >
-              <Text style={[
-                styles.dayNumber,
-                dayData.hasData && styles.dayNumberWithData,
-                isToday(dayData.date) && styles.todayText
-              ]}>
+              <Text
+                style={[
+                  styles.dayNumber,
+                  dayData.hasData && styles.dayNumberWithData,
+                  isToday(dayData.date) && styles.todayText,
+                ]}
+              >
                 {dayNumber}
               </Text>
               {dayData.minutes > 0 && (
-                <Text style={styles.minutesText}>{dayData.minutes} {t('components.readingTimeLogger.minutesShort')}</Text>
+                <Text style={styles.minutesText}>
+                  {dayData.minutes}{" "}
+                  {t("components.readingTimeLogger.minutesShort")}
+                </Text>
               )}
             </TouchableOpacity>
           );
@@ -169,19 +186,39 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
         <Text style={styles.legendTitle}>Reading Activity</Text>
         <View style={styles.legendColors}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSquare, { backgroundColor: '#F1F5F9' }]} />
+            <View
+              style={[
+                styles.legendSquare,
+                { backgroundColor: COLORS.neutral[100] },
+              ]}
+            />
             <Text style={styles.legendText}>None</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSquare, { backgroundColor: '#DDD6FE' }]} />
+            <View
+              style={[
+                styles.legendSquare,
+                { backgroundColor: COLORS.state.readingHeat1 },
+              ]}
+            />
             <Text style={styles.legendText}>Light</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSquare, { backgroundColor: '#A78BFA' }]} />
+            <View
+              style={[
+                styles.legendSquare,
+                { backgroundColor: COLORS.state.readingHeat3 },
+              ]}
+            />
             <Text style={styles.legendText}>Moderate</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSquare, { backgroundColor: '#7C3AED' }]} />
+            <View
+              style={[
+                styles.legendSquare,
+                { backgroundColor: COLORS.state.readingHeat5 },
+              ]}
+            />
             <Text style={styles.legendText}>Heavy</Text>
           </View>
         </View>
@@ -192,103 +229,103 @@ export default function ReadingCalendar({ onDatePress }: ReadingCalendarProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     margin: 16,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   monthTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: "700",
+    color: COLORS.neutral[800],
   },
   navButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: COLORS.neutral[100],
   },
   navButtonText: {
     fontSize: 20,
-    color: '#64748B',
-    fontWeight: 'bold',
+    color: COLORS.neutral[500],
+    fontWeight: "bold",
   },
   weekDaysHeader: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 8,
   },
   weekDayLabel: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
+    fontWeight: "600",
+    color: COLORS.neutral[500],
     paddingVertical: 4,
   },
   calendar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginBottom: 16,
   },
   emptyDay: {
-    width: '14.28%',
+    width: "14.28%",
     aspectRatio: 1,
   },
   day: {
-    width: '14.28%',
+    width: "14.28%",
     aspectRatio: 1,
     padding: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 4,
     margin: 1,
   },
   today: {
     borderWidth: 2,
-    borderColor: '#6C63FF',
+    borderColor: COLORS.primary,
   },
   dayNumber: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
+    fontWeight: "500",
+    color: COLORS.neutral[500],
   },
   dayNumberWithData: {
-    color: '#1E293B',
-    fontWeight: '700',
+    color: COLORS.neutral[800],
+    fontWeight: "700",
   },
   todayText: {
-    color: '#6C63FF',
-    fontWeight: 'bold',
+    color: COLORS.primary,
+    fontWeight: "bold",
   },
   minutesText: {
     fontSize: 8,
-    color: '#64748B',
+    color: COLORS.neutral[500],
     marginTop: 1,
   },
   legend: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   legendTitle: {
     fontSize: 12,
-    color: '#64748B',
+    color: COLORS.neutral[500],
     marginBottom: 8,
   },
   legendColors: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   legendItem: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 4,
   },
   legendSquare: {
@@ -298,6 +335,6 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 10,
-    color: '#64748B',
+    color: COLORS.neutral[500],
   },
 });

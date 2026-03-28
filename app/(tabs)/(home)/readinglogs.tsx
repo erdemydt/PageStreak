@@ -1,25 +1,36 @@
-
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  Alert,
-  Dimensions,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
-} from 'react-native';
-import WeeklyStatsView from '../../../components/WeeklyStatsView';
-import { EnhancedBook, execute, queryAll, ReadingSession } from '../../../db/db';
-import { dateToLocalDateString, getTodayDateString } from '../../../utils/dateUtils';
-import { isDevModeEnabled } from '../../../utils/devMode';
-import { getEnhancedBookProgress, syncBookCurrentPageFromSessions } from '../../../utils/readingProgress';
+    Alert,
+    Dimensions,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import WeeklyStatsView from "../../../components/WeeklyStatsView";
+import {
+    EnhancedBook,
+    execute,
+    queryAll,
+    ReadingSession,
+} from "../../../db/db";
+import { COLORS } from "../../../themes/colors";
+import {
+    dateToLocalDateString,
+    getTodayDateString,
+} from "../../../utils/dateUtils";
+import { isDevModeEnabled } from "../../../utils/devMode";
+import {
+    getEnhancedBookProgress,
+    syncBookCurrentPageFromSessions,
+} from "../../../utils/readingProgress";
 interface WeekDay {
   date: string;
   day: string;
@@ -38,16 +49,27 @@ interface EditSessionModalProps {
   visible: boolean;
   session: SessionWithBook | null;
   onClose: () => void;
-  onSave: (sessionId: number, minutes: number, notes: string, pages?: number) => void;
+  onSave: (
+    sessionId: number,
+    minutes: number,
+    notes: string,
+    pages?: number,
+  ) => void;
   onDelete: (sessionId: number) => void;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get("window");
 
-function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditSessionModalProps) {
-  const [minutes, setMinutes] = useState('');
-  const [pages, setPages] = useState('');
-  const [notes, setNotes] = useState('');
+function EditSessionModal({
+  visible,
+  session,
+  onClose,
+  onSave,
+  onDelete,
+}: EditSessionModalProps) {
+  const [minutes, setMinutes] = useState("");
+  const [pages, setPages] = useState("");
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [bookData, setBookData] = useState<EnhancedBook | null>(null);
   const [remainingPages, setRemainingPages] = useState<number>(0);
@@ -58,27 +80,27 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
       if (session) {
         try {
           const books = await queryAll<EnhancedBook>(
-            'SELECT * FROM enhanced_books WHERE id = ?',
-            [session.book_id]
+            "SELECT * FROM enhanced_books WHERE id = ?",
+            [session.book_id],
           );
           if (books.length > 0) {
             setBookData(books[0]);
           }
         } catch (error) {
-          console.error('Error loading book data:', error);
+          console.error("Error loading book data:", error);
         }
       }
     };
 
     if (session) {
       setMinutes(session.minutes_read.toString());
-      setPages(session.pages_read ? session.pages_read.toString() : '');
-      setNotes(session.notes || '');
+      setPages(session.pages_read ? session.pages_read.toString() : "");
+      setNotes(session.notes || "");
       loadBookData();
     } else {
-      setMinutes('');
-      setPages('');
-      setNotes('');
+      setMinutes("");
+      setPages("");
+      setNotes("");
       setBookData(null);
     }
   }, [session]);
@@ -88,17 +110,23 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
       setRemainingPages(0);
       return;
     }
-    
+
     try {
-      const progress = await getEnhancedBookProgress(bookData.id, bookData.page, bookData.current_page || 0);
+      const progress = await getEnhancedBookProgress(
+        bookData.id,
+        bookData.page,
+        bookData.current_page || 0,
+      );
       const remaining = bookData.page - progress.pagesRead;
       // Add back the pages from the current session being edited, since we can modify them
       const sessionPages = session.pages_read || 0;
       setRemainingPages(Math.max(0, remaining + sessionPages));
     } catch (error) {
-      console.error('Error calculating remaining pages:', error);
+      console.error("Error calculating remaining pages:", error);
       const sessionPages = session.pages_read || 0;
-      setRemainingPages(bookData.page - (bookData.current_page || 0) + sessionPages);
+      setRemainingPages(
+        bookData.page - (bookData.current_page || 0) + sessionPages,
+      );
     }
   };
 
@@ -109,26 +137,37 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
   }, [bookData]);
 
   const handleSave = async () => {
-    if (!session || !minutes.trim() || isNaN(Number(minutes)) || Number(minutes) <= 0) {
-      Alert.alert(t('components.readingLogsEditModal.invalidInput'), t('components.readingLogsEditModal.enterValidMinutes'));
+    if (
+      !session ||
+      !minutes.trim() ||
+      isNaN(Number(minutes)) ||
+      Number(minutes) <= 0
+    ) {
+      Alert.alert(
+        t("components.readingLogsEditModal.invalidInput"),
+        t("components.readingLogsEditModal.enterValidMinutes"),
+      );
       return;
     }
 
     // Validate pages if provided
     if (pages.trim() && (isNaN(Number(pages)) || Number(pages) <= 0)) {
-      Alert.alert(t('components.readingLogsEditModal.invalidInput'), t('components.readingTimeLogger.enterValidPages'));
+      Alert.alert(
+        t("components.readingLogsEditModal.invalidInput"),
+        t("components.readingTimeLogger.enterValidPages"),
+      );
       return;
     }
 
     // Validate pages don't exceed remaining pages
     if (pages.trim() && Number(pages) > remainingPages) {
       Alert.alert(
-        t('components.readingTimeLogger.tooManyPages'),
-        t('components.readingTimeLogger.tooManyPagesMessage', {
+        t("components.readingTimeLogger.tooManyPages"),
+        t("components.readingTimeLogger.tooManyPagesMessage", {
           pages: Number(pages),
           remaining: remainingPages,
-          bookName: bookData?.name || 'Unknown Book'
-        })
+          bookName: bookData?.name || "Unknown Book",
+        }),
       );
       return;
     }
@@ -139,7 +178,10 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
       await onSave(session.id, Number(minutes), notes.trim(), pagesValue);
       onClose();
     } catch (error) {
-      Alert.alert(t('components.readingLogsEditModal.updateError'), t('components.readingLogsEditModal.updateErrorMessage'));
+      Alert.alert(
+        t("components.readingLogsEditModal.updateError"),
+        t("components.readingLogsEditModal.updateErrorMessage"),
+      );
     } finally {
       setLoading(false);
     }
@@ -149,143 +191,192 @@ function EditSessionModal({ visible, session, onClose, onSave, onDelete }: EditS
     if (!session) return;
 
     Alert.alert(
-      t('components.readingLogsEditModal.deleteConfirmTitle'),
-      t('components.readingLogsEditModal.deleteConfirmMessage'),
+      t("components.readingLogsEditModal.deleteConfirmTitle"),
+      t("components.readingLogsEditModal.deleteConfirmMessage"),
       [
-        { text: t('components.readingLogsEditModal.deleteConfirmCancel'), style: 'cancel' },
         {
-          text: t('components.readingLogsEditModal.deleteConfirmDelete'),
-          style: 'destructive',
+          text: t("components.readingLogsEditModal.deleteConfirmCancel"),
+          style: "cancel",
+        },
+        {
+          text: t("components.readingLogsEditModal.deleteConfirmDelete"),
+          style: "destructive",
           onPress: () => {
             onDelete(session.id);
             onClose();
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
   if (!session) return null;
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+    >
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <TouchableOpacity onPress={onClose}>
-            <Text style={styles.modalCancelText}>{t('components.readingLogsEditModal.cancel')}</Text>
+            <Text style={styles.modalCancelText}>
+              {t("components.readingLogsEditModal.cancel")}
+            </Text>
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>{t('components.readingLogsEditModal.title')}</Text>
+          <Text style={styles.modalTitle}>
+            {t("components.readingLogsEditModal.title")}
+          </Text>
           <TouchableOpacity onPress={handleSave} disabled={loading}>
-            <Text style={[styles.modalSaveText, loading && styles.modalSaveTextDisabled]}>
-              {loading ? t('components.readingLogsEditModal.saving') : t('components.readingLogsEditModal.save')}
+            <Text
+              style={[
+                styles.modalSaveText,
+                loading && styles.modalSaveTextDisabled,
+              ]}
+            >
+              {loading
+                ? t("components.readingLogsEditModal.saving")
+                : t("components.readingLogsEditModal.save")}
             </Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.modalContent}>
           <View style={styles.modalSection}>
-            <Text style={styles.modalSectionTitle}>{t('components.readingLogsEditModal.book')}</Text>
+            <Text style={styles.modalSectionTitle}>
+              {t("components.readingLogsEditModal.book")}
+            </Text>
             <View style={styles.bookInfoContainer}>
               <Text style={styles.bookInfoTitle}>{session.book_name}</Text>
-              <Text style={styles.bookInfoAuthor}>{t('components.readingLogsEditModal.by')} {session.book_author}</Text>
+              <Text style={styles.bookInfoAuthor}>
+                {t("components.readingLogsEditModal.by")} {session.book_author}
+              </Text>
             </View>
           </View>
 
           <View style={styles.modalSection}>
-            <Text style={styles.modalSectionTitle}>{t('components.readingLogsEditModal.readingTimeLabel')}</Text>
+            <Text style={styles.modalSectionTitle}>
+              {t("components.readingLogsEditModal.readingTimeLabel")}
+            </Text>
             <TextInput
               style={styles.modalInput}
               value={minutes}
               onChangeText={setMinutes}
               keyboardType="numeric"
-              placeholder={t('components.readingLogsEditModal.readingTimePlaceholder')}
+              placeholder={t(
+                "components.readingLogsEditModal.readingTimePlaceholder",
+              )}
             />
           </View>
 
           {/* Pages Input */}
           <View style={styles.modalSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.modalSectionTitle}>{t('components.readingTimeLogger.pagesRead')}</Text>
+              <Text style={styles.modalSectionTitle}>
+                {t("components.readingTimeLogger.pagesRead")}
+              </Text>
               <View style={styles.optionalBadge}>
-                <Text style={styles.optionalText}>{t('components.readingTimeLogger.optional')}</Text>
+                <Text style={styles.optionalText}>
+                  {t("components.readingTimeLogger.optional")}
+                </Text>
               </View>
             </View>
             {bookData && (
               <Text style={styles.sectionSubtitle}>
-                {t('components.readingTimeLogger.trackPagesDescription')}
+                {t("components.readingTimeLogger.trackPagesDescription")}
               </Text>
             )}
-            
+
             {bookData && (
               <View style={styles.remainingPagesInfo}>
                 <Text style={styles.remainingPagesText}>
-                  {(session.pages_read || 0) > 0 
-                    ? t('components.readingTimeLogger.remainingPagesForEdit', { 
-                        remaining: remainingPages, 
+                  {(session.pages_read || 0) > 0
+                    ? t("components.readingTimeLogger.remainingPagesForEdit", {
+                        remaining: remainingPages,
                         total: bookData.page,
-                        current: session.pages_read || 0
+                        current: session.pages_read || 0,
                       })
-                    : t('components.readingTimeLogger.remainingPages', { 
-                        remaining: remainingPages, 
-                        total: bookData.page 
-                      })
-                  }
+                    : t("components.readingTimeLogger.remainingPages", {
+                        remaining: remainingPages,
+                        total: bookData.page,
+                      })}
                 </Text>
               </View>
             )}
-            
+
             <TextInput
               style={styles.modalInput}
               value={pages}
               onChangeText={setPages}
               keyboardType="numeric"
-              placeholder={bookData ? t('components.readingTimeLogger.enterPagesPlaceholder', { max: remainingPages }) : t('components.readingTimeLogger.selectBookFirst')}
+              placeholder={
+                bookData
+                  ? t("components.readingTimeLogger.enterPagesPlaceholder", {
+                      max: remainingPages,
+                    })
+                  : t("components.readingTimeLogger.selectBookFirst")
+              }
               editable={!!bookData && remainingPages > 0}
             />
-            
-            {bookData && pages.trim() && !isNaN(Number(pages)) && Number(pages) > 0 && Number(pages) <= remainingPages && (
-              <View style={styles.progressPreview}>
-                <Text style={styles.progressPreviewText}>
-                  {(session.pages_read || 0) > 0 
-                    ? t('components.readingTimeLogger.progressPreviewForEdit', { 
-                        pages: Number(pages),
-                        oldPages: session.pages_read || 0,
-                        bookName: bookData.name,
-                        total: bookData.page 
-                      })
-                    : t('components.readingTimeLogger.progressPreview', { 
-                        pages: Number(pages), 
-                        bookName: bookData.name, 
-                        total: bookData.page 
-                      })
-                  }
-                </Text>
-              </View>
-            )}
+
+            {bookData &&
+              pages.trim() &&
+              !isNaN(Number(pages)) &&
+              Number(pages) > 0 &&
+              Number(pages) <= remainingPages && (
+                <View style={styles.progressPreview}>
+                  <Text style={styles.progressPreviewText}>
+                    {(session.pages_read || 0) > 0
+                      ? t(
+                          "components.readingTimeLogger.progressPreviewForEdit",
+                          {
+                            pages: Number(pages),
+                            oldPages: session.pages_read || 0,
+                            bookName: bookData.name,
+                            total: bookData.page,
+                          },
+                        )
+                      : t("components.readingTimeLogger.progressPreview", {
+                          pages: Number(pages),
+                          bookName: bookData.name,
+                          total: bookData.page,
+                        })}
+                  </Text>
+                </View>
+              )}
 
             {pages.trim() && Number(pages) > remainingPages && (
               <View style={styles.warningContainer}>
                 <Text style={styles.warningText}>
-                  {t('components.readingTimeLogger.tooManyPagesWarning', { remaining: remainingPages })}
+                  {t("components.readingTimeLogger.tooManyPagesWarning", {
+                    remaining: remainingPages,
+                  })}
                 </Text>
               </View>
             )}
           </View>
 
           <View style={styles.modalSection}>
-            <Text style={styles.modalSectionTitle}>{t('components.readingLogsEditModal.notesLabel')}</Text>
+            <Text style={styles.modalSectionTitle}>
+              {t("components.readingLogsEditModal.notesLabel")}
+            </Text>
             <TextInput
               style={[styles.modalInput, styles.modalNotesInput]}
               value={notes}
               onChangeText={setNotes}
-              placeholder={t('components.readingLogsEditModal.notesPlaceholder')}
+              placeholder={t(
+                "components.readingLogsEditModal.notesPlaceholder",
+              )}
               multiline
               numberOfLines={3}
             />
           </View>
 
           <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-            <Text style={styles.deleteButtonText}>{t('components.readingLogsEditModal.deleteSession')}</Text>
+            <Text style={styles.deleteButtonText}>
+              {t("components.readingLogsEditModal.deleteSession")}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -298,7 +389,9 @@ const generateRandomReadingData = async (): Promise<void> => {
   try {
     // Check if we're in development mode
     if (!isDevModeEnabled()) {
-      console.log('⚠️ Random data generation is only available in development mode');
+      console.log(
+        "⚠️ Random data generation is only available in development mode",
+      );
       return;
     }
 
@@ -306,13 +399,13 @@ const generateRandomReadingData = async (): Promise<void> => {
     const currentlyReadingBooks = await queryAll<EnhancedBook>(
       `SELECT * FROM enhanced_books 
        WHERE reading_status = 'currently_reading' 
-       ORDER BY date_started DESC, date_added DESC`
+       ORDER BY date_started DESC, date_added DESC`,
     );
 
     if (currentlyReadingBooks.length === 0) {
       Alert.alert(
-        'No Currently Reading Books',
-        'Please add some books with "currently reading" status first.'
+        "No Currently Reading Books",
+        'Please add some books with "currently reading" status first.',
       );
       return;
     }
@@ -336,7 +429,10 @@ const generateRandomReadingData = async (): Promise<void> => {
       const minutesRead = 1 + Math.floor(Math.random() * 20);
 
       // Random book selection
-      const randomBook = currentlyReadingBooks[Math.floor(Math.random() * currentlyReadingBooks.length)];
+      const randomBook =
+        currentlyReadingBooks[
+          Math.floor(Math.random() * currentlyReadingBooks.length)
+        ];
 
       // Format date as YYYY-MM-DD using local timezone
       const dateString = dateToLocalDateString(sessionDate);
@@ -349,7 +445,7 @@ const generateRandomReadingData = async (): Promise<void> => {
         minutes_read: minutesRead,
         date: dateString,
         created_at: createdAt,
-        notes: null
+        notes: null,
       });
     }
 
@@ -358,19 +454,24 @@ const generateRandomReadingData = async (): Promise<void> => {
       await execute(
         `INSERT INTO reading_sessions (book_id, minutes_read, date, created_at, notes) 
          VALUES (?, ?, ?, ?, ?)`,
-        [session.book_id, session.minutes_read, session.date, session.created_at, session.notes]
+        [
+          session.book_id,
+          session.minutes_read,
+          session.date,
+          session.created_at,
+          session.notes,
+        ],
       );
     }
 
     console.log(`✅ Generated ${sessions.length} random reading sessions`);
     Alert.alert(
-      'Random Data Generated',
-      `Successfully added ${sessions.length} random reading sessions across different days and hours.`
+      "Random Data Generated",
+      `Successfully added ${sessions.length} random reading sessions across different days and hours.`,
     );
-
   } catch (error) {
-    console.error('❌ Error generating random data:', error);
-    Alert.alert('Error', 'Failed to generate random reading data');
+    console.error("❌ Error generating random data:", error);
+    Alert.alert("Error", "Failed to generate random reading data");
   }
 };
 
@@ -380,7 +481,8 @@ export default function ReadingLogs() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<SessionWithBook | null>(null);
+  const [selectedSession, setSelectedSession] =
+    useState<SessionWithBook | null>(null);
 
   const [isWeeklyView, setIsWeeklyView] = useState(false);
 
@@ -392,21 +494,31 @@ export default function ReadingLogs() {
     // JS: Sun=0, Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6
     // We want: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
     const mondayFirstIndex = dayIndex === 0 ? 6 : dayIndex - 1;
-    const weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    const weekdays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
     return t(`components.readingLogs.weekdays.${weekdays[mondayFirstIndex]}`);
   };
 
   const getLocalizedMonth = (monthIndex: number): string => {
     const months = [
-      'january', 'february', 'march', 'april', 'may', 'june',
-      'july', 'august', 'september', 'october', 'november', 'december'
+      "january",
+      "february",
+      "march",
+      "april",
+      "may",
+      "june",
+      "july",
+      "august",
+      "september",
+      "october",
+      "november",
+      "december",
     ];
     return t(`components.readingLogs.months.${months[monthIndex]}`);
   };
   useFocusEffect(
     useCallback(() => {
       loadWeekData();
-    }, [currentWeekStart])
+    }, [currentWeekStart]),
   );
 
   const getWeekStart = (date: Date) => {
@@ -419,7 +531,7 @@ export default function ReadingLogs() {
     const diff = day === 0 ? -6 : -(day - 1);
     return new Date(d.setDate(d.getDate() + diff));
   };
-  
+
   const getWeekDates = (startDate: Date): WeekDay[] => {
     const dates: WeekDay[] = [];
     const today = getTodayDateString();
@@ -435,7 +547,7 @@ export default function ReadingLogs() {
         dayNum: date.getDate(),
         isToday: dateString === today,
         sessions: [],
-        totalMinutes: 0
+        totalMinutes: 0,
       });
     }
     return dates;
@@ -451,45 +563,57 @@ export default function ReadingLogs() {
       const endDateString = dateToLocalDateString(weekEnd);
 
       // Get all sessions for the week with book info
-      const sessions = await queryAll<SessionWithBook>(`
+      const sessions = await queryAll<SessionWithBook>(
+        `
         SELECT rs.*, eb.name as book_name, eb.author as book_author
         FROM reading_sessions rs
         JOIN enhanced_books eb ON rs.book_id = eb.id
         WHERE rs.date BETWEEN ? AND ?
         ORDER BY rs.date, rs.created_at
-      `, [startDateString, endDateString]);
+      `,
+        [startDateString, endDateString],
+      );
 
       // Initialize week data
       const weekDates = getWeekDates(weekStart);
 
       // Group sessions by date
-      const sessionsByDate = sessions.reduce((acc, session) => {
-        if (!acc[session.date]) {
-          acc[session.date] = [];
-        }
-        acc[session.date].push(session);
-        return acc;
-      }, {} as Record<string, SessionWithBook[]>);
- 
+      const sessionsByDate = sessions.reduce(
+        (acc, session) => {
+          if (!acc[session.date]) {
+            acc[session.date] = [];
+          }
+          acc[session.date].push(session);
+          return acc;
+        },
+        {} as Record<string, SessionWithBook[]>,
+      );
+
       // Add sessions to week data and calculate totals
-      weekDates.forEach(day => {
+      weekDates.forEach((day) => {
         day.sessions = sessionsByDate[day.date] || [];
-        day.totalMinutes = day.sessions.reduce((sum, session) => sum + session.minutes_read, 0);
+        day.totalMinutes = day.sessions.reduce(
+          (sum, session) => sum + session.minutes_read,
+          0,
+        );
       });
 
       setWeekData(weekDates);
     } catch (error) {
-      console.error('Error loading week data:', error);
-      Alert.alert(t('components.readingLogs.errorTitle'), t('components.readingLogs.errorMessage'));
+      console.error("Error loading week data:", error);
+      Alert.alert(
+        t("components.readingLogs.errorTitle"),
+        t("components.readingLogs.errorMessage"),
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
+  const navigateWeek = (direction: "prev" | "next") => {
     const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
+    newDate.setDate(newDate.getDate() + (direction === "next" ? 7 : -7));
     setCurrentWeekStart(newDate);
   };
 
@@ -507,16 +631,21 @@ export default function ReadingLogs() {
     setEditModalVisible(true);
   };
 
-  const handleUpdateSession = async (sessionId: number, minutes: number, notes: string, pages?: number) => {
+  const handleUpdateSession = async (
+    sessionId: number,
+    minutes: number,
+    notes: string,
+    pages?: number,
+  ) => {
     try {
       // Get the session to find the book_id
       const sessions = await queryAll<ReadingSession>(
-        'SELECT * FROM reading_sessions WHERE id = ?',
-        [sessionId]
+        "SELECT * FROM reading_sessions WHERE id = ?",
+        [sessionId],
       );
 
       if (sessions.length === 0) {
-        throw new Error('Session not found');
+        throw new Error("Session not found");
       }
 
       const session = sessions[0];
@@ -524,7 +653,7 @@ export default function ReadingLogs() {
       // Update the session
       await execute(
         `UPDATE reading_sessions SET minutes_read = ?, notes = ?, pages_read = ? WHERE id = ?`,
-        [minutes, notes || null, pages || null, sessionId]
+        [minutes, notes || null, pages || null, sessionId],
       );
 
       // If pages were updated, sync the book's current page from all sessions
@@ -533,9 +662,12 @@ export default function ReadingLogs() {
       }
 
       loadWeekData();
-      Alert.alert(t('components.readingLogsEditModal.updateSuccess'), t('components.readingLogsEditModal.updateSuccessMessage'));
+      Alert.alert(
+        t("components.readingLogsEditModal.updateSuccess"),
+        t("components.readingLogsEditModal.updateSuccessMessage"),
+      );
     } catch (error) {
-      console.error('Error updating session:', error);
+      console.error("Error updating session:", error);
       throw error;
     }
   };
@@ -544,12 +676,12 @@ export default function ReadingLogs() {
     try {
       // Get the session to find the book_id before deleting
       const sessions = await queryAll<ReadingSession>(
-        'SELECT * FROM reading_sessions WHERE id = ?',
-        [sessionId]
+        "SELECT * FROM reading_sessions WHERE id = ?",
+        [sessionId],
       );
 
       if (sessions.length === 0) {
-        throw new Error('Session not found');
+        throw new Error("Session not found");
       }
 
       const session = sessions[0];
@@ -563,10 +695,16 @@ export default function ReadingLogs() {
       }
 
       loadWeekData();
-      Alert.alert(t('components.readingLogsEditModal.deleteSuccess'), t('components.readingLogsEditModal.deleteSuccessMessage'));
+      Alert.alert(
+        t("components.readingLogsEditModal.deleteSuccess"),
+        t("components.readingLogsEditModal.deleteSuccessMessage"),
+      );
     } catch (error) {
-      console.error('Error deleting session:', error);
-      Alert.alert(t('components.readingLogsEditModal.deleteError'), t('components.readingLogsEditModal.deleteErrorMessage'));
+      console.error("Error deleting session:", error);
+      Alert.alert(
+        t("components.readingLogsEditModal.deleteError"),
+        t("components.readingLogsEditModal.deleteErrorMessage"),
+      );
     }
   };
 
@@ -576,7 +714,7 @@ export default function ReadingLogs() {
       // Refresh the data after generation
       loadWeekData();
     } catch (error) {
-      console.error('Error generating random data:', error);
+      console.error("Error generating random data:", error);
     }
   };
 
@@ -595,7 +733,9 @@ export default function ReadingLogs() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <Text style={styles.loadingText}>{t('components.readingLogs.loadingText')}</Text>
+        <Text style={styles.loadingText}>
+          {t("components.readingLogs.loadingText")}
+        </Text>
       </View>
     );
   }
@@ -606,29 +746,45 @@ export default function ReadingLogs() {
         {/* View Mode Toggle */}
         <View style={styles.viewModeToggle}>
           <TouchableOpacity
-            style={[styles.toggleButton, !isWeeklyView ? styles.toggleButtonActive : undefined]}
+            style={[
+              styles.toggleButton,
+              !isWeeklyView ? styles.toggleButtonActive : undefined,
+            ]}
             onPress={() => setIsWeeklyView(false)}
           >
             <Ionicons
               name="calendar"
               size={16}
-              color={!isWeeklyView ? '#FFFFFF' : '#64748B'}
+              color={!isWeeklyView ? COLORS.white : COLORS.neutral[500]}
             />
-            <Text style={[styles.toggleText, !isWeeklyView ? styles.toggleTextActive : undefined]}>
-              {t('components.readingLogs.dailyView')}
+            <Text
+              style={[
+                styles.toggleText,
+                !isWeeklyView ? styles.toggleTextActive : undefined,
+              ]}
+            >
+              {t("components.readingLogs.dailyView")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.toggleButton, isWeeklyView ? styles.toggleButtonActive : undefined]}
+            style={[
+              styles.toggleButton,
+              isWeeklyView ? styles.toggleButtonActive : undefined,
+            ]}
             onPress={() => setIsWeeklyView(true)}
           >
             <Ionicons
               name="analytics"
               size={16}
-              color={isWeeklyView ? '#FFFFFF' : '#64748B'}
+              color={isWeeklyView ? COLORS.white : COLORS.neutral[500]}
             />
-            <Text style={[styles.toggleText, isWeeklyView ? styles.toggleTextActive : undefined]}>
-              {t('components.readingLogs.analytics')}
+            <Text
+              style={[
+                styles.toggleText,
+                isWeeklyView ? styles.toggleTextActive : undefined,
+              ]}
+            >
+              {t("components.readingLogs.analytics")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -647,29 +803,45 @@ export default function ReadingLogs() {
       {/* View Mode Toggle */}
       <View style={styles.viewModeToggle}>
         <TouchableOpacity
-          style={[styles.toggleButton, !isWeeklyView ? styles.toggleButtonActive : undefined]}
+          style={[
+            styles.toggleButton,
+            !isWeeklyView ? styles.toggleButtonActive : undefined,
+          ]}
           onPress={() => setIsWeeklyView(false)}
         >
           <Ionicons
             name="calendar"
             size={16}
-            color={!isWeeklyView ? '#FFFFFF' : '#64748B'}
+            color={!isWeeklyView ? COLORS.white : COLORS.neutral[500]}
           />
-          <Text style={[styles.toggleText, !isWeeklyView ? styles.toggleTextActive : undefined]}>
-            {t('components.readingLogs.dailyView')}
+          <Text
+            style={[
+              styles.toggleText,
+              !isWeeklyView ? styles.toggleTextActive : undefined,
+            ]}
+          >
+            {t("components.readingLogs.dailyView")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.toggleButton, isWeeklyView ? styles.toggleButtonActive : undefined]}
+          style={[
+            styles.toggleButton,
+            isWeeklyView ? styles.toggleButtonActive : undefined,
+          ]}
           onPress={() => setIsWeeklyView(true)}
         >
           <Ionicons
             name="analytics"
             size={16}
-            color={isWeeklyView ? '#FFFFFF' : '#64748B'}
+            color={isWeeklyView ? COLORS.white : COLORS.neutral[500]}
           />
-          <Text style={[styles.toggleText, isWeeklyView ? styles.toggleTextActive : undefined]}>
-            {t('components.readingLogs.analytics')}
+          <Text
+            style={[
+              styles.toggleText,
+              isWeeklyView ? styles.toggleTextActive : undefined,
+            ]}
+          >
+            {t("components.readingLogs.analytics")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -677,7 +849,10 @@ export default function ReadingLogs() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.weekNavigation}>
-          <TouchableOpacity onPress={() => navigateWeek('prev')} style={styles.navButton}>
+          <TouchableOpacity
+            onPress={() => navigateWeek("prev")}
+            style={styles.navButton}
+          >
             <Text style={styles.navButtonText}>←</Text>
           </TouchableOpacity>
 
@@ -685,10 +860,15 @@ export default function ReadingLogs() {
             <Text style={styles.weekRange}>
               {formatDate(weekStart)} - {formatDate(weekEnd)}
             </Text>
-            <Text style={styles.weekTotal}>{weekTotal} {t('components.readingLogs.minutesThisWeek')}</Text>
+            <Text style={styles.weekTotal}>
+              {weekTotal} {t("components.readingLogs.minutesThisWeek")}
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigateWeek('next')} style={styles.navButton}>
+          <TouchableOpacity
+            onPress={() => navigateWeek("next")}
+            style={styles.navButton}
+          >
             <Text style={styles.navButtonText}>→</Text>
           </TouchableOpacity>
         </View>
@@ -701,8 +881,10 @@ export default function ReadingLogs() {
             style={styles.devButton}
             onPress={handleGenerateRandomData}
           >
-            <Ionicons name="flask" size={16} color="#FFFFFF" />
-            <Text style={styles.devButtonText}>Generate Random Data (20 sessions)</Text>
+            <Ionicons name="flask" size={16} color={COLORS.white} />
+            <Text style={styles.devButtonText}>
+              Generate Random Data (20 sessions)
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -710,24 +892,40 @@ export default function ReadingLogs() {
       {/* Week Grid */}
       <ScrollView
         style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <View style={styles.weekGrid}>
           {weekData.map((day) => (
-            <View key={day.date} style={[styles.dayCard, day.isToday && styles.todayCard]}>
+            <View
+              key={day.date}
+              style={[styles.dayCard, day.isToday && styles.todayCard]}
+            >
               {/* Day Header */}
               <View style={styles.dayHeader}>
-                <Text style={[styles.dayName, day.isToday && styles.todayText]}>{day.day}</Text>
-                <Text style={[styles.dayNumber, day.isToday && styles.todayText]}>{day.dayNum}</Text>
-                <Text style={[styles.dayTotal, day.isToday && styles.todayText]}>
-                  {day.totalMinutes} {t('components.readingTimeLogger.minutesShort')}
+                <Text style={[styles.dayName, day.isToday && styles.todayText]}>
+                  {day.day}
+                </Text>
+                <Text
+                  style={[styles.dayNumber, day.isToday && styles.todayText]}
+                >
+                  {day.dayNum}
+                </Text>
+                <Text
+                  style={[styles.dayTotal, day.isToday && styles.todayText]}
+                >
+                  {day.totalMinutes}{" "}
+                  {t("components.readingTimeLogger.minutesShort")}
                 </Text>
               </View>
 
               {/* Sessions */}
               <View style={styles.sessionsContainer}>
                 {day.sessions.length === 0 ? (
-                  <Text style={styles.noSessionsText}>{t('components.readingLogs.noSessionsText')}</Text>
+                  <Text style={styles.noSessionsText}>
+                    {t("components.readingLogs.noSessionsText")}
+                  </Text>
                 ) : (
                   day.sessions.map((session) => (
                     <TouchableOpacity
@@ -736,14 +934,18 @@ export default function ReadingLogs() {
                       onPress={() => handleEditSession(session)}
                     >
                       <View style={styles.sessionHeader}>
-                        <Text style={styles.sessionTime}>{session.minutes_read}{t('components.readingLogs.minutesSuffix')}</Text>
+                        <Text style={styles.sessionTime}>
+                          {session.minutes_read}
+                          {t("components.readingLogs.minutesSuffix")}
+                        </Text>
                         <Text style={styles.editHint}>✏️</Text>
                       </View>
                       <Text style={styles.sessionBook} numberOfLines={2}>
                         {session.book_name}
                       </Text>
                       <Text style={styles.sessionAuthor} numberOfLines={1}>
-                        {t('components.readingLogs.sessionCardBy')} {session.book_author}
+                        {t("components.readingLogs.sessionCardBy")}{" "}
+                        {session.book_author}
                       </Text>
                       {session.notes && (
                         <Text style={styles.sessionNotes} numberOfLines={2}>
@@ -773,20 +975,20 @@ export default function ReadingLogs() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.neutral[50],
   },
   centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748B',
-    fontWeight: '500',
+    color: COLORS.neutral[500],
+    fontWeight: "500",
   },
   viewModeToggle: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    flexDirection: "row",
+    backgroundColor: COLORS.neutral[100],
     borderRadius: 8,
     padding: 4,
     margin: 16,
@@ -794,65 +996,65 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
     gap: 6,
   },
   toggleButtonActive: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: COLORS.primary,
   },
   toggleText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
+    fontWeight: "600",
+    color: COLORS.neutral[500],
   },
   toggleTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.white,
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: COLORS.neutral[200],
   },
   weekNavigation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   navButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.neutral[100],
+    justifyContent: "center",
+    alignItems: "center",
   },
   navButtonText: {
     fontSize: 18,
-    color: '#475569',
-    fontWeight: '600',
+    color: COLORS.neutral[700],
+    fontWeight: "600",
   },
   weekInfo: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     marginHorizontal: 16,
   },
   weekRange: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontWeight: "600",
+    color: COLORS.neutral[800],
     marginBottom: 4,
   },
   weekTotal: {
     fontSize: 14,
-    color: '#6C63FF',
-    fontWeight: '500',
+    color: COLORS.primary,
+    fontWeight: "500",
   },
   content: {
     flex: 1,
@@ -863,75 +1065,75 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   dayCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.neutral[200],
   },
   todayCard: {
-    borderColor: '#6C63FF',
-    backgroundColor: '#F8F7FF',
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.state.cardAccent,
   },
   dayHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 12,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: COLORS.neutral[100],
   },
   dayName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
+    fontWeight: "600",
+    color: COLORS.neutral[500],
     flex: 1,
   },
   dayNumber: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: "700",
+    color: COLORS.neutral[800],
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
   },
   dayTotal: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#6C63FF',
+    fontWeight: "600",
+    color: COLORS.primary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: "right",
   },
   todayText: {
-    color: '#6C63FF',
+    color: COLORS.primary,
   },
   sessionsContainer: {
     gap: 8,
   },
   noSessionsText: {
     fontSize: 14,
-    color: '#94A3B8',
-    fontStyle: 'italic',
-    textAlign: 'center',
+    color: COLORS.neutral[400],
+    fontStyle: "italic",
+    textAlign: "center",
     paddingVertical: 16,
   },
   sessionCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.neutral[50],
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.neutral[200],
   },
   sessionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 6,
   },
   sessionTime: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#6C63FF',
+    fontWeight: "700",
+    color: COLORS.primary,
   },
   editHint: {
     fontSize: 12,
@@ -939,20 +1141,20 @@ const styles = StyleSheet.create({
   },
   sessionBook: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontWeight: "600",
+    color: COLORS.neutral[800],
     marginBottom: 2,
   },
   sessionAuthor: {
     fontSize: 12,
-    color: '#64748B',
+    color: COLORS.neutral[500],
     marginBottom: 4,
   },
   sessionNotes: {
     fontSize: 12,
-    color: '#475569',
-    fontStyle: 'italic',
-    backgroundColor: '#F1F5F9',
+    color: COLORS.neutral[700],
+    fontStyle: "italic",
+    backgroundColor: COLORS.neutral[100],
     padding: 8,
     borderRadius: 6,
     marginTop: 4,
@@ -961,35 +1163,35 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.neutral[50],
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: COLORS.neutral[200],
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: "700",
+    color: COLORS.neutral[800],
   },
   modalCancelText: {
     fontSize: 16,
-    color: '#64748B',
-    fontWeight: '500',
+    color: COLORS.neutral[500],
+    fontWeight: "500",
   },
   modalSaveText: {
     fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
+    color: COLORS.primary,
+    fontWeight: "600",
   },
   modalSaveTextDisabled: {
-    color: '#CBD5E1',
+    color: COLORS.neutral[300],
   },
   modalContent: {
     flex: 1,
@@ -1000,149 +1202,149 @@ const styles = StyleSheet.create({
   },
   modalSectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: COLORS.neutral[700],
     marginBottom: 12,
   },
   bookInfoContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.neutral[200],
   },
   bookInfoTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontWeight: "600",
+    color: COLORS.neutral[800],
     marginBottom: 4,
   },
   bookInfoAuthor: {
     fontSize: 14,
-    color: '#64748B',
+    color: COLORS.neutral[500],
   },
   modalInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.neutral[200],
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1E293B',
+    color: COLORS.neutral[800],
   },
   modalNotesInput: {
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   deleteButton: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: COLORS.dangerLight,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,
     marginTop: 32,
     marginBottom: 32,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: COLORS.state.dangerBorder,
   },
   deleteButtonText: {
     fontSize: 16,
-    color: '#DC2626',
-    fontWeight: '600',
-    textAlign: 'center',
+    color: COLORS.state.dangerText,
+    fontWeight: "600",
+    textAlign: "center",
   },
 
   // Development button styles
   devButtonContainer: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.neutral[50],
   },
   devButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: COLORS.info,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   devButtonText: {
     fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: COLORS.white,
+    fontWeight: "600",
   },
   // Pages input styles
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   optionalBadge: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: COLORS.state.primarySoftAlt,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
     marginLeft: 8,
     borderWidth: 1,
-    borderColor: '#0EA5E9',
+    borderColor: COLORS.state.accentCyan,
   },
   optionalText: {
     fontSize: 10,
-    color: '#0EA5E9',
-    fontWeight: '600',
+    color: COLORS.state.accentCyan,
+    fontWeight: "600",
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: COLORS.neutral[500],
     marginBottom: 12,
     lineHeight: 18,
   },
   // Remaining pages info
   remainingPagesInfo: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: COLORS.state.primarySoftAlt,
     borderRadius: 8,
     padding: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderColor: COLORS.state.infoBorder,
   },
   remainingPagesText: {
     fontSize: 12,
-    color: '#0369A1',
-    fontWeight: '500',
-    textAlign: 'center',
+    color: COLORS.state.accentCyanDark,
+    fontWeight: "500",
+    textAlign: "center",
   },
   // Progress preview styles
   progressPreview: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: COLORS.state.primarySoftAlt,
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#0EA5E9',
+    borderColor: COLORS.state.accentCyan,
     marginTop: 12,
   },
   progressPreviewText: {
     fontSize: 12,
-    color: '#0369A1',
+    color: COLORS.state.accentCyanDark,
     lineHeight: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   // Warning styles
   warningContainer: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: COLORS.state.dangerSoft,
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: COLORS.state.dangerBorder,
     marginTop: 12,
   },
   warningText: {
     fontSize: 12,
-    color: '#DC2626',
+    color: COLORS.state.dangerText,
     lineHeight: 16,
-    textAlign: 'center',
-    fontWeight: '500',
+    textAlign: "center",
+    fontWeight: "500",
   },
 });

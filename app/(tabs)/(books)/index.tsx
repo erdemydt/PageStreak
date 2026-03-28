@@ -1,12 +1,26 @@
-import { Link, Stack, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Alert, Animated, FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
-import BookCard from '../../../components/BookCard';
-import BookDetailModal from '../../../components/BookDetailModal';
-import BookStatusModal, { BookStatus } from '../../../components/BookStatusModal';
-import { EnhancedBook, execute, queryAll } from '../../../db/db';
-import { getBookReadingTime } from '../../../utils/readingProgress';
+import { Link, Stack, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+    Alert,
+    Animated,
+    FlatList,
+    Keyboard,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
+} from "react-native";
+import BookCard from "../../../components/BookCard";
+import BookDetailModal from "../../../components/BookDetailModal";
+import BookStatusModal, {
+    BookStatus,
+} from "../../../components/BookStatusModal";
+import { EnhancedBook, execute, queryAll } from "../../../db/db";
+import { COLORS } from "../../../themes/colors";
+import { getBookReadingTime } from "../../../utils/readingProgress";
 type BooksearchProps = {
   name: string;
   setName: (name: string) => void;
@@ -28,43 +42,45 @@ function ManualBookEntry(props: BooksearchProps) {
   const { t } = useTranslation();
   const getStatusColor = (status: BookStatus) => {
     switch (status) {
-      case 'currently_reading':
-        return '#3B82F6';
-      case 'read':
-        return '#10B981';
-      case 'want_to_read':
-        return '#F59E0B';
+      case "currently_reading":
+        return COLORS.info;
+      case "read":
+        return COLORS.success;
+      case "want_to_read":
+        return COLORS.warning;
       default:
-        return '#64748B';
+        return COLORS.neutral[500];
     }
   };
   const getStatusText = (status: BookStatus) => {
     switch (status) {
-      case 'currently_reading':
-        return t('components.bookCard.currentlyReading');
-      case 'read':
-        return t('components.bookCard.read');
-      case 'want_to_read':
-        return t('components.bookCard.wantToRead');
+      case "currently_reading":
+        return t("components.bookCard.currentlyReading");
+      case "read":
+        return t("components.bookCard.read");
+      case "want_to_read":
+        return t("components.bookCard.wantToRead");
       default:
-        return t('components.bookCard.unknown');
+        return t("components.bookCard.unknown");
     }
   };
 
   return (
     <View style={styles.modalOverlay}>
-      <Animated.View 
+      <Animated.View
         style={[
-          styles.modalCard, 
+          styles.modalCard,
           {
             opacity: props.fadeAnim,
             transform: [{ scale: props.scaleAnim }],
-          }
+          },
         ]}
       >
         <View style={styles.modalHeader}>
-          <Text style={styles.cardTitle}>{t('components.bookSearchModal.title')}</Text>
-          <TouchableOpacity 
+          <Text style={styles.cardTitle}>
+            {t("components.bookSearchModal.title")}
+          </Text>
+          <TouchableOpacity
             style={styles.closeButton}
             onPress={props.onClose}
             disabled={props.loading}
@@ -73,33 +89,67 @@ function ManualBookEntry(props: BooksearchProps) {
           </TouchableOpacity>
         </View>
         <View style={styles.inputContainer}>
-          <TextInput style={styles.input} placeholder={t('components.bookSearchModal.title')} placeholderTextColor="#9CA3AF" value={props.name} onChangeText={props.setName} editable={!props.loading} autoCapitalize="words" returnKeyType="next" />
-          <TextInput style={styles.input} placeholder={t('components.bookSearchModal.author')} placeholderTextColor="#9CA3AF" value={props.author} onChangeText={props.setAuthor} editable={!props.loading} autoCapitalize="words" returnKeyType="next" />
-          <TextInput style={styles.input} placeholder={t('components.bookSearchModal.pageCount')} placeholderTextColor="#9CA3AF" value={props.page} onChangeText={props.setPage} editable={!props.loading} keyboardType="numeric" returnKeyType="done" onSubmitEditing={props.saveBook} />
+          <TextInput
+            style={styles.input}
+            placeholder={t("components.bookSearchModal.title")}
+            placeholderTextColor={COLORS.neutral[400]}
+            value={props.name}
+            onChangeText={props.setName}
+            editable={!props.loading}
+            autoCapitalize="words"
+            returnKeyType="next"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder={t("components.bookSearchModal.author")}
+            placeholderTextColor={COLORS.neutral[400]}
+            value={props.author}
+            onChangeText={props.setAuthor}
+            editable={!props.loading}
+            autoCapitalize="words"
+            returnKeyType="next"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder={t("components.bookSearchModal.pageCount")}
+            placeholderTextColor={COLORS.neutral[400]}
+            value={props.page}
+            onChangeText={props.setPage}
+            editable={!props.loading}
+            keyboardType="numeric"
+            returnKeyType="done"
+            onSubmitEditing={props.saveBook}
+          />
 
           <View style={styles.statusSelectionContainer}>
-            <Text style={styles.statusSelectionLabel}>{t('components.bookDetailModal.status')}</Text>
+            <Text style={styles.statusSelectionLabel}>
+              {t("components.bookDetailModal.status")}
+            </Text>
             <View style={styles.statusButtons}>
-              {(['want_to_read', 'currently_reading', 'read'] as BookStatus[]).map((status) => (
+              {(
+                ["want_to_read", "currently_reading", "read"] as BookStatus[]
+              ).map((status) => (
                 <TouchableOpacity
                   key={status}
                   style={[
                     styles.statusButton,
                     props.selectedStatus === status && [
                       styles.statusButtonActive,
-                      { borderColor: getStatusColor(status) }
-                    ]
+                      { borderColor: getStatusColor(status) },
+                    ],
                   ]}
                   onPress={() => props.onStatusChange(status)}
                   disabled={props.loading}
                 >
-                  <Text style={[
-                    styles.statusButtonText,
-                    props.selectedStatus === status && [
-                      styles.statusButtonTextActive,
-                      { color: getStatusColor(status) }
-                    ]
-                  ]}>
+                  <Text
+                    style={[
+                      styles.statusButtonText,
+                      props.selectedStatus === status && [
+                        styles.statusButtonTextActive,
+                        { color: getStatusColor(status) },
+                      ],
+                    ]}
+                  >
                     {getStatusText(status)}
                   </Text>
                 </TouchableOpacity>
@@ -107,8 +157,26 @@ function ManualBookEntry(props: BooksearchProps) {
             </View>
           </View>
 
-          <TouchableOpacity style={[styles.saveBtn, (!props.name.trim() || !props.author.trim() || !props.page.trim() || props.loading) && styles.saveBtnDisabled]} onPress={props.saveBook} disabled={props.loading || !props.name.trim() || !props.author.trim() || !props.page.trim()}>
-            <Text style={styles.saveBtnText}>{props.loading ? t("booksPage.saving") : t("booksPage.addBook")}</Text>
+          <TouchableOpacity
+            style={[
+              styles.saveBtn,
+              (!props.name.trim() ||
+                !props.author.trim() ||
+                !props.page.trim() ||
+                props.loading) &&
+                styles.saveBtnDisabled,
+            ]}
+            onPress={props.saveBook}
+            disabled={
+              props.loading ||
+              !props.name.trim() ||
+              !props.author.trim() ||
+              !props.page.trim()
+            }
+          >
+            <Text style={styles.saveBtnText}>
+              {props.loading ? t("booksPage.saving") : t("booksPage.addBook")}
+            </Text>
           </TouchableOpacity>
         </View>
         {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
@@ -118,16 +186,17 @@ function ManualBookEntry(props: BooksearchProps) {
 }
 
 export default function HomeScreen() {
-
-  const [name, setName] = useState('');
-  const [author, setAuthor] = useState('');
-  const [page, setPage] = useState('');
-  const [books, setBooks] = useState<(EnhancedBook & { reading_time?: number })[]>([]);
+  const [name, setName] = useState("");
+  const [author, setAuthor] = useState("");
+  const [page, setPage] = useState("");
+  const [books, setBooks] = useState<
+    (EnhancedBook & { reading_time?: number })[]
+  >([]);
   const [allBooksCount, setAllBooksCount] = useState(0);
   const [statusCounts, setStatusCounts] = useState({
     want_to_read: 0,
     currently_reading: 0,
-    read: 0
+    read: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,9 +210,12 @@ export default function HomeScreen() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [detailModalFadeAnim] = useState(new Animated.Value(0));
   const [detailModalScaleAnim] = useState(new Animated.Value(0.8));
-  const [selectedBookForDetail, setSelectedBookForDetail] = useState<(EnhancedBook & { reading_time?: number }) | null>(null);
-  const [manualBookStatus, setManualBookStatus] = useState<BookStatus>('currently_reading');
-  const [filterStatus, setFilterStatus] = useState<BookStatus | 'all'>('all');
+  const [selectedBookForDetail, setSelectedBookForDetail] = useState<
+    (EnhancedBook & { reading_time?: number }) | null
+  >(null);
+  const [manualBookStatus, setManualBookStatus] =
+    useState<BookStatus>("currently_reading");
+  const [filterStatus, setFilterStatus] = useState<BookStatus | "all">("all");
 
   useEffect(() => {
     // Database is already initialized by the main app entry point
@@ -153,26 +225,31 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadBooks();
-    }, [])
+    }, []),
   );
   const { t } = useTranslation();
   const loadBooks = async () => {
     setLoading(true);
     try {
       // Get total counts first
-      const totalResult = await queryAll<{total: number}>('SELECT COUNT(*) as total FROM enhanced_books');
+      const totalResult = await queryAll<{ total: number }>(
+        "SELECT COUNT(*) as total FROM enhanced_books",
+      );
       const totalCount = totalResult[0]?.total || 0;
       setAllBooksCount(totalCount);
 
       // Get status counts
-      const statusCountsResult = await queryAll<{reading_status: string, count: number}>(`
+      const statusCountsResult = await queryAll<{
+        reading_status: string;
+        count: number;
+      }>(`
         SELECT reading_status, COUNT(*) as count 
         FROM enhanced_books 
         GROUP BY reading_status
       `);
-      
+
       const counts = { want_to_read: 0, currently_reading: 0, read: 0 };
-      statusCountsResult.forEach(row => {
+      statusCountsResult.forEach((row) => {
         if (row.reading_status in counts) {
           counts[row.reading_status as keyof typeof counts] = row.count;
         }
@@ -190,29 +267,29 @@ export default function HomeScreen() {
           date_added DESC
         LIMIT 10
       `);
-      
+
       // Fetch reading time for each book (only for preview)
       const booksWithReadingTime = await Promise.all(
         res.map(async (book) => {
           const readingTime = await getBookReadingTime(book.id);
           return { ...book, reading_time: readingTime };
-        })
+        }),
       );
-      
+
       setBooks(booksWithReadingTime);
     } catch (e) {
-      setError(t('booksPage.failedToLoad'));
-      console.error('Load books error:', e);
+      setError(t("booksPage.failedToLoad"));
+      console.error("Load books error:", e);
     } finally {
       setLoading(false);
     }
   };
 
   const getFilteredBooks = () => {
-    if (filterStatus === 'all') {
+    if (filterStatus === "all") {
       return books;
     }
-    return books.filter(book => book.reading_status === filterStatus);
+    return books.filter((book) => book.reading_status === filterStatus);
   };
 
   const getStatusCount = (status: BookStatus) => {
@@ -220,44 +297,51 @@ export default function HomeScreen() {
   };
 
   const saveManualBook = async () => {
-    if (!name.trim() || !author.trim() || !page.trim() || isNaN(Number(page))) return;
+    if (!name.trim() || !author.trim() || !page.trim() || isNaN(Number(page)))
+      return;
     setLoading(true);
     setError(null);
     try {
-      let dateField = '';
+      let dateField = "";
       let dateValue = null;
 
       // Set appropriate date fields based on status
-      if (manualBookStatus === 'currently_reading') {
-        dateField = ', date_started';
+      if (manualBookStatus === "currently_reading") {
+        dateField = ", date_started";
         dateValue = new Date().toISOString();
-      } else if (manualBookStatus === 'read') {
-        dateField = ', date_finished';
+      } else if (manualBookStatus === "read") {
+        dateField = ", date_finished";
         dateValue = new Date().toISOString();
       }
 
       const query = `
         INSERT INTO enhanced_books (name, author, page, reading_status, date_added${dateField})
-        VALUES (?, ?, ?, ?, ? ${dateValue ? ', ?' : ''})
+        VALUES (?, ?, ?, ?, ? ${dateValue ? ", ?" : ""})
       `;
 
-      const params = [name.trim(), author.trim(), Number(page), manualBookStatus, new Date().toISOString()];
+      const params = [
+        name.trim(),
+        author.trim(),
+        Number(page),
+        manualBookStatus,
+        new Date().toISOString(),
+      ];
       if (dateValue) {
         params.push(dateValue);
       }
 
       await execute(query, params);
-      
-      setName('');
-      setAuthor('');
-      setPage('');
-      setManualBookStatus('currently_reading');
+
+      setName("");
+      setAuthor("");
+      setPage("");
+      setManualBookStatus("currently_reading");
       Keyboard.dismiss();
       await loadBooks();
       toggleManualForm();
     } catch (e) {
-      setError(t('booksPage.failedToSave'));
-      console.error('Save manual book error:', e);
+      setError(t("booksPage.failedToSave"));
+      console.error("Save manual book error:", e);
     } finally {
       setLoading(false);
     }
@@ -265,28 +349,30 @@ export default function HomeScreen() {
 
   const deleteBook = async (bookId: number, bookTitle: string) => {
     Alert.alert(
-      t('booksPage.alert.deleteTitle'),
-      t('booksPage.alert.deleteMessage', { title: bookTitle }),
+      t("booksPage.alert.deleteTitle"),
+      t("booksPage.alert.deleteMessage", { title: bookTitle }),
       [
-        { text: t('booksPage.alert.cancel'), style: 'cancel' },
+        { text: t("booksPage.alert.cancel"), style: "cancel" },
         {
-          text: t('booksPage.alert.delete'),
-          style: 'destructive',
+          text: t("booksPage.alert.delete"),
+          style: "destructive",
           onPress: async () => {
             setLoading(true);
             setError(null);
             try {
-              await execute('DELETE FROM enhanced_books WHERE id = ?', [bookId]);
+              await execute("DELETE FROM enhanced_books WHERE id = ?", [
+                bookId,
+              ]);
               await loadBooks();
             } catch (e) {
-              setError('Failed to delete book');
-              console.error('Delete book error:', e);
+              setError("Failed to delete book");
+              console.error("Delete book error:", e);
             } finally {
               setLoading(false);
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
@@ -320,10 +406,10 @@ export default function HomeScreen() {
         }),
       ]).start(() => {
         setIsAddingManually(false);
-        setName('');
-        setAuthor('');
-        setPage('');
-        setManualBookStatus('currently_reading');
+        setName("");
+        setAuthor("");
+        setPage("");
+        setManualBookStatus("currently_reading");
         setError(null);
       });
     }
@@ -372,68 +458,84 @@ export default function HomeScreen() {
     setError(null);
 
     try {
-      let dateField = '';
+      let dateField = "";
       let dateValue = null;
 
       // Set appropriate date fields based on status
-      if (newStatus === 'currently_reading') {
-        dateField = ', date_started = ?';
+      if (newStatus === "currently_reading") {
+        dateField = ", date_started = ?";
         dateValue = new Date().toISOString();
-      } else if (newStatus === 'read') {
-        dateField = ', date_finished = ?';
+      } else if (newStatus === "read") {
+        dateField = ", date_finished = ?";
         dateValue = new Date().toISOString();
       }
 
       const query = `UPDATE enhanced_books SET reading_status = ?${dateField} WHERE id = ?`;
-      const params = dateValue 
+      const params = dateValue
         ? [newStatus, dateValue, selectedBook.id]
         : [newStatus, selectedBook.id];
       // remove finished date if switching back to currently_reading or want_to_read
-      if (newStatus !== 'read') {
-        await execute('UPDATE enhanced_books SET date_finished = NULL WHERE id = ?', [selectedBook.id]);
+      if (newStatus !== "read") {
+        await execute(
+          "UPDATE enhanced_books SET date_finished = NULL WHERE id = ?",
+          [selectedBook.id],
+        );
       }
       await execute(query, params);
       await loadBooks();
 
       // Show success message
-      const statusText = newStatus === 'want_to_read' ? 'Want to Read' : 
-                        newStatus === 'currently_reading' ? 'Currently Reading' : 'Read';
-      
-      Alert.alert('Status Updated', `"${selectedBook.name}" has been marked as ${statusText}.`);
+      const statusText =
+        newStatus === "want_to_read"
+          ? "Want to Read"
+          : newStatus === "currently_reading"
+            ? "Currently Reading"
+            : "Read";
+
+      Alert.alert(
+        "Status Updated",
+        `"${selectedBook.name}" has been marked as ${statusText}.`,
+      );
     } catch (e) {
-      setError('Failed to update book status');
-      console.error('Update status error:', e);
-      Alert.alert('Error', 'Failed to update book status. Please try again.');
+      setError("Failed to update book status");
+      console.error("Update status error:", e);
+      Alert.alert("Error", "Failed to update book status. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDetailModalStatusChange = async (bookId: number, newStatus: BookStatus) => {
+  const handleDetailModalStatusChange = async (
+    bookId: number,
+    newStatus: BookStatus,
+  ) => {
     setLoading(true);
     setError(null);
 
     try {
-      let dateField = '';
+      let dateField = "";
       let dateValue = null;
 
       // Set appropriate date fields based on status
-      if (newStatus === 'currently_reading') {
-        dateField = ', date_started = ?';
+      if (newStatus === "currently_reading") {
+        dateField = ", date_started = ?";
         dateValue = new Date().toISOString();
-      } else if (newStatus === 'read') {
-        dateField = ', date_finished = ?';
+      } else if (newStatus === "read") {
+        dateField = ", date_finished = ?";
         dateValue = new Date().toISOString();
       }
 
       const query = `UPDATE enhanced_books SET reading_status = ?${dateField} WHERE id = ?`;
-      const params = dateValue 
+      const params = dateValue
         ? [newStatus, dateValue, bookId]
         : [newStatus, bookId];
-      
+
       // remove finished date if switching back to currently_reading or want_to_read
-      if (newStatus !== 'read') {
-        await execute('UPDATE enhanced_books SET date_finished = NULL WHERE id = ?', [bookId]);
+      if (newStatus !== "read") {
+        await execute(
+          "UPDATE enhanced_books SET date_finished = NULL WHERE id = ?",
+          [bookId],
+        );
       }
       await execute(query, params);
       await loadBooks();
@@ -443,20 +545,33 @@ export default function HomeScreen() {
         setSelectedBookForDetail({
           ...selectedBookForDetail,
           reading_status: newStatus,
-          date_started: newStatus === 'currently_reading' ? dateValue || selectedBookForDetail.date_started : selectedBookForDetail.date_started,
-          date_finished: newStatus === 'read' ? dateValue || selectedBookForDetail.date_finished : undefined,
+          date_started:
+            newStatus === "currently_reading"
+              ? dateValue || selectedBookForDetail.date_started
+              : selectedBookForDetail.date_started,
+          date_finished:
+            newStatus === "read"
+              ? dateValue || selectedBookForDetail.date_finished
+              : undefined,
         });
       }
 
       // Show success message
-      const statusText = newStatus === 'want_to_read' ? t('components.bookCard.wantToRead') : 
-                        newStatus === 'currently_reading' ? t('components.bookCard.currentlyReading') : t('components.bookCard.read');
+      const statusText =
+        newStatus === "want_to_read"
+          ? t("components.bookCard.wantToRead")
+          : newStatus === "currently_reading"
+            ? t("components.bookCard.currentlyReading")
+            : t("components.bookCard.read");
 
-      Alert.alert(t("booksPage.alert.statusUpdated"), t("booksPage.alert.bookStatusUpdated", { statusText }));
+      Alert.alert(
+        t("booksPage.alert.statusUpdated"),
+        t("booksPage.alert.bookStatusUpdated", { statusText }),
+      );
     } catch (e) {
-      setError(t('booksPage.alert.failedUpdate'));
-      console.error('Update status error:', e);
-      Alert.alert(t('error'), t('booksPage.alert.failedUpdate'));
+      setError(t("booksPage.alert.failedUpdate"));
+      console.error("Update status error:", e);
+      Alert.alert(t("error"), t("booksPage.alert.failedUpdate"));
     } finally {
       setLoading(false);
     }
@@ -498,7 +613,11 @@ export default function HomeScreen() {
     });
   };
 
-  const renderBook = ({ item }: { item: EnhancedBook & { reading_time?: number } }) => (
+  const renderBook = ({
+    item,
+  }: {
+    item: EnhancedBook & { reading_time?: number };
+  }) => (
     <BookCard
       book={item}
       showDeleteButton={true}
@@ -519,171 +638,204 @@ export default function HomeScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
-      <View style={{flex: 1}}>
-        <Stack.Screen options={{ title: 'Books' }} />
+      <View style={{ flex: 1 }}>
+        <Stack.Screen options={{ title: "Books" }} />
         <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('booksPage.title')}</Text>
-          <Text style={styles.subtitle}>{t('booksPage.subtitle')}</Text>
-        </View>
-
-        {isAddingManually && (
-          <ManualBookEntry 
-            name={name} 
-            setName={setName} 
-            author={author} 
-            setAuthor={setAuthor} 
-            page={page} 
-            setPage={setPage} 
-            selectedStatus={manualBookStatus}
-            onStatusChange={setManualBookStatus}
-            loading={loading} 
-            error={error} 
-            saveBook={saveManualBook}
-            onClose={toggleManualForm}
-            fadeAnim={fadeAnim}
-            scaleAnim={scaleAnim}
-          />
-        )}
-
-        <BookStatusModal
-          visible={statusModalVisible}
-          bookTitle={selectedBook?.name || ''}
-          currentStatus={(selectedBook?.reading_status || 'currently_reading') as BookStatus}
-          onStatusChange={handleStatusChange}
-          onClose={closeStatusModal}
-          fadeAnim={statusModalFadeAnim}
-          scaleAnim={statusModalScaleAnim}
-        />
-
-        <BookDetailModal
-          visible={detailModalVisible}
-          book={selectedBookForDetail}
-          readingTimeMinutes={selectedBookForDetail?.reading_time || 0}
-          onClose={closeDetailModal}
-          onStatusChange={handleDetailModalStatusChange}
-          fadeAnim={detailModalFadeAnim}
-          scaleAnim={detailModalScaleAnim}
-        />
-
-        <View style={styles.actionButtons}>
-          <Link href="./search" asChild style={styles.actionBtn}>
-            <TouchableOpacity 
-              style={ isAddingManually && styles.nonVisibleBtn}
-              disabled={loading || isAddingManually}
-            >
-              <Text style={styles.actionBtnText }>{t('booksPage.searchButton')}</Text>
-            </TouchableOpacity>
-          </Link>
-          
-          <TouchableOpacity 
-            style={[styles.actionBtn, styles.secondaryBtn, isAddingManually && styles.nonVisibleBtn]}
-            onPress={toggleManualForm}
-            disabled={loading || isAddingManually}
-          >
-            <Text style={[styles.actionBtnText, styles.secondaryBtnText]}>{t('booksPage.addBookManually')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.filterSection}>
-          <Text style={styles.filterTitle}>{t('booksPage.filter.title')}</Text>
-          <View style={styles.filterButtons}>
-            <TouchableOpacity
-              style={[
-                styles.filterBtn,
-                filterStatus === 'all' && styles.filterBtnActive
-              ]}
-              onPress={() => setFilterStatus('all')}
-            >
-              <Text style={[
-                styles.filterBtnText,
-                filterStatus === 'all' && styles.filterBtnTextActive
-              ]}>
-                {t("booksPage.filter.all")} ({allBooksCount})
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.filterBtn,
-                filterStatus === 'want_to_read' && styles.filterBtnActive
-              ]}
-              onPress={() => setFilterStatus('want_to_read')}
-            >
-              <Text style={[
-                styles.filterBtnText,
-                filterStatus === 'want_to_read' && styles.filterBtnTextActive
-              ]}>
-                {t("booksPage.filter.want_to_read")} ({getStatusCount('want_to_read')})
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.filterBtn,
-                filterStatus === 'currently_reading' && styles.filterBtnActive
-              ]}
-              onPress={() => setFilterStatus('currently_reading')}
-            >
-              <Text style={[
-                styles.filterBtnText,
-                filterStatus === 'currently_reading' && styles.filterBtnTextActive
-              ]}>
-                {t("booksPage.filter.currently_reading")} ({getStatusCount('currently_reading')})
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.filterBtn,
-                filterStatus === 'read' && styles.filterBtnActive
-              ]}
-              onPress={() => setFilterStatus('read')}
-            >
-              <Text style={[
-                styles.filterBtnText,
-                filterStatus === 'read' && styles.filterBtnTextActive
-              ]}>
-                {t("booksPage.filter.read")} ({getStatusCount('read')})
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.header}>
+            <Text style={styles.title}>{t("booksPage.title")}</Text>
+            <Text style={styles.subtitle}>{t("booksPage.subtitle")}</Text>
           </View>
-        </View>
 
-        <View style={styles.listSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {t('booksPage.listHeader.myBooks') } {t('booksPage.listHeader.showing')} ({filteredBooks.length} {t('booksPage.listHeader.of')} {allBooksCount})
-            </Text>
-            <Link href="./my-books" asChild>
-              <TouchableOpacity style={styles.viewAllButton}>
-                <Text style={styles.viewAllButtonText}>{t('booksPage.listHeader.viewAll')}</Text>
+          {isAddingManually && (
+            <ManualBookEntry
+              name={name}
+              setName={setName}
+              author={author}
+              setAuthor={setAuthor}
+              page={page}
+              setPage={setPage}
+              selectedStatus={manualBookStatus}
+              onStatusChange={setManualBookStatus}
+              loading={loading}
+              error={error}
+              saveBook={saveManualBook}
+              onClose={toggleManualForm}
+              fadeAnim={fadeAnim}
+              scaleAnim={scaleAnim}
+            />
+          )}
+
+          <BookStatusModal
+            visible={statusModalVisible}
+            bookTitle={selectedBook?.name || ""}
+            currentStatus={
+              (selectedBook?.reading_status ||
+                "currently_reading") as BookStatus
+            }
+            onStatusChange={handleStatusChange}
+            onClose={closeStatusModal}
+            fadeAnim={statusModalFadeAnim}
+            scaleAnim={statusModalScaleAnim}
+          />
+
+          <BookDetailModal
+            visible={detailModalVisible}
+            book={selectedBookForDetail}
+            readingTimeMinutes={selectedBookForDetail?.reading_time || 0}
+            onClose={closeDetailModal}
+            onStatusChange={handleDetailModalStatusChange}
+            fadeAnim={detailModalFadeAnim}
+            scaleAnim={detailModalScaleAnim}
+          />
+
+          <View style={styles.actionButtons}>
+            <Link href="./search" asChild style={styles.actionBtn}>
+              <TouchableOpacity
+                style={isAddingManually && styles.nonVisibleBtn}
+                disabled={loading || isAddingManually}
+              >
+                <Text style={styles.actionBtnText}>
+                  {t("booksPage.searchButton")}
+                </Text>
               </TouchableOpacity>
             </Link>
+
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                styles.secondaryBtn,
+                isAddingManually && styles.nonVisibleBtn,
+              ]}
+              onPress={toggleManualForm}
+              disabled={loading || isAddingManually}
+            >
+              <Text style={[styles.actionBtnText, styles.secondaryBtnText]}>
+                {t("booksPage.addBookManually")}
+              </Text>
+            </TouchableOpacity>
           </View>
-          <FlatList
-            data={filteredBooks}
-            keyExtractor={item => item.id.toString()}
-            renderItem={renderBook}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>📚</Text>
-                <Text style={styles.emptyTitle}>
-                  {filterStatus === 'all' ? t("booksPage.empty.noBooks") : t("booksPage.empty.noFilteredBooks", { status: filterStatus.replace('_', ' ') })}
+
+          <View style={styles.filterSection}>
+            <Text style={styles.filterTitle}>
+              {t("booksPage.filter.title")}
+            </Text>
+            <View style={styles.filterButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.filterBtn,
+                  filterStatus === "all" && styles.filterBtnActive,
+                ]}
+                onPress={() => setFilterStatus("all")}
+              >
+                <Text
+                  style={[
+                    styles.filterBtnText,
+                    filterStatus === "all" && styles.filterBtnTextActive,
+                  ]}
+                >
+                  {t("booksPage.filter.all")} ({allBooksCount})
                 </Text>
-                <Text style={styles.emptySubtitle}>
-                  {filterStatus === 'all' 
-                    ? t("booksPage.empty.searchOrAdd") 
-                    : t("booksPage.empty.tryChangingFilter")
-                  }
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterBtn,
+                  filterStatus === "want_to_read" && styles.filterBtnActive,
+                ]}
+                onPress={() => setFilterStatus("want_to_read")}
+              >
+                <Text
+                  style={[
+                    styles.filterBtnText,
+                    filterStatus === "want_to_read" &&
+                      styles.filterBtnTextActive,
+                  ]}
+                >
+                  {t("booksPage.filter.want_to_read")} (
+                  {getStatusCount("want_to_read")})
                 </Text>
-              </View>
-            }
-            style={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterBtn,
+                  filterStatus === "currently_reading" &&
+                    styles.filterBtnActive,
+                ]}
+                onPress={() => setFilterStatus("currently_reading")}
+              >
+                <Text
+                  style={[
+                    styles.filterBtnText,
+                    filterStatus === "currently_reading" &&
+                      styles.filterBtnTextActive,
+                  ]}
+                >
+                  {t("booksPage.filter.currently_reading")} (
+                  {getStatusCount("currently_reading")})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterBtn,
+                  filterStatus === "read" && styles.filterBtnActive,
+                ]}
+                onPress={() => setFilterStatus("read")}
+              >
+                <Text
+                  style={[
+                    styles.filterBtnText,
+                    filterStatus === "read" && styles.filterBtnTextActive,
+                  ]}
+                >
+                  {t("booksPage.filter.read")} ({getStatusCount("read")})
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.listSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {t("booksPage.listHeader.myBooks")}{" "}
+                {t("booksPage.listHeader.showing")} ({filteredBooks.length}{" "}
+                {t("booksPage.listHeader.of")} {allBooksCount})
+              </Text>
+              <Link href="./my-books" asChild>
+                <TouchableOpacity style={styles.viewAllButton}>
+                  <Text style={styles.viewAllButtonText}>
+                    {t("booksPage.listHeader.viewAll")}
+                  </Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+            <FlatList
+              data={filteredBooks}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderBook}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyIcon}>📚</Text>
+                  <Text style={styles.emptyTitle}>
+                    {filterStatus === "all"
+                      ? t("booksPage.empty.noBooks")
+                      : t("booksPage.empty.noFilteredBooks", {
+                          status: filterStatus.replace("_", " "),
+                        })}
+                  </Text>
+                  <Text style={styles.emptySubtitle}>
+                    {filterStatus === "all"
+                      ? t("booksPage.empty.searchOrAdd")
+                      : t("booksPage.empty.tryChangingFilter")}
+                  </Text>
+                </View>
+              }
+              style={styles.list}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
         </View>
-      </View>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -692,71 +844,70 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.neutral[50],
   },
   header: {
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1E293B',
+    fontWeight: "bold",
+    color: COLORS.neutral[800],
     marginBottom: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748B',
-    textAlign: 'center',
+    color: COLORS.neutral[500],
+    textAlign: "center",
   },
   actionButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 20,
-    justifyContent:'space-evenly',
+    justifyContent: "space-evenly",
     gap: 12,
     marginBottom: 16,
   },
   actionBtn: {
-
-    backgroundColor: '#6C63FF',
+    backgroundColor: COLORS.primary,
     padding: 10,
     margin: 0,
     borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#6C63FF',
+    alignItems: "center",
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   secondaryBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderWidth: 1.5,
-    borderColor: '#6C63FF',
+    borderColor: COLORS.primary,
     shadowOpacity: 0,
     elevation: 0,
   },
   actionBtnText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: COLORS.white,
+    fontWeight: "bold",
     fontSize: 16,
   },
   secondaryBtnText: {
-    color: '#6C63FF',
+    color: COLORS.primary,
   },
   nonVisibleBtn: {
-    backgroundColor: 'transparent',
+    backgroundColor: COLORS.transparent,
     shadowOpacity: 0,
     opacity: 0,
     elevation: 0,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: "700",
+    color: COLORS.neutral[800],
     marginBottom: 16,
   },
   inputContainer: {
@@ -764,43 +915,43 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 48,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.neutral[200],
     borderWidth: 1.5,
     borderRadius: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     fontSize: 16,
-    color: '#1E293B',
+    color: COLORS.neutral[800],
   },
   saveBtn: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 8,
-    shadowColor: '#6C63FF',
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   saveBtnDisabled: {
-    backgroundColor: '#CBD5E1',
+    backgroundColor: COLORS.neutral[300],
     shadowOpacity: 0,
     elevation: 0,
   },
   saveBtnText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: COLORS.white,
+    fontWeight: "bold",
     fontSize: 16,
   },
   error: {
-    color: '#EF4444',
+    color: COLORS.danger,
     marginTop: 12,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   listSection: {
     marginTop: 8,
@@ -808,34 +959,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: "700",
+    color: COLORS.neutral[800],
     flex: 1,
   },
   viewAllButton: {
-    backgroundColor: '#6C63FF',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   viewAllButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   list: {
     flex: 1,
   },
   emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 60,
   },
   emptyIcon: {
@@ -844,54 +995,54 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#64748B',
+    fontWeight: "600",
+    color: COLORS.neutral[500],
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
-    textAlign: 'center',
+    color: COLORS.neutral[400],
+    textAlign: "center",
   },
   // Modal styles
   modalOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.overlay,
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 1000,
     paddingHorizontal: 20,
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
-    width: '100%',
+    backgroundColor: COLORS.white,
+    width: "100%",
     maxWidth: 400,
     padding: 24,
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 10,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
   closeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    backgroundColor: COLORS.neutral[100],
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -899,16 +1050,16 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#64748B',
+    fontWeight: "bold",
+    color: COLORS.neutral[500],
   },
   statusSelectionContainer: {
     marginBottom: 16,
   },
   statusSelectionLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontWeight: "600",
+    color: COLORS.neutral[800],
     marginBottom: 12,
   },
   statusButtons: {
@@ -919,62 +1070,62 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: COLORS.neutral[200],
+    backgroundColor: COLORS.white,
   },
   statusButtonActive: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.neutral[50],
     borderWidth: 2,
   },
   statusButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#64748B',
-    textAlign: 'center',
+    fontWeight: "500",
+    color: COLORS.neutral[500],
+    textAlign: "center",
   },
   statusButtonTextActive: {
-    fontWeight: '600',
+    fontWeight: "600",
   },
   filterSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: COLORS.neutral[200],
   },
   filterTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontWeight: "600",
+    color: COLORS.neutral[800],
     marginBottom: 12,
   },
   filterButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   filterBtn: {
     flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: COLORS.neutral[200],
+    backgroundColor: COLORS.white,
   },
   filterBtnActive: {
-    backgroundColor: '#6C63FF',
-    borderColor: '#6C63FF',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   filterBtnText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
-    textAlign: 'center',
+    fontWeight: "500",
+    color: COLORS.neutral[500],
+    textAlign: "center",
   },
   filterBtnTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: COLORS.white,
+    fontWeight: "600",
   },
 });

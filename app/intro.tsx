@@ -3,18 +3,18 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Animated,
-    Dimensions,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { execute } from "../db/db";
 import NotificationService from "../services/notificationService";
@@ -363,7 +363,7 @@ export default function IntroScreen() {
           placeholder={t("intro.welcome.placeholder")}
           placeholderTextColor={COLORS.neutral[400]}
           value={username}
-          onChangeText={(text) => {
+          onChangeText={(text: string) => {
             // Remove any leading/trailing spaces and limit length
             const cleanText = text.slice(0, 50);
             setUsername(cleanText);
@@ -398,7 +398,7 @@ export default function IntroScreen() {
           placeholder={t("intro.goal.placeholder")}
           placeholderTextColor={COLORS.neutral[400]}
           value={yearlyGoal}
-          onChangeText={(text) => {
+          onChangeText={(text: string) => {
             // Only allow numbers
             const numericText = text.replace(/[^0-9]/g, "");
             if (numericText.length <= 4) {
@@ -464,7 +464,7 @@ export default function IntroScreen() {
           ))}
         </View>
       </ScrollView>
-    </View>
+    </>
   );
 
   const renderStep4 = () => (
@@ -483,7 +483,7 @@ export default function IntroScreen() {
           placeholder={t("intro.currentReading.placeholder")}
           placeholderTextColor={COLORS.neutral[400]}
           value={dailyReadingGoal}
-          onChangeText={(text) => {
+          onChangeText={(text: string) => {
             // Only allow numbers
             const numericText = text.replace(/[^0-9]/g, "");
             if (numericText.length <= 4) {
@@ -537,7 +537,7 @@ export default function IntroScreen() {
           placeholder={t("intro.targetGoal.placeholder")}
           placeholderTextColor={COLORS.neutral[400]}
           value={targetDailyGoal}
-          onChangeText={(text) => {
+          onChangeText={(text: string) => {
             // Only allow numbers
             const numericText = text.replace(/[^0-9]/g, "");
             if (numericText.length <= 4) {
@@ -583,7 +583,7 @@ export default function IntroScreen() {
               maximumDate={
                 new Date(new Date().setFullYear(new Date().getFullYear() + 5))
               }
-              onChange={(event, date) => {
+              onChange={(event: { type?: string }, date?: Date) => {
                 if (date && event.type !== "dismissed") {
                   setGoalDate(date);
                   // Clear error if date is valid
@@ -648,7 +648,7 @@ export default function IntroScreen() {
                 maximumDate={
                   new Date(new Date().setFullYear(new Date().getFullYear() + 5))
                 }
-                onChange={(event, date) => {
+                onChange={(event: { type?: string }, date?: Date) => {
                   // Always hide picker on Android
                   setShowDatePicker(false);
 

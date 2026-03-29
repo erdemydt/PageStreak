@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -15,6 +17,10 @@ import { execute, queryFirst } from "../../db/db";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import { TYPE } from "../../themes/typography";
+import {
+  computeGrowthGoalFields,
+  validateGrowthGoals,
+} from "../../utils/goalSettings";
 
 type FullUserPreferences = {
   id: number;
@@ -90,11 +96,7 @@ export default function ProfileScreen() {
     const index = genres.indexOf(genre);
     return index !== -1 ? getTranslatedGenres()[index] : genre;
   };
-  useEffect(() => {
-    loadUserPreferences();
-  }, []);
-
-  const loadUserPreferences = async () => {
+  const loadUserPreferences = useCallback(async () => {
     try {
       const user = await queryFirst<FullUserPreferences>(
         "SELECT * FROM user_preferences WHERE id = 1",
@@ -106,7 +108,17 @@ export default function ProfileScreen() {
     } catch (e) {
       console.error("Failed to load user preferences:", e);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadUserPreferences();
+  }, [loadUserPreferences]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUserPreferences();
+    }, [loadUserPreferences]),
+  );
 
   const populateEditFields = (user: FullUserPreferences) => {
     setEditedUsername(user.username);
@@ -131,18 +143,11 @@ export default function ProfileScreen() {
   };
 
   const savePreferences = async () => {
-    if (
-      !editedUsername.trim() ||
-      !editedYearlyGoal.trim() ||
-      !editedDailyGoal.trim() ||
-      !editedTargetGoal.trim() ||
-      isNaN(Number(editedYearlyGoal)) ||
-      isNaN(Number(editedDailyGoal)) ||
-      isNaN(Number(editedTargetGoal)) ||
-      Number(editedYearlyGoal) <= 0 ||
-      Number(editedDailyGoal) <= 0 ||
-      Number(editedTargetGoal) <= 0
-    ) {
+    const yearlyGoal = Number(editedYearlyGoal);
+    const currentDailyGoal = Number(editedDailyGoal);
+    const targetDailyGoal = Number(editedTargetGoal);
+
+    if (!editedUsername.trim()) {
       Alert.alert(
         t("profile.error.title"),
         t("profile.validation.usernameRequired"),
@@ -150,23 +155,38 @@ export default function ProfileScreen() {
       return;
     }
 
+    if (!Number.isFinite(yearlyGoal) || yearlyGoal <= 0) {
+      Alert.alert(
+        t("profile.error.title"),
+        t("profile.validation.yearlyGoalRequired"),
+      );
+      return;
+    }
+
+    const growthValidation = validateGrowthGoals({
+      currentDailyGoal,
+      targetDailyGoal,
+      targetDate: userPreferences?.end_reading_rate_goal_date,
+    });
+
+    if (growthValidation) {
+      const messageKey =
+        growthValidation === "current_daily_required" ||
+        growthValidation === "current_daily_range"
+          ? "profile.validation.dailyGoalRequired"
+          : "profile.validation.targetGoalRequired";
+
+      Alert.alert(t("profile.error.title"), t(messageKey));
+      return;
+    }
+
     setLoading(true);
     try {
-      // Calculate derived values
-      const initialRate = Number(editedDailyGoal);
-      const targetRate = Number(editedTargetGoal);
-      const weeklyGoal = initialRate * 7;
-
-      // Calculate weekly increase needed over 52 weeks
-      const totalIncrease = targetRate - initialRate;
-      const weeklyIncrease =
-        totalIncrease > 0 ? Math.ceil(totalIncrease / 52) : 0;
-      const weeklyIncreasePercentage =
-        initialRate > 0 ? (weeklyIncrease / initialRate) * 100 : 0;
-
-      // Set end goal date to end of current year
-      const currentYear = new Date().getFullYear();
-      const endGoalDate = new Date(currentYear, 11, 31).toISOString();
+      const computedGoals = computeGrowthGoalFields({
+        currentDailyGoal,
+        targetDailyGoal,
+        targetDate: userPreferences?.end_reading_rate_goal_date,
+      });
 
       await execute(
         `UPDATE user_preferences SET 
@@ -174,23 +194,27 @@ export default function ProfileScreen() {
           yearly_book_goal = ?, 
           preferred_genres = ?,
           weekly_reading_goal = ?,
+          initial_reading_rate_minutes_per_day = ?,
           end_reading_rate_goal_minutes_per_day = ?,
           end_reading_rate_goal_date = ?,
           current_reading_rate_minutes_per_day = ?,
+          current_reading_rate_last_updated = ?,
           weekly_reading_rate_increase_minutes = ?,
           weekly_reading_rate_increase_minutes_percentage = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = 1`,
         [
           editedUsername.trim(),
-          Number(editedYearlyGoal),
+          yearlyGoal,
           editedGenres.join(","),
-          weeklyGoal,
-          targetRate,
-          endGoalDate,
-          initialRate, // reset current rate to initial
-          weeklyIncrease,
-          weeklyIncreasePercentage,
+          computedGoals.weeklyReadingGoal,
+          computedGoals.initialReadingRate,
+          computedGoals.targetReadingRate,
+          computedGoals.endGoalDate,
+          computedGoals.currentReadingRate,
+          new Date().toISOString(),
+          computedGoals.weeklyIncreaseMinutes,
+          computedGoals.weeklyIncreasePercentage,
         ],
       );
 
@@ -315,6 +339,32 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+
+        <TouchableOpacity
+          style={styles.growthJourneyButton}
+          onPress={() => router.push("/(tabs)/reading-growth")}
+        >
+          <View style={styles.growthJourneyIconWrap}>
+            <Ionicons
+              name="stats-chart"
+              size={18}
+              color={COLORS.accent.strong}
+            />
+          </View>
+          <View style={styles.growthJourneyTextWrap}>
+            <Text style={styles.growthJourneyTitle}>
+              {t("profile.growth.title")}
+            </Text>
+            <Text style={styles.growthJourneySubtitle}>
+              {t("profile.growth.subtitle")}
+            </Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={COLORS.neutral[500]}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Reading Progress Section */}
@@ -781,6 +831,39 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.neutral[200],
     marginHorizontal: -SPACING[4],
+  },
+  growthJourneyButton: {
+    marginTop: SPACING[2],
+    backgroundColor: COLORS.surface.raised,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.neutral[200],
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  growthJourneyIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.state.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  growthJourneyTextWrap: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  growthJourneyTitle: {
+    fontSize: 14,
+    color: COLORS.text.primary,
+    fontWeight: "600",
+  },
+  growthJourneySubtitle: {
+    fontSize: 12,
+    color: COLORS.text.secondary,
+    marginTop: 2,
   },
   genresDisplay: {
     flexDirection: "row",

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, Tabs } from "expo-router";
+import { router, Stack, Tabs } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { COLORS } from "../../themes/colors";
 
 export default function TabLayout() {
@@ -52,6 +52,22 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="reading-growth"
+          options={{
+            href: null,
+            title: t("growthJourney.title"),
+            headerShown: true,
+            headerLeft: () => (
+              <TouchableOpacity
+                onPress={() => router.replace("/(tabs)/profile")}
+                style={styles.headerBackButton}
+              >
+                <Ionicons name="chevron-back" size={22} color={COLORS.white} />
+              </TouchableOpacity>
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="settings"
           options={{
             title: t("navigation.settings"),
@@ -99,5 +115,9 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 18,
     fontWeight: "bold",
+  },
+  headerBackButton: {
+    marginLeft: 8,
+    padding: 6,
   },
 });

@@ -2,13 +2,13 @@ import { Link, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    FlatList,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import BookCard from "../../../components/BookCard";
@@ -16,10 +16,12 @@ import DailyProgressCard from "../../../components/DailyProgressCard";
 import ReadingTimeLogger from "../../../components/ReadingTimeLogger";
 import { EnhancedBook, queryAll, queryFirst } from "../../../db/db";
 import { COLORS } from "../../../themes/colors";
+import { SPACING } from "../../../themes/spacing";
+import { TYPE } from "../../../themes/typography";
 import {
-    getReadingStreak,
-    getTodayReadingMinutes,
-    initializeReadingSessions,
+  getReadingStreak,
+  getTodayReadingMinutes,
+  initializeReadingSessions,
 } from "../../../utils/readingProgress";
 
 type UserPreferences = {
@@ -182,6 +184,10 @@ export default function HomeScreen() {
   const yearlyGoal = userPreferences?.yearly_book_goal || 0;
   const progressPercentage =
     yearlyGoal > 0 ? Math.min((booksRead / yearlyGoal) * 100, 100) : 0;
+  const currentBook =
+    books.find((book) => book.reading_status === "currently_reading") ||
+    books[0] ||
+    null;
 
   const renderBook = ({ item }: { item: EnhancedBook }) => (
     <BookCard book={item} compact={true} refreshTrigger={refreshTrigger} />
@@ -198,18 +204,69 @@ export default function HomeScreen() {
   const topPart = () => (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Image
-            source={require("../../../assets/images/Logo.png")}
-            style={styles.headerLogo}
-            resizeMode="contain"
-          />
-          <Text style={styles.title}>{t("home.title")}</Text>
-        </View>
+        <Text style={styles.title}>{t("home.title")}</Text>
         {userPreferences && (
           <Text style={styles.subtitle}>
             {t("home.welcomeBack", { username: userPreferences.username })}
           </Text>
+        )}
+      </View>
+
+      {/* Continue Reading Hero */}
+      <View style={styles.heroCard}>
+        <View style={styles.heroTopRow}>
+          <Text style={styles.heroEyebrow}>{t("home.reading")}</Text>
+          <Text style={styles.heroStreakText}>{readingStreak}d streak</Text>
+        </View>
+
+        {currentBook ? (
+          <>
+            <View style={styles.heroBookRow}>
+              {currentBook.cover_url ? (
+                <Image
+                  source={{ uri: currentBook.cover_url }}
+                  style={styles.heroCover}
+                  defaultSource={require("../../../assets/images/icon.png")}
+                />
+              ) : (
+                <View style={styles.heroCoverPlaceholder}>
+                  <Text style={styles.heroCoverPlaceholderText}>📖</Text>
+                </View>
+              )}
+
+              <View style={styles.heroBookMeta}>
+                <Text style={styles.heroTitle} numberOfLines={2}>
+                  {currentBook.name}
+                </Text>
+                <Text style={styles.heroAuthor} numberOfLines={1}>
+                  {currentBook.author}
+                </Text>
+                <Text style={styles.heroPages}>
+                  {currentBook.page} {t("components.bookCard.pages")}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.heroPrimaryButton}
+              onPress={() => setShowReadingLogger(true)}
+            >
+              <Text style={styles.heroPrimaryButtonText}>
+                {t("home.logReadingTime")}
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.heroEmptyState}>
+            <Text style={styles.heroEmptyTitle}>{t("home.noBooksYet")}</Text>
+            <Link href={"/(books)" as any} asChild>
+              <TouchableOpacity style={styles.heroPrimaryButton}>
+                <Text style={styles.heroPrimaryButtonText}>
+                  {t("home.discoverBooks")}
+                </Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
         )}
       </View>
 
@@ -222,28 +279,24 @@ export default function HomeScreen() {
         streakDays={readingStreak}
       />
 
-      {/* Log Reading Time Button */}
-      <View style={styles.actionContainer}>
-        <TouchableOpacity
-          style={styles.logTimeButton}
-          onPress={() => setShowReadingLogger(true)}
-        >
-          <Text style={styles.logTimeButtonText}>
-            {t("home.logReadingTime")}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={{ marginTop: 12, alignItems: "center" }}>
-          <Link href={"/readinglogs"}>
-            <Text style={{ color: COLORS.primary, fontWeight: "600" }}>
+      <View style={styles.actionsRow}>
+        <Link href={"/readinglogs"} asChild>
+          <TouchableOpacity style={styles.secondaryActionButton}>
+            <Text style={styles.secondaryActionButtonText}>
               {t("home.viewReadingLogs")}
             </Text>
-          </Link>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </Link>
+        <Link href={"/(books)" as any} asChild>
+          <TouchableOpacity style={styles.secondaryActionButton}>
+            <Text style={styles.secondaryActionButtonText}>
+              {t("home.seeAll")}
+            </Text>
+          </TouchableOpacity>
+        </Link>
       </View>
 
-      {/* Reading Progress Card */}
-      <View style={styles.card}>
+      <View style={styles.progressSummaryCard}>
         <Text style={styles.cardTitle}>{t("home.readingJourney")}</Text>
         <View style={styles.progressContainer}>
           <View style={styles.progressStats}>
@@ -343,55 +396,125 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.neutral[50],
+    backgroundColor: COLORS.surface.page,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
-    alignItems: "center",
-  },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 4,
-  },
-  headerLogo: {
-    width: 32,
-    height: 32,
+    paddingHorizontal: SPACING[4],
+    paddingTop: SPACING[5],
+    paddingBottom: SPACING[3],
+    alignItems: "flex-start",
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
-    textAlign: "center",
+    ...TYPE.pageTitle,
   },
   subtitle: {
-    fontSize: 16,
-    color: COLORS.neutral[500],
-    textAlign: "center",
+    ...TYPE.body,
+    marginTop: 2,
   },
-  card: {
-    backgroundColor: COLORS.white,
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 20,
+  heroCard: {
+    backgroundColor: COLORS.surface.raised,
+    marginHorizontal: SPACING[4],
+    marginBottom: SPACING[3],
+    padding: SPACING[4],
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.neutral[200],
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SPACING[3],
+  },
+  heroEyebrow: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    color: COLORS.text.secondary,
+  },
+  heroStreakText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.accent.strong,
+  },
+  heroBookRow: {
+    flexDirection: "row",
+    gap: SPACING[3],
+    marginBottom: SPACING[3],
+  },
+  heroCover: {
+    width: 62,
+    height: 92,
+    borderRadius: 8,
+    backgroundColor: COLORS.neutral[100],
+  },
+  heroCoverPlaceholder: {
+    width: 62,
+    height: 92,
+    borderRadius: 8,
+    backgroundColor: COLORS.neutral[100],
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroCoverPlaceholderText: {
+    fontSize: 24,
+  },
+  heroBookMeta: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 4,
+  },
+  heroTitle: {
+    fontSize: 19,
+    fontWeight: "600",
+    color: COLORS.text.primary,
+  },
+  heroAuthor: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  heroPages: {
+    fontSize: 13,
+    color: COLORS.text.secondary,
+    fontWeight: "500",
+  },
+  heroPrimaryButton: {
+    backgroundColor: COLORS.accent.primary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  heroPrimaryButtonText: {
+    color: COLORS.text.inverse,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  heroEmptyState: {
+    gap: SPACING[3],
+  },
+  heroEmptyTitle: {
+    ...TYPE.body,
+    color: COLORS.text.secondary,
+  },
+  progressSummaryCard: {
+    backgroundColor: COLORS.surface.raised,
+    marginHorizontal: SPACING[4],
+    marginTop: SPACING[2],
+    padding: SPACING[4],
     borderRadius: 16,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
-    marginBottom: 16,
+    ...TYPE.cardTitle,
+    marginBottom: SPACING[3],
   },
   progressContainer: {
-    gap: 16,
+    gap: SPACING[3],
   },
   progressStats: {
     flexDirection: "row",
@@ -402,14 +525,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: COLORS.primary,
+    fontSize: 22,
+    fontWeight: "600",
+    color: COLORS.text.primary,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: COLORS.neutral[500],
+    color: COLORS.text.secondary,
     fontWeight: "500",
   },
   statDivider: {
@@ -428,13 +551,13 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: "100%",
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent.primary,
     borderRadius: 4,
   },
   progressText: {
     fontSize: 14,
-    color: COLORS.neutral[500],
-    textAlign: "center",
+    color: COLORS.text.secondary,
+    textAlign: "left",
     fontWeight: "500",
   },
   listSection: {
@@ -461,7 +584,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: COLORS.primary,
+    color: COLORS.accent.strong,
     fontWeight: "600",
   },
   list: {
@@ -489,7 +612,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   addFirstBookBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -499,25 +622,22 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
   },
-  actionContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
+  actionsRow: {
+    paddingHorizontal: SPACING[4],
+    marginBottom: SPACING[3],
+    flexDirection: "row",
+    gap: SPACING[2],
   },
-  logTimeButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+  secondaryActionButton: {
+    flex: 1,
+    backgroundColor: COLORS.surface.interactive,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: "center",
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  logTimeButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "700",
+  secondaryActionButtonText: {
+    color: COLORS.accent.strong,
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

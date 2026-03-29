@@ -1,23 +1,24 @@
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Alert,
-    Keyboard,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Keyboard,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import DataExportModal from "../../components/DataExportModal";
 import DataImportModal from "../../components/DataImportModal";
 import LanguageSelector from "../../components/LanguageSelector";
 import NotificationSettings from "../../components/NotificationSettings";
 import NotificationTester from "../../components/NotificationTester";
+import SettingsRow from "../../components/SettingsRow";
 import { queryFirst } from "../../db/db";
 import { COLORS } from "../../themes/colors";
+import { SPACING } from "../../themes/spacing";
+import { TYPE } from "../../themes/typography";
 import { isDevModeEnabled } from "../../utils/devMode";
 import { logoutUser } from "../../utils/migration";
 
@@ -136,38 +137,15 @@ export default function SettingsScreen() {
             {/* Profile Section */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t("settings.profile")}</Text>
-              <View style={styles.profileCard}>
-                <TouchableOpacity
-                  style={styles.profileNavigationButton}
+              <View style={styles.sectionCard}>
+                <SettingsRow
+                  icon="person-circle-outline"
+                  title={userPreferences?.username || "-"}
+                  subtitle={t("settings.goal", {
+                    goal: userPreferences?.yearly_book_goal || 0,
+                  })}
                   onPress={() => router.push("/(tabs)/profile")}
-                >
-                  <View style={styles.profileHeader}>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>
-                        {userPreferences?.username.charAt(0).toUpperCase() ||
-                          "?"}
-                      </Text>
-                    </View>
-                    <View style={styles.profileInfo}>
-                      <Text style={styles.profileName}>
-                        {userPreferences?.username || "Loading..."}
-                      </Text>
-                      <Text style={styles.profileGoal}>
-                        {t("settings.goal", {
-                          goal: userPreferences?.yearly_book_goal || 0,
-                        })}
-                      </Text>
-                      <Text style={styles.profileSubtext}>
-                        {t("settings.editProfile")}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={20}
-                      color={COLORS.primary}
-                    />
-                  </View>
-                </TouchableOpacity>
+                />
               </View>
             </View>
 
@@ -198,128 +176,57 @@ export default function SettingsScreen() {
               <Text style={styles.sectionTitle}>
                 {t("settings.dataBackup")}
               </Text>
-              <View style={styles.backupCard}>
-                <TouchableOpacity
-                  style={styles.backupOption}
+              <View style={styles.sectionCard}>
+                <SettingsRow
+                  icon="download-outline"
+                  title={t("dataBackup.export.title")}
+                  subtitle={t("dataBackup.export.buttonSubtitle")}
                   onPress={() => setShowExportModal(true)}
-                >
-                  <View style={styles.backupOptionLeft}>
-                    <Ionicons
-                      name="download"
-                      size={24}
-                      color={COLORS.primary}
-                    />
-                    <View style={styles.backupOptionInfo}>
-                      <Text style={styles.backupOptionTitle}>
-                        {t("dataBackup.export.title")}
-                      </Text>
-                      <Text style={styles.backupOptionSubtitle}>
-                        {t("dataBackup.export.buttonSubtitle")}
-                      </Text>
-                    </View>
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={COLORS.primary}
-                  />
-                </TouchableOpacity>
-
-                <View style={styles.divider} />
-
-                <TouchableOpacity
-                  style={styles.backupOption}
+                />
+                <SettingsRow
+                  icon="cloud-upload-outline"
+                  iconColor={COLORS.success}
+                  title={t("dataBackup.import.title")}
+                  subtitle={t("dataBackup.import.buttonSubtitle")}
                   onPress={() => setShowImportModal(true)}
-                >
-                  <View style={styles.backupOptionLeft}>
-                    <Ionicons
-                      name="cloud-upload"
-                      size={24}
-                      color={COLORS.success}
-                    />
-                    <View style={styles.backupOptionInfo}>
-                      <Text style={styles.backupOptionTitle}>
-                        {t("dataBackup.import.title")}
-                      </Text>
-                      <Text style={styles.backupOptionSubtitle}>
-                        {t("dataBackup.import.buttonSubtitle")}
-                      </Text>
-                    </View>
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={COLORS.success}
-                  />
-                </TouchableOpacity>
+                  isLast
+                />
               </View>
             </View>
 
             {/* App Info Section */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t("settings.about")}</Text>
-              <View style={styles.aboutCard}>
-                <View style={styles.aboutItem}>
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={24}
-                    color={COLORS.primary}
-                  />
-                  <View style={styles.aboutInfo}>
-                    <Text style={styles.aboutTitle}>
-                      {t("settings.appName")}
-                    </Text>
-                    <Text style={styles.aboutSubtitle}>
-                      {t("settings.version")}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.aboutItem}>
-                  <Ionicons
-                    name="book-outline"
-                    size={24}
-                    color={COLORS.success}
-                  />
-                  <View style={styles.aboutInfo}>
-                    <Text style={styles.aboutTitle}>
-                      {t("settings.trackReading")}
-                    </Text>
-                    <Text style={styles.aboutSubtitle}>
-                      {t("settings.builtForBookLovers")}
-                    </Text>
-                  </View>
-                </View>
+              <View style={styles.sectionCard}>
+                <SettingsRow
+                  icon="information-circle-outline"
+                  title={t("settings.appName")}
+                  subtitle={t("settings.version")}
+                />
+                <SettingsRow
+                  icon="book-outline"
+                  iconColor={COLORS.success}
+                  title={t("settings.trackReading")}
+                  subtitle={t("settings.builtForBookLovers")}
+                  isLast
+                />
               </View>
             </View>
 
             {/* Logout Section */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t("settings.account")}</Text>
-              <View style={styles.logoutCard}>
-                <TouchableOpacity
-                  style={styles.logoutBtn}
+              <View style={styles.sectionCard}>
+                <SettingsRow
+                  icon="log-out-outline"
+                  iconColor={COLORS.danger}
+                  title={t("settings.logout")}
+                  titleColor={COLORS.danger}
+                  subtitle={t("settings.logoutDescription")}
                   onPress={handleLogout}
                   disabled={loading}
-                >
-                  <Ionicons
-                    name="log-out-outline"
-                    size={24}
-                    color={COLORS.danger}
-                  />
-                  <View style={styles.logoutInfo}>
-                    <Text style={styles.logoutTitle}>
-                      {t("settings.logout")}
-                    </Text>
-                    <Text style={styles.logoutSubtitle}>
-                      {t("settings.logoutDescription")}
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={COLORS.danger}
-                  />
-                </TouchableOpacity>
+                  isLast
+                />
               </View>
             </View>
 
@@ -350,201 +257,53 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.neutral[50],
+    backgroundColor: COLORS.surface.page,
   },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: SPACING[4],
     marginTop: 40,
-    paddingTop: 20,
-    paddingBottom: 16,
-    alignItems: "center",
+    paddingTop: SPACING[4],
+    paddingBottom: SPACING[3],
+    alignItems: "flex-start",
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
-    marginBottom: 4,
-    textAlign: "center",
+    ...TYPE.pageTitle,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 16,
-    color: COLORS.neutral[500],
-    textAlign: "center",
+    ...TYPE.body,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: SPACING[4],
   },
   section: {
-    marginBottom: 32,
+    marginBottom: SPACING[5],
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.neutral[700],
-    marginBottom: 16,
+    ...TYPE.meta,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: SPACING[2],
     paddingLeft: 4,
   },
-  profileCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
+  sectionCard: {
+    backgroundColor: COLORS.surface.raised,
+    borderRadius: 14,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
     overflow: "hidden",
-  },
-  profileNavigationButton: {
-    padding: 20,
-  },
-  profileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  profileSubtext: {
-    fontSize: 12,
-    color: COLORS.neutral[400],
-    fontStyle: "italic",
-    marginTop: 4,
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  avatarText: {
-    color: COLORS.white,
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
-    marginBottom: 4,
-  },
-  profileGoal: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-  },
-  editBtn: {
-    backgroundColor: COLORS.neutral[100],
-    padding: 12,
-    borderRadius: 10,
-  },
-  aboutCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  aboutItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  aboutInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  aboutTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.neutral[800],
-    marginBottom: 2,
-  },
-  aboutSubtitle: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
   },
   footer: {
     alignItems: "center",
-    paddingVertical: 32,
+    paddingVertical: SPACING[6],
     paddingBottom: 40,
   },
   copyright: {
     fontSize: 12,
-    color: COLORS.neutral[400],
-  },
-  logoutCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  logoutBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-  },
-  logoutInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  logoutTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.danger,
-    marginBottom: 2,
-  },
-  logoutSubtitle: {
-    fontSize: 14,
-    color: COLORS.neutral[400],
-  },
-  backupCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    overflow: "hidden",
-  },
-  backupOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 20,
-  },
-  backupOptionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  backupOptionInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  backupOptionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.neutral[800],
-    marginBottom: 2,
-  },
-  backupOptionSubtitle: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.neutral[100],
-    marginHorizontal: 20,
+    color: COLORS.text.tertiary,
   },
 });

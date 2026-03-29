@@ -1,17 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Animated,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { EnhancedBook, queryFirst } from "../db/db";
 import { COLORS } from "../themes/colors";
+import { SPACING } from "../themes/spacing";
+import { TYPE } from "../themes/typography";
 import { getStatusColor, getStatusText } from "../utils/bookStatus";
 import { getEnhancedBookProgress } from "../utils/readingProgress";
 import BookStatusModal, { BookStatus } from "./BookStatusModal";
@@ -49,14 +51,7 @@ export default function BookDetailModal({
   const statusModalFadeAnim = useRef(new Animated.Value(0)).current;
   const statusModalScaleAnim = useRef(new Animated.Value(0.8)).current;
 
-  useEffect(() => {
-    if (book && visible) {
-      loadFirstReadingDate();
-      loadProgressData();
-    }
-  }, [book, visible]);
-
-  const loadProgressData = async () => {
+  const loadProgressData = useCallback(async () => {
     if (!book) return;
 
     const progress = await getEnhancedBookProgress(
@@ -65,9 +60,9 @@ export default function BookDetailModal({
       book.current_page || 0,
     );
     setProgressData(progress);
-  };
+  }, [book]);
 
-  const loadFirstReadingDate = async () => {
+  const loadFirstReadingDate = useCallback(async () => {
     if (!book) return;
 
     try {
@@ -75,7 +70,6 @@ export default function BookDetailModal({
         "SELECT date FROM reading_sessions WHERE book_id = ? ORDER BY date ASC LIMIT 1",
         [book.id],
       );
-      console.log(book.date_added);
       setFirstReadingDate(
         result?.date || t("components.bookDetailModal.haveNotStartedReading"),
       );
@@ -83,7 +77,14 @@ export default function BookDetailModal({
       console.error("Error loading first reading date:", error);
       setFirstReadingDate(null);
     }
-  };
+  }, [book, t]);
+
+  useEffect(() => {
+    if (book && visible) {
+      loadFirstReadingDate();
+      loadProgressData();
+    }
+  }, [book, visible, loadFirstReadingDate, loadProgressData]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -231,7 +232,7 @@ export default function BookDetailModal({
                     <Text style={styles.statusText}>
                       {getStatusText(t, book.reading_status)}
                     </Text>
-                    <Text style={styles.statusChangeHint}>📝</Text>
+                    <Text style={styles.statusChangeHint}>Edit</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -284,9 +285,7 @@ export default function BookDetailModal({
                       </Text>
                       {progressData.source === "sessions" && (
                         <View style={styles.trackingBadge}>
-                          <Text style={styles.trackingText}>
-                            📊 Session Tracked
-                          </Text>
+                          <Text style={styles.trackingText}>Session-based</Text>
                         </View>
                       )}
                     </View>
@@ -319,7 +318,7 @@ export default function BookDetailModal({
                 {book.date_started && (
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>
-                      {formatDate(book.date_started)}
+                      {formatDate(firstReadingDate || book.date_started)}
                     </Text>
                     <Text style={styles.statLabel}>
                       {t("components.bookDetailModal.firstRead")}
@@ -373,7 +372,7 @@ export default function BookDetailModal({
                       {t("components.bookDetailModal.rating")}
                     </Text>
                     <Text style={styles.infoValue}>
-                      ⭐ {book.rating.toFixed(1)}
+                      {book.rating.toFixed(1)}
                     </Text>
                   </View>
                 )}
@@ -462,14 +461,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.overlay,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: SPACING[4],
   },
   modalContainer: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface.raised,
     width: "100%",
     maxWidth: 400,
-    maxHeight: "90%",
-    borderRadius: 20,
+    maxHeight: "88%",
+    borderRadius: 16,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
@@ -480,16 +479,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
+    paddingHorizontal: SPACING[5],
+    paddingTop: SPACING[5],
+    paddingBottom: SPACING[3],
     borderBottomWidth: 1,
     borderBottomColor: COLORS.neutral[100],
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
+    ...TYPE.cardTitle,
     flex: 1,
   },
   closeButton: {
@@ -506,24 +503,24 @@ const styles = StyleSheet.create({
     color: COLORS.neutral[500],
   },
   scrollContainer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: SPACING[5],
   },
   bookHeader: {
     flexDirection: "row",
-    paddingVertical: 20,
+    paddingVertical: SPACING[4],
     alignItems: "flex-start",
   },
   coverContainer: {
-    marginRight: 16,
+    marginRight: SPACING[3],
   },
   cover: {
-    width: 100,
-    height: 150,
+    width: 84,
+    height: 126,
     borderRadius: 8,
   },
   coverPlaceholder: {
-    width: 100,
-    height: 150,
+    width: 84,
+    height: 126,
     borderRadius: 8,
     backgroundColor: COLORS.neutral[100],
     justifyContent: "center",
@@ -536,17 +533,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
-    marginBottom: 8,
-    lineHeight: 24,
+    fontSize: 17,
+    fontWeight: "600",
+    color: COLORS.text.primary,
+    marginBottom: 6,
+    lineHeight: 22,
   },
   author: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: "600",
-    marginBottom: 12,
+    fontSize: 13,
+    color: COLORS.text.secondary,
+    fontWeight: "500",
+    marginBottom: 10,
   },
   statusBadge: {
     alignSelf: "flex-start",
@@ -558,28 +555,31 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statusText: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.white,
     fontWeight: "600",
   },
   statusChangeHint: {
-    fontSize: 10,
+    fontSize: 11,
     color: COLORS.white,
     opacity: 0.8,
+    fontWeight: "600",
   },
   section: {
-    marginBottom: 24,
+    marginBottom: SPACING[4],
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
-    color: COLORS.neutral[800],
-    marginBottom: 12,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING[2],
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
   progressContainer: {
-    backgroundColor: COLORS.neutral[50],
-    padding: 20,
-    borderRadius: 16,
+    backgroundColor: COLORS.surface.muted,
+    padding: SPACING[4],
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.neutral[200],
   },
@@ -593,9 +593,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   progressPercentage: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: COLORS.info,
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.accent.strong,
     marginBottom: 2,
   },
   progressValue: {
@@ -614,15 +614,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   progressBar: {
-    height: 10,
+    height: 8,
     backgroundColor: COLORS.neutral[200],
-    borderRadius: 5,
+    borderRadius: 999,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: COLORS.info,
-    borderRadius: 5,
+    backgroundColor: COLORS.accent.primary,
+    borderRadius: 999,
   },
   progressComplete: {
     backgroundColor: COLORS.success,
@@ -639,14 +639,14 @@ const styles = StyleSheet.create({
   },
   trackingBadge: {
     backgroundColor: COLORS.state.infoSoft,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: COLORS.info,
   },
   trackingText: {
-    fontSize: 11,
+    fontSize: 10,
     color: COLORS.state.infoStrong,
     fontWeight: "600",
   },
@@ -656,9 +656,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statItem: {
-    backgroundColor: COLORS.neutral[50],
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: COLORS.surface.muted,
+    padding: 12,
+    borderRadius: 10,
     flex: 1,
     minWidth: 100,
     alignItems: "center",
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   infoGrid: {
-    gap: 12,
+    gap: 8,
   },
   infoItem: {
     flexDirection: "row",
@@ -700,11 +700,11 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 13,
-    color: COLORS.neutral[500],
+    color: COLORS.text.secondary,
     lineHeight: 20,
-    backgroundColor: COLORS.neutral[50],
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: COLORS.surface.muted,
+    padding: 12,
+    borderRadius: 10,
   },
   timelineContainer: {
     gap: 12,
@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
   timelineDate: {
     fontSize: 13,
     fontWeight: "600",
-    color: COLORS.primary,
+    color: COLORS.accent.strong,
     minWidth: 120,
   },
   timelineEvent: {
@@ -728,11 +728,11 @@ const styles = StyleSheet.create({
   },
   notes: {
     fontSize: 13,
-    color: COLORS.neutral[500],
+    color: COLORS.text.secondary,
     lineHeight: 20,
-    backgroundColor: COLORS.neutral[50],
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: COLORS.surface.muted,
+    padding: 12,
+    borderRadius: 10,
     fontStyle: "italic",
   },
 });

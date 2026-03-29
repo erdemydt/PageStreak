@@ -4,6 +4,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { EnhancedBook } from "../db/db";
 import { COLORS } from "../themes/colors";
+import { SPACING } from "../themes/spacing";
 import { getStatusColor, getStatusText } from "../utils/bookStatus";
 import { getEnhancedBookProgress } from "../utils/readingProgress";
 
@@ -276,10 +277,10 @@ export default function BookCard({
           </Text>
 
           <View style={styles.smallerMetadata}>
-            <Text style={styles.smallerPages}>📄 {book.page}p</Text>
+            <Text style={styles.smallerPages}>{book.page}p</Text>
             {showReadingTime && readingTimeMinutes > 0 && (
               <Text style={styles.smallerReadingTime}>
-                ⏱️ {formatReadingTime(readingTimeMinutes)}
+                {formatReadingTime(readingTimeMinutes)}
               </Text>
             )}
           </View>
@@ -346,16 +347,16 @@ export default function BookCard({
 
           <View style={styles.metadata}>
             <Text style={styles.pages}>
-              📄 {book.page} {t("components.bookCard.pages")}
+              {book.page} {t("components.bookCard.pages")}
             </Text>
             {book.first_publish_year && (
-              <Text style={styles.year}>📅 {book.first_publish_year}</Text>
+              <Text style={styles.year}>{book.first_publish_year}</Text>
             )}
           </View>
 
           {book.publisher && (
             <Text style={styles.publisher} numberOfLines={1}>
-              🏢 {book.publisher}
+              {book.publisher}
             </Text>
           )}
 
@@ -383,7 +384,7 @@ export default function BookCard({
           {showReadingTime && readingTimeMinutes > 0 && (
             <View style={styles.readingTimeContainer}>
               <Text style={styles.readingTimeText}>
-                ⏱️ {formatReadingTime(readingTimeMinutes)}{" "}
+                {formatReadingTime(readingTimeMinutes)}{" "}
                 {t("components.bookCard.readingTime")}
               </Text>
             </View>
@@ -421,32 +422,32 @@ export default function BookCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface.raised,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: SPACING[2],
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
     borderWidth: 1,
     borderColor: COLORS.neutral[100],
   },
   cardContent: {
     flexDirection: "row",
-    padding: 16,
+    padding: 12,
   },
   coverContainer: {
-    marginRight: 16,
+    marginRight: 12,
   },
   cover: {
-    width: 80,
-    height: 120,
+    width: 68,
+    height: 102,
     borderRadius: 8,
   },
   coverPlaceholder: {
-    width: 80,
-    height: 120,
+    width: 68,
+    height: 102,
     borderRadius: 8,
     backgroundColor: COLORS.neutral[100],
     justifyContent: "center",
@@ -459,43 +460,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
-    color: COLORS.neutral[800],
-    marginBottom: 4,
+    color: COLORS.text.primary,
+    marginBottom: 2,
   },
   author: {
-    fontSize: 14,
-    color: COLORS.primary,
+    fontSize: 13,
+    color: COLORS.text.secondary,
     fontWeight: "500",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   metadata: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 6,
+    gap: 10,
+    marginBottom: 4,
   },
   pages: {
-    fontSize: 12,
-    color: COLORS.neutral[500],
+    fontSize: 11,
+    color: COLORS.text.secondary,
   },
   year: {
-    fontSize: 12,
-    color: COLORS.neutral[500],
+    fontSize: 11,
+    color: COLORS.text.secondary,
   },
   publisher: {
-    fontSize: 12,
-    color: COLORS.neutral[500],
-    marginBottom: 8,
+    fontSize: 11,
+    color: COLORS.text.secondary,
+    marginBottom: 6,
   },
   statusContainer: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   statusBadge: {
     alignSelf: "flex-start",
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingVertical: 3,
+    borderRadius: 999,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -513,7 +514,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   ratingContainer: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   rating: {
     fontSize: 13,
@@ -521,11 +522,11 @@ const styles = StyleSheet.create({
     color: COLORS.warning,
   },
   readingTimeContainer: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   readingTimeText: {
     fontSize: 11,
-    color: COLORS.primaryDark,
+    color: COLORS.text.secondary,
     fontWeight: "500",
   },
   dateFinished: {
@@ -536,9 +537,9 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: COLORS.dangerLight,
     borderRadius: 8,
-    padding: 8,
+    padding: 6,
     alignSelf: "flex-start",
-    minWidth: 36,
+    minWidth: 30,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -547,7 +548,7 @@ const styles = StyleSheet.create({
   },
   // Compact styles
   compactCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface.raised,
     borderRadius: 12,
     marginBottom: 8,
     shadowColor: COLORS.black,
@@ -556,8 +557,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     flexDirection: "row",
-    padding: 12,
+    padding: 10,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.neutral[100],
   },
   compactCoverContainer: {
     marginRight: 12,
@@ -589,7 +592,7 @@ const styles = StyleSheet.create({
   },
   compactAuthor: {
     fontSize: 12,
-    color: COLORS.primary,
+    color: COLORS.text.secondary,
     fontWeight: "500",
     marginBottom: 2,
   },
@@ -600,7 +603,7 @@ const styles = StyleSheet.create({
   },
   // Smaller styles
   smallerCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface.raised,
     borderRadius: 8,
     marginBottom: 8,
     shadowColor: COLORS.black,
@@ -644,7 +647,7 @@ const styles = StyleSheet.create({
   },
   smallerAuthor: {
     fontSize: 11,
-    color: COLORS.primary,
+    color: COLORS.text.secondary,
     fontWeight: "500",
     marginBottom: 4,
   },
@@ -659,7 +662,7 @@ const styles = StyleSheet.create({
   },
   smallerReadingTime: {
     fontSize: 10,
-    color: COLORS.primaryDark,
+    color: COLORS.text.secondary,
     fontWeight: "500",
   },
   smallerStatusBadge: {

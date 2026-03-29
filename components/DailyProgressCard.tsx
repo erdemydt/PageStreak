@@ -1,7 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
-import Svg, { Circle } from "react-native-svg";
 import { COLORS } from "../themes/colors";
+import { SPACING } from "../themes/spacing";
+import { TYPE } from "../themes/typography";
 import Card from "./Card";
 
 interface DailyProgressCardProps {
@@ -19,11 +20,6 @@ export default function DailyProgressCard({
   const percentage =
     goalMinutes > 0 ? Math.min((todayMinutes / goalMinutes) * 100, 100) : 0;
   const isGoalReached = todayMinutes >= goalMinutes;
-
-  // Calculate the visual progress for the circular progress
-  const radius = 40;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   const formatMinutes = (minutes: number) => {
     if (minutes >= 60) {
@@ -54,78 +50,59 @@ export default function DailyProgressCard({
 
   return (
     <Card>
-      <Text style={styles.cardTitle}>
-        {t("components.dailyProgress.title")}
-      </Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.cardTitle}>
+          {t("components.dailyProgress.title")}
+        </Text>
+        <Text style={styles.progressMeta}>{Math.round(percentage)}%</Text>
+      </View>
 
-      <View style={styles.progressContainer}>
-        {/* Progress Ring */}
-        <View style={styles.progressRing}>
-          <Svg width={90} height={90}>
-            {/* Background Circle */}
-            <Circle
-              cx={45}
-              cy={45}
-              r={40}
-              stroke={COLORS.neutral[200]}
-              strokeWidth={8}
-              fill={COLORS.transparent}
-            />
-            {/* Progress Circle */}
-            <Circle
-              cx={45}
-              cy={45}
-              r={40}
-              stroke={isGoalReached ? COLORS.success : COLORS.primary}
-              strokeWidth={8}
-              fill={COLORS.transparent}
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              transform="rotate(-90 45 45)"
-            />
-          </Svg>
+      <View style={styles.progressBlock}>
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              {
+                width: `${percentage}%`,
+                backgroundColor: isGoalReached
+                  ? COLORS.success
+                  : COLORS.accent.primary,
+              },
+            ]}
+          />
+        </View>
+        <Text style={styles.remainingTextInline}>
+          {isGoalReached
+            ? t("components.dailyProgress.goalCrushed")
+            : t("components.dailyProgress.leftToReach", {
+                time: formatMinutes(goalMinutes - todayMinutes),
+              })}
+        </Text>
+      </View>
 
-          <View style={styles.progressTextContainer}>
-            <Text style={styles.progressPercentage}>
-              {Math.round(percentage)}%
-            </Text>
-            <Text style={styles.progressLabel}>
-              {t("components.dailyProgress.complete")}
-            </Text>
-          </View>
+      <View style={styles.statsRow}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{formatMinutes(todayMinutes)}</Text>
+          <Text style={styles.statLabel}>
+            {t("components.dailyProgress.today")}
+          </Text>
         </View>
 
-        {/* Stats */}
-        <View style={styles.stats}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{formatMinutes(todayMinutes)}</Text>
-            <Text style={styles.statLabel}>
-              {t("components.dailyProgress.today")}
-            </Text>
-          </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{formatMinutes(goalMinutes)}</Text>
+          <Text style={styles.statLabel}>
+            {t("components.dailyProgress.goal")}
+          </Text>
+        </View>
 
-          <View style={styles.statDivider} />
-
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{formatMinutes(goalMinutes)}</Text>
-            <Text style={styles.statLabel}>
-              {t("components.dailyProgress.goal")}
-            </Text>
-          </View>
-
-          <View style={styles.statDivider} />
-
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{streakDays}</Text>
-            <Text style={styles.statLabel}>
-              {t("components.dailyProgress.dayStreak")}
-            </Text>
-          </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{streakDays}</Text>
+          <Text style={styles.statLabel}>
+            {t("components.dailyProgress.dayStreak")}
+          </Text>
         </View>
       </View>
 
-      {/* Motivation Message */}
       <View
         style={[
           styles.motivationContainer,
@@ -141,89 +118,69 @@ export default function DailyProgressCard({
           {getMotivationMessage()}
         </Text>
       </View>
-
-      {/* Time Remaining */}
-      {!isGoalReached && goalMinutes > 0 && (
-        <Text style={styles.remainingText}>
-          {t("components.dailyProgress.leftToReach", {
-            time: formatMinutes(goalMinutes - todayMinutes),
-          })}
-        </Text>
-      )}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: SPACING[2],
+  },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
-    marginBottom: 20,
+    ...TYPE.cardTitle,
   },
-  progressContainer: {
-    flexDirection: "column",
-    gap: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
+  progressMeta: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text.secondary,
   },
-  progressRing: {
-    position: "relative",
-    width: 90,
-    height: 90,
-    marginRight: 24,
-    justifyContent: "center",
-    alignItems: "center",
+  progressBlock: {
+    marginBottom: SPACING[3],
+    gap: SPACING[2],
   },
-  progressTextContainer: {
-    position: "absolute",
-    justifyContent: "center",
-    alignItems: "center",
+  progressTrack: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: COLORS.neutral[200],
+    overflow: "hidden",
   },
-  progressPercentage: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
+  progressFill: {
+    height: "100%",
+    borderRadius: 999,
   },
-  progressLabel: {
-    fontSize: 9,
-    color: COLORS.neutral[500],
-    marginTop: 2,
+  remainingTextInline: {
+    ...TYPE.meta,
+    color: COLORS.text.secondary,
   },
-  stats: {
-    flex: 1,
+  statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 10,
-    alignItems: "center",
+    marginBottom: SPACING[3],
   },
   statItem: {
-    alignItems: "center",
+    alignItems: "flex-start",
+    flex: 1,
   },
   statValue: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: COLORS.primary,
-    marginBottom: 4,
+    fontWeight: "600",
+    color: COLORS.text.primary,
+    marginBottom: 2,
   },
   statLabel: {
-    fontSize: 11,
-    color: COLORS.neutral[500],
+    fontSize: 12,
+    color: COLORS.text.secondary,
     fontWeight: "500",
   },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: COLORS.neutral[200],
-  },
   motivationContainer: {
-    backgroundColor: COLORS.state.cardAccent,
-    padding: 12,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
-    marginBottom: 12,
+    backgroundColor: COLORS.surface.muted,
+    padding: SPACING[3],
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.accent.primary,
   },
   motivationContainerSuccess: {
     backgroundColor: COLORS.state.successSoft,
@@ -231,17 +188,11 @@ const styles = StyleSheet.create({
   },
   motivationText: {
     fontSize: 13,
-    color: COLORS.primaryDark,
+    color: COLORS.accent.strong,
     fontWeight: "500",
-    textAlign: "center",
+    textAlign: "left",
   },
   motivationTextSuccess: {
     color: COLORS.success,
-  },
-  remainingText: {
-    fontSize: 11,
-    color: COLORS.neutral[500],
-    textAlign: "center",
-    fontStyle: "italic",
   },
 });

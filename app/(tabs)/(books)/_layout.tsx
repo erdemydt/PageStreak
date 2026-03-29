@@ -6,12 +6,13 @@ export default function BooksLayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: COLORS.primary,
+          backgroundColor: COLORS.surface.page,
         },
-        headerTintColor: COLORS.white,
+        headerTintColor: COLORS.text.primary,
         headerTitleStyle: {
-          fontWeight: "bold",
+          fontWeight: "600",
         },
+        headerShadowVisible: false,
       }}
     >
       <Stack.Screen
@@ -31,6 +32,13 @@ export default function BooksLayout() {
         name="my-books"
         options={{
           title: "My Books",
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
+        name="[id]"
+        options={{
+          title: "Book Details",
           presentation: "card",
         }}
       />

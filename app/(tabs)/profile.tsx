@@ -2,17 +2,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Alert,
-    Keyboard,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Keyboard,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { execute, queryFirst } from "../../db/db";
 import { COLORS } from "../../themes/colors";
+import { SPACING } from "../../themes/spacing";
+import { TYPE } from "../../themes/typography";
 
 type FullUserPreferences = {
   id: number;
@@ -211,10 +213,6 @@ export default function ProfileScreen() {
     setIsEditing(false);
   };
 
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
-  };
-
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
     try {
@@ -250,9 +248,7 @@ export default function ProfileScreen() {
 
       {/* Reading Goals Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          📚 {t("profile.sections.goals")}
-        </Text>
+        <Text style={styles.sectionTitle}>{t("profile.sections.goals")}</Text>
         <View style={styles.card}>
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
@@ -324,7 +320,7 @@ export default function ProfileScreen() {
       {/* Reading Progress Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
-          📈 {t("profile.sections.statistics")}
+          {t("profile.sections.statistics")}
         </Text>
         <View style={styles.card}>
           <View style={styles.infoRow}>
@@ -416,7 +412,7 @@ export default function ProfileScreen() {
       {/* Preferred Genres Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
-          🎭 {t("profile.fields.favoriteGenres")}
+          {t("profile.fields.favoriteGenres")}
         </Text>
         <View style={styles.card}>
           <View style={styles.genresDisplay}>
@@ -442,10 +438,7 @@ export default function ProfileScreen() {
 
       {/* Account Info Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {" "}
-          {t("profile.sections.account")}
-        </Text>
+        <Text style={styles.sectionTitle}>{t("profile.sections.account")}</Text>
         <View style={styles.card}>
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
@@ -499,7 +492,7 @@ export default function ProfileScreen() {
         <Ionicons name="close" size={25} color={COLORS.neutral[700]} />
       </TouchableOpacity>
       <View style={styles.editHeader}>
-        <Text style={styles.editTitle}>✏️ {t("profile.edit")}</Text>
+        <Text style={styles.editTitle}>{t("profile.edit")}</Text>
 
         <Text style={styles.editSubtitle}>{t("profile.subtitle")}</Text>
       </View>
@@ -653,10 +646,10 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.neutral[50],
+    backgroundColor: COLORS.surface.page,
   },
   header: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.surface.page,
     elevation: 0,
     shadowOpacity: 0,
     borderBottomWidth: 0,
@@ -678,21 +671,21 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: SPACING[4],
   },
   profileHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.white,
-    padding: 20,
+    backgroundColor: COLORS.surface.raised,
+    padding: SPACING[4],
     borderRadius: 16,
-    marginTop: 20,
-    marginBottom: 24,
+    marginTop: SPACING[4],
+    marginBottom: SPACING[5],
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   avatar: {
     width: 64,
@@ -712,14 +705,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
+    fontSize: 20,
+    fontWeight: "600",
+    color: COLORS.text.primary,
     marginBottom: 4,
   },
   profileSubtitle: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
+    ...TYPE.meta,
     fontWeight: "500",
   },
   editButton: {
@@ -737,23 +729,25 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   section: {
-    marginBottom: 24,
+    marginBottom: SPACING[4],
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
-    marginBottom: 12,
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.text.secondary,
+    marginBottom: SPACING[2],
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface.raised,
     borderRadius: 16,
-    padding: 20,
+    padding: SPACING[4],
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   infoRow: {
     flexDirection: "row",
@@ -773,20 +767,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoLabel: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
+    fontSize: 13,
+    color: COLORS.text.secondary,
     fontWeight: "500",
     marginBottom: 2,
   },
   infoValue: {
-    fontSize: 16,
-    color: COLORS.neutral[800],
+    fontSize: 15,
+    color: COLORS.text.primary,
     fontWeight: "600",
   },
   divider: {
     height: 1,
     backgroundColor: COLORS.neutral[200],
-    marginHorizontal: -20,
+    marginHorizontal: -SPACING[4],
   },
   genresDisplay: {
     flexDirection: "row",
@@ -794,13 +788,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   genreTag: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent.soft,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
   },
   genreTagText: {
-    color: COLORS.white,
+    color: COLORS.accent.strong,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -813,22 +807,21 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   editTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
+    fontSize: 22,
+    fontWeight: "600",
+    color: COLORS.text.primary,
     marginBottom: 4,
   },
   editSubtitle: {
-    fontSize: 16,
-    color: COLORS.neutral[500],
+    ...TYPE.body,
   },
   inputGroup: {
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
-    color: COLORS.neutral[700],
+    color: COLORS.text.secondary,
     marginBottom: 8,
     flexDirection: "row",
     alignItems: "center",
@@ -839,9 +832,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: 12,
     paddingHorizontal: 16,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface.raised,
     fontSize: 16,
-    color: COLORS.neutral[800],
+    color: COLORS.text.primary,
   },
   genresGrid: {
     flexDirection: "row",
@@ -852,13 +845,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: COLORS.neutral[100],
-    borderWidth: 1.5,
+    backgroundColor: COLORS.surface.muted,
+    borderWidth: 1,
     borderColor: COLORS.neutral[200],
   },
   genreChipSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.accent.soft,
+    borderColor: COLORS.accent.primary,
   },
   genreChipText: {
     fontSize: 14,
@@ -866,14 +859,14 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   genreChipTextSelected: {
-    color: COLORS.white,
+    color: COLORS.accent.strong,
     fontWeight: "600",
   },
   editActions: {
     flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    gap: SPACING[2],
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[4],
   },
   cancelButton: {
     flex: 1,
@@ -895,7 +888,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent.primary,
     paddingVertical: 14,
     borderRadius: 12,
     gap: 6,

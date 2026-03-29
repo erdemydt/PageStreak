@@ -1,25 +1,26 @@
-import { Link, Stack, useFocusEffect } from "expo-router";
+import { Link, Stack, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Alert,
-    Animated,
-    FlatList,
-    Keyboard,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Alert,
+  Animated,
+  FlatList,
+  Keyboard,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import BookCard from "../../../components/BookCard";
-import BookDetailModal from "../../../components/BookDetailModal";
 import BookStatusModal, {
-    BookStatus,
+  BookStatus,
 } from "../../../components/BookStatusModal";
 import { EnhancedBook, execute, queryAll } from "../../../db/db";
 import { COLORS } from "../../../themes/colors";
+import { SPACING } from "../../../themes/spacing";
+import { TYPE } from "../../../themes/typography";
 import { getBookReadingTime } from "../../../utils/readingProgress";
 type BooksearchProps = {
   name: string;
@@ -186,6 +187,7 @@ function ManualBookEntry(props: BooksearchProps) {
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [author, setAuthor] = useState("");
   const [page, setPage] = useState("");
@@ -207,12 +209,6 @@ export default function HomeScreen() {
   const [selectedBook, setSelectedBook] = useState<EnhancedBook | null>(null);
   const [statusModalFadeAnim] = useState(new Animated.Value(0));
   const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [detailModalFadeAnim] = useState(new Animated.Value(0));
-  const [detailModalScaleAnim] = useState(new Animated.Value(0.8));
-  const [selectedBookForDetail, setSelectedBookForDetail] = useState<
-    (EnhancedBook & { reading_time?: number }) | null
-  >(null);
   const [manualBookStatus, setManualBookStatus] =
     useState<BookStatus>("currently_reading");
   const [filterStatus, setFilterStatus] = useState<BookStatus | "all">("all");
@@ -505,114 +501,6 @@ export default function HomeScreen() {
     }
   };
 
-  const handleDetailModalStatusChange = async (
-    bookId: number,
-    newStatus: BookStatus,
-  ) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      let dateField = "";
-      let dateValue = null;
-
-      // Set appropriate date fields based on status
-      if (newStatus === "currently_reading") {
-        dateField = ", date_started = ?";
-        dateValue = new Date().toISOString();
-      } else if (newStatus === "read") {
-        dateField = ", date_finished = ?";
-        dateValue = new Date().toISOString();
-      }
-
-      const query = `UPDATE enhanced_books SET reading_status = ?${dateField} WHERE id = ?`;
-      const params = dateValue
-        ? [newStatus, dateValue, bookId]
-        : [newStatus, bookId];
-
-      // remove finished date if switching back to currently_reading or want_to_read
-      if (newStatus !== "read") {
-        await execute(
-          "UPDATE enhanced_books SET date_finished = NULL WHERE id = ?",
-          [bookId],
-        );
-      }
-      await execute(query, params);
-      await loadBooks();
-
-      // Update the selected book for detail modal
-      if (selectedBookForDetail && selectedBookForDetail.id === bookId) {
-        setSelectedBookForDetail({
-          ...selectedBookForDetail,
-          reading_status: newStatus,
-          date_started:
-            newStatus === "currently_reading"
-              ? dateValue || selectedBookForDetail.date_started
-              : selectedBookForDetail.date_started,
-          date_finished:
-            newStatus === "read"
-              ? dateValue || selectedBookForDetail.date_finished
-              : undefined,
-        });
-      }
-
-      // Show success message
-      const statusText =
-        newStatus === "want_to_read"
-          ? t("components.bookCard.wantToRead")
-          : newStatus === "currently_reading"
-            ? t("components.bookCard.currentlyReading")
-            : t("components.bookCard.read");
-
-      Alert.alert(
-        t("booksPage.alert.statusUpdated"),
-        t("booksPage.alert.bookStatusUpdated", { statusText }),
-      );
-    } catch (e) {
-      setError(t("booksPage.alert.failedUpdate"));
-      console.error("Update status error:", e);
-      Alert.alert(t("error"), t("booksPage.alert.failedUpdate"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const openDetailModal = (book: EnhancedBook & { reading_time?: number }) => {
-    setSelectedBookForDetail(book);
-    setDetailModalVisible(true);
-    Animated.parallel([
-      Animated.timing(detailModalFadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(detailModalScaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const closeDetailModal = () => {
-    Animated.parallel([
-      Animated.timing(detailModalFadeAnim, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(detailModalScaleAnim, {
-        toValue: 0.8,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setDetailModalVisible(false);
-      setSelectedBookForDetail(null);
-    });
-  };
-
   const renderBook = ({
     item,
   }: {
@@ -624,7 +512,12 @@ export default function HomeScreen() {
       showStatusButton={true}
       showReadingTime={true}
       readingTimeMinutes={item.reading_time || 0}
-      onPress={() => openDetailModal(item)}
+      onPress={() =>
+        router.push({
+          pathname: "/(tabs)/(books)/[id]",
+          params: { id: item.id.toString() },
+        })
+      }
       onDelete={() => deleteBook(item.id, item.name)}
       onStatusChange={() => openStatusModal(item)}
     />
@@ -676,16 +569,6 @@ export default function HomeScreen() {
             onClose={closeStatusModal}
             fadeAnim={statusModalFadeAnim}
             scaleAnim={statusModalScaleAnim}
-          />
-
-          <BookDetailModal
-            visible={detailModalVisible}
-            book={selectedBookForDetail}
-            readingTimeMinutes={selectedBookForDetail?.reading_time || 0}
-            onClose={closeDetailModal}
-            onStatusChange={handleDetailModalStatusChange}
-            fadeAnim={detailModalFadeAnim}
-            scaleAnim={detailModalScaleAnim}
           />
 
           <View style={styles.actionButtons}>
@@ -798,9 +681,8 @@ export default function HomeScreen() {
           <View style={styles.listSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
-                {t("booksPage.listHeader.myBooks")}{" "}
-                {t("booksPage.listHeader.showing")} ({filteredBooks.length}{" "}
-                {t("booksPage.listHeader.of")} {allBooksCount})
+                {t("booksPage.listHeader.myBooks")} ({filteredBooks.length}/
+                {allBooksCount})
               </Text>
               <Link href="./my-books" asChild>
                 <TouchableOpacity style={styles.viewAllButton}>
@@ -844,59 +726,46 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.neutral[50],
+    backgroundColor: COLORS.surface.page,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
-    alignItems: "center",
+    paddingHorizontal: SPACING[4],
+    paddingTop: SPACING[4],
+    paddingBottom: SPACING[3],
+    alignItems: "flex-start",
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
-    marginBottom: 4,
-    textAlign: "center",
+    ...TYPE.pageTitle,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 16,
-    color: COLORS.neutral[500],
-    textAlign: "center",
+    ...TYPE.body,
   },
   actionButtons: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    justifyContent: "space-evenly",
-    gap: 12,
-    marginBottom: 16,
+    paddingHorizontal: SPACING[4],
+    gap: SPACING[2],
+    marginBottom: SPACING[3],
   },
   actionBtn: {
-    backgroundColor: COLORS.primary,
-    padding: 10,
-    margin: 0,
-    borderRadius: 12,
+    flex: 1,
+    backgroundColor: COLORS.accent.primary,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: "center",
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   secondaryBtn: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    shadowOpacity: 0,
-    elevation: 0,
+    backgroundColor: COLORS.surface.interactive,
+    borderWidth: 1,
+    borderColor: COLORS.accent.soft,
   },
   actionBtnText: {
-    color: COLORS.white,
-    fontWeight: "bold",
-    fontSize: 16,
+    color: COLORS.text.inverse,
+    fontWeight: "600",
+    fontSize: 14,
   },
   secondaryBtnText: {
-    color: COLORS.primary,
+    color: COLORS.accent.strong,
   },
   nonVisibleBtn: {
     backgroundColor: COLORS.transparent,
@@ -905,10 +774,8 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
-    marginBottom: 16,
+    ...TYPE.cardTitle,
+    marginBottom: SPACING[3],
   },
   inputContainer: {
     gap: 12,
@@ -954,9 +821,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   listSection: {
-    marginTop: 8,
+    marginTop: SPACING[2],
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: SPACING[4],
   },
   sectionHeader: {
     flexDirection: "row",
@@ -965,20 +832,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.text.primary,
     flex: 1,
   },
   viewAllButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: COLORS.surface.interactive,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   viewAllButtonText: {
-    color: COLORS.white,
-    fontSize: 14,
+    color: COLORS.accent.strong,
+    fontSize: 13,
     fontWeight: "600",
   },
   list: {
@@ -1018,11 +885,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   modalCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface.raised,
     width: "100%",
     maxWidth: 400,
-    padding: 24,
-    borderRadius: 20,
+    padding: SPACING[5],
+    borderRadius: 16,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
@@ -1087,45 +954,47 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   filterSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[3],
+    backgroundColor: COLORS.surface.raised,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.neutral[200],
   },
   filterTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "600",
-    color: COLORS.neutral[800],
-    marginBottom: 12,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING[2],
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
   filterButtons: {
     flexDirection: "row",
-    gap: 8,
+    gap: SPACING[2],
   },
   filterBtn: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 8,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: COLORS.neutral[200],
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface.page,
   },
   filterBtnActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.accent.soft,
+    borderColor: COLORS.accent.primary,
   },
   filterBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "500",
-    color: COLORS.neutral[500],
+    color: COLORS.text.secondary,
     textAlign: "center",
   },
   filterBtnTextActive: {
-    color: COLORS.white,
+    color: COLORS.accent.strong,
     fontWeight: "600",
   },
 });

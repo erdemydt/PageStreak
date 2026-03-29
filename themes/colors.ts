@@ -2,6 +2,7 @@ export const COLORS = {
   white: "#FFFFFF",
   black: "#000000",
   transparent: "transparent",
+  // Legacy brand tokens (kept for compatibility during migration)
   primary: "#276340",
   primaryDark: "#1F4F40",
   success: "#3F8F5C",
@@ -19,6 +20,26 @@ export const COLORS = {
     700: "#3F3F36",
     800: "#26261F",
   },
+
+  // Semantic palette for calm editorial UI
+  surface: {
+    page: "#F7F7F4",
+    raised: "#FFFFFF",
+    muted: "#F4F2EA",
+    interactive: "#E8EFEA",
+  },
+  text: {
+    primary: "#26261F",
+    secondary: "#6A6A5E",
+    tertiary: "#A2A294",
+    inverse: "#FFFFFF",
+  },
+  accent: {
+    primary: "#276340",
+    soft: "#E8EFEA",
+    strong: "#1F4F40",
+  },
+
   overlay: "rgba(0, 0, 0, 0.5)",
   status: {
     currently_reading: "#2F6E5B",

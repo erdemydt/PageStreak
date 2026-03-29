@@ -1,29 +1,32 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    FlatList,
-    Image,
-    Keyboard,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  FlatList,
+  Image,
+  Keyboard,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import BookStatusModal, {
-    BookStatus,
+  BookStatus,
 } from "../../../components/BookStatusModal";
 import { execute } from "../../../db/db";
 import {
-    OpenLibraryService,
-    SearchBookResult,
+  OpenLibraryService,
+  SearchBookResult,
 } from "../../../services/openLibrary";
 import { COLORS } from "../../../themes/colors";
+import { SPACING } from "../../../themes/spacing";
+import { TYPE } from "../../../themes/typography";
 
 export default function BookSearchScreen() {
   const router = useRouter();
@@ -252,13 +255,11 @@ export default function BookSearchScreen() {
         <View style={styles.bookMetadata}>
           {item.firstPublishYear && (
             <View style={styles.metadataItem}>
-              <Text style={styles.metadataIcon}>📅</Text>
               <Text style={styles.metadataText}>{item.firstPublishYear}</Text>
             </View>
           )}
           {item.pageCount && (
             <View style={styles.metadataItem}>
-              <Text style={styles.metadataIcon}>📄</Text>
               <Text style={styles.metadataText}>
                 {item.pageCount} {t("booksPage.search.pages")}
               </Text>
@@ -268,7 +269,6 @@ export default function BookSearchScreen() {
 
         {item.publisher && (
           <View style={styles.publisherContainer}>
-            <Text style={styles.metadataIcon}>🏢</Text>
             <Text style={styles.publisherText} numberOfLines={1}>
               {item.publisher}
             </Text>
@@ -313,9 +313,9 @@ export default function BookSearchScreen() {
         <Stack.Screen
           options={{
             title: t("booksPage.search.headerTitle"),
-            headerStyle: { backgroundColor: COLORS.primary },
-            headerTintColor: COLORS.white,
-            headerTitleStyle: { fontWeight: "bold" },
+            headerStyle: { backgroundColor: COLORS.surface.page },
+            headerTintColor: COLORS.text.primary,
+            headerTitleStyle: { fontWeight: "600" },
           }}
         />
 
@@ -437,7 +437,12 @@ export default function BookSearchScreen() {
               searchQuery.trim() !== "" &&
               searchResults.length === 0 ? (
                 <View style={styles.emptyResults}>
-                  <Text style={styles.emptyResultsIcon}>📚</Text>
+                  <Ionicons
+                    name="book-outline"
+                    size={40}
+                    color={COLORS.neutral[400]}
+                    style={styles.emptyResultsIconGlyph}
+                  />
                   <Text style={styles.emptyResultsText}>
                     {t("booksPage.search.noBooksfound")}
                   </Text>
@@ -447,7 +452,12 @@ export default function BookSearchScreen() {
                 </View>
               ) : searchResults.length === 0 && !clickedSearch ? (
                 <View style={styles.emptyResults}>
-                  <Text style={styles.emptyResultsIcon}>🔍</Text>
+                  <Ionicons
+                    name="search-outline"
+                    size={40}
+                    color={COLORS.neutral[400]}
+                    style={styles.emptyResultsIconGlyph}
+                  />
                   <Text style={styles.emptyResultsText}>
                     {t("booksPage.search.startSearching")}
                   </Text>
@@ -486,88 +496,80 @@ export default function BookSearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.neutral[50],
+    backgroundColor: COLORS.surface.page,
   },
   searchHeader: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING[4],
+    paddingTop: SPACING[4],
+    paddingBottom: SPACING[3],
+    backgroundColor: COLORS.surface.page,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.neutral[200],
+    borderBottomColor: COLORS.neutral[100],
   },
   searchTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
-    marginBottom: 4,
+    ...TYPE.sectionTitle,
+    marginBottom: 2,
   },
   searchSubtitle: {
-    fontSize: 16,
-    color: COLORS.neutral[500],
+    ...TYPE.body,
   },
   searchTypeContainer: {
     flexDirection: "row",
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 12,
-    gap: 8,
-    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING[4],
+    paddingTop: SPACING[3],
+    paddingBottom: SPACING[2],
+    gap: SPACING[2],
+    backgroundColor: COLORS.surface.page,
   },
   searchTypeButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: COLORS.neutral[100],
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: COLORS.surface.muted,
     alignItems: "center",
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: COLORS.neutral[200],
   },
   searchTypeButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.accent.soft,
+    borderColor: COLORS.accent.primary,
   },
   searchTypeText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: COLORS.neutral[500],
+    color: COLORS.text.secondary,
   },
   searchTypeTextActive: {
-    color: COLORS.white,
+    color: COLORS.accent.strong,
   },
   searchContainer: {
     flexDirection: "row",
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    gap: 12,
-    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[3],
+    gap: SPACING[2],
+    backgroundColor: COLORS.surface.page,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.neutral[200],
+    borderBottomColor: COLORS.neutral[100],
   },
   searchInput: {
     flex: 1,
-    height: 52,
+    height: 46,
     borderColor: COLORS.neutral[200],
-    borderWidth: 2,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.white,
-    fontSize: 16,
-    color: COLORS.neutral[800],
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    backgroundColor: COLORS.surface.raised,
+    fontSize: 15,
+    color: COLORS.text.primary,
   },
   searchButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    backgroundColor: COLORS.accent.primary,
+    paddingHorizontal: 18,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    minWidth: 100,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    minWidth: 84,
   },
   searchButtonDisabled: {
     backgroundColor: COLORS.neutral[300],
@@ -575,19 +577,19 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   searchButtonText: {
-    color: COLORS.white,
-    fontWeight: "bold",
-    fontSize: 16,
+    color: COLORS.text.inverse,
+    fontWeight: "600",
+    fontSize: 14,
   },
   resultsContainer: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingHorizontal: SPACING[4],
+    paddingTop: SPACING[3],
   },
   resultsCount: {
-    fontSize: 16,
-    color: COLORS.neutral[500],
-    marginBottom: 16,
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING[3],
     fontWeight: "600",
   },
   resultsList: {
@@ -598,15 +600,15 @@ const styles = StyleSheet.create({
   },
   bookItem: {
     flexDirection: "row",
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: COLORS.surface.raised,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: SPACING[2],
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
     borderWidth: 1,
     borderColor: COLORS.neutral[100],
   },
@@ -614,69 +616,61 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   bookCoverContainer: {
-    marginRight: 16,
+    marginRight: 12,
   },
   bookCover: {
-    width: 80,
-    height: 120,
-    borderRadius: 12,
+    width: 62,
+    height: 92,
+    borderRadius: 8,
   },
   bookCoverPlaceholder: {
-    width: 80,
-    height: 120,
-    borderRadius: 12,
+    width: 62,
+    height: 92,
+    borderRadius: 8,
     backgroundColor: COLORS.neutral[100],
     justifyContent: "center",
     alignItems: "center",
   },
   bookCoverPlaceholderText: {
-    fontSize: 32,
+    fontSize: 24,
   },
   bookInfo: {
     flex: 1,
     paddingRight: 12,
   },
   bookTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
-    marginBottom: 6,
-    lineHeight: 24,
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text.primary,
+    marginBottom: 4,
+    lineHeight: 22,
   },
   bookAuthor: {
-    fontSize: 16,
-    color: COLORS.primary,
-    fontWeight: "600",
-    marginBottom: 12,
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    fontWeight: "500",
+    marginBottom: 8,
   },
   bookMetadata: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 8,
+    gap: 10,
+    marginBottom: 6,
   },
   metadataItem: {
-    flexDirection: "row",
     alignItems: "center",
   },
-  metadataIcon: {
-    fontSize: 12,
-    marginRight: 4,
-  },
   metadataText: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
+    fontSize: 12,
+    color: COLORS.text.secondary,
     fontWeight: "500",
   },
   publisherContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   publisherText: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
+    fontSize: 12,
+    color: COLORS.text.secondary,
     fontWeight: "500",
-    marginLeft: 4,
   },
   ratingContainer: {
     flexDirection: "row",
@@ -714,21 +708,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.success,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.accent.soft,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: COLORS.success,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   addButtonText: {
-    fontSize: 24,
-    color: COLORS.white,
+    fontSize: 20,
+    color: COLORS.accent.strong,
     fontWeight: "bold",
   },
   emptyResults: {
@@ -736,21 +725,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 60,
   },
-  emptyResultsIcon: {
-    fontSize: 64,
-    marginBottom: 20,
+  emptyResultsIconGlyph: {
+    marginBottom: SPACING[3],
   },
   emptyResultsText: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.neutral[500],
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.text.secondary,
     marginBottom: 8,
   },
   emptyResultsSubtext: {
-    fontSize: 16,
-    color: COLORS.neutral[400],
+    fontSize: 14,
+    color: COLORS.text.tertiary,
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 20,
   },
   loadingContainer: {
     alignItems: "center",

@@ -1,36 +1,45 @@
-import { Stack } from 'expo-router';
+import { Stack } from "expo-router";
+import { COLORS } from "../../../themes/colors";
 
 export default function BooksLayout() {
   return (
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#6C63FF',
+          backgroundColor: COLORS.surface.page,
         },
-        headerTintColor: '#FFFFFF',
+        headerTintColor: COLORS.text.primary,
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: "600",
         },
+        headerShadowVisible: false,
       }}
     >
       <Stack.Screen
         name="index"
         options={{
-          title: 'Books',
+          title: "Books",
         }}
       />
       <Stack.Screen
         name="search"
         options={{
-          title: 'Search Books',
-          presentation: 'card',
+          title: "Search Books",
+          presentation: "card",
         }}
       />
       <Stack.Screen
         name="my-books"
         options={{
-          title: 'My Books',
-          presentation: 'card',
+          title: "My Books",
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
+        name="[id]"
+        options={{
+          title: "Book Details",
+          presentation: "card",
         }}
       />
     </Stack>

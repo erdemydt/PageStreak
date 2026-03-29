@@ -1,9 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import NotificationService from '../services/notificationService';
-import { isDevModeEnabled } from '../utils/devMode';
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import NotificationService from "../services/notificationService";
+import { COLORS } from "../themes/colors";
+import { isDevModeEnabled } from "../utils/devMode";
 
 const NotificationTester: React.FC = () => {
   const { t } = useTranslation();
@@ -26,7 +27,7 @@ const NotificationTester: React.FC = () => {
       const status = await NotificationService.getNotificationStatus();
       setNotificationStatus(status);
     } catch (error) {
-      console.error('Error loading notification status:', error);
+      console.error("Error loading notification status:", error);
     } finally {
       setLoading(false);
     }
@@ -35,49 +36,79 @@ const NotificationTester: React.FC = () => {
   const handleSendImmediateTest = async () => {
     try {
       await NotificationService.sendImmediateTestNotification();
-      Alert.alert(t('components.notificationTester.immediateTestSent'), t('components.notificationTester.checkNotificationPanel'));
+      Alert.alert(
+        t("components.notificationTester.immediateTestSent"),
+        t("components.notificationTester.checkNotificationPanel"),
+      );
     } catch (error) {
-      Alert.alert(t('components.notificationTester.error'), t('components.notificationTester.failedToSendImmediateTest'));
+      Alert.alert(
+        t("components.notificationTester.error"),
+        t("components.notificationTester.failedToSendImmediateTest"),
+      );
     }
   };
 
   const handleSchedule1MinuteTest = async () => {
     try {
       await NotificationService.scheduleTestNotification(1);
-      Alert.alert(t('components.notificationTester.testScheduled'), t('components.notificationTester.notificationIn1Minute'));
+      Alert.alert(
+        t("components.notificationTester.testScheduled"),
+        t("components.notificationTester.notificationIn1Minute"),
+      );
       await loadNotificationStatus();
     } catch (error) {
-      Alert.alert(t('components.notificationTester.error'), t('components.notificationTester.failedToScheduleTest'));
+      Alert.alert(
+        t("components.notificationTester.error"),
+        t("components.notificationTester.failedToScheduleTest"),
+      );
     }
   };
 
   const handleSchedule5MinuteTest = async () => {
     try {
       await NotificationService.scheduleTestNotification(5);
-      Alert.alert(t('components.notificationTester.testScheduled'), t('components.notificationTester.notificationIn5Minutes'));
+      Alert.alert(
+        t("components.notificationTester.testScheduled"),
+        t("components.notificationTester.notificationIn5Minutes"),
+      );
       await loadNotificationStatus();
     } catch (error) {
-      Alert.alert(t('components.notificationTester.error'), t('components.notificationTester.failedToScheduleTest'));
+      Alert.alert(
+        t("components.notificationTester.error"),
+        t("components.notificationTester.failedToScheduleTest"),
+      );
     }
   };
 
   const handleCheckSchedule = async () => {
     try {
       await NotificationService.checkAndScheduleNotification();
-      Alert.alert(t('components.notificationTester.scheduleCheck'), t('components.notificationTester.checkedAndScheduled'));
+      Alert.alert(
+        t("components.notificationTester.scheduleCheck"),
+        t("components.notificationTester.checkedAndScheduled"),
+      );
       await loadNotificationStatus();
     } catch (error) {
-      Alert.alert(t('components.notificationTester.error'), t('components.notificationTester.failedToCheckSchedule'));
+      Alert.alert(
+        t("components.notificationTester.error"),
+        t("components.notificationTester.failedToCheckSchedule"),
+      );
     }
   };
 
   const handleCancelNotifications = async () => {
     try {
       await NotificationService.cancelScheduledNotification();
-      Alert.alert(t('components.notificationTester.cancelled'), t('components.notificationTester.allNotificationsCancelled'));
+      Alert.alert(
+        t("components.notificationTester.cancelled"),
+        t("components.notificationTester.allNotificationsCancelled"),
+      );
       await loadNotificationStatus();
     } catch (error) {
-      Alert.alert(t('components.notificationTester.error'), t('components.notificationTester.failedToCancelNotifications'));
+      Alert.alert(
+        t("components.notificationTester.error"),
+        t("components.notificationTester.failedToCancelNotifications"),
+      );
     }
   };
 
@@ -89,46 +120,61 @@ const NotificationTester: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerIcon}>
-          <Ionicons name="flask" size={24} color="#FF6B6B" />
+          <Ionicons name="flask" size={24} color={COLORS.state.dangerStrong} />
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.title}>{t('components.notificationTester.title')}</Text>
-          <Text style={styles.subtitle}>{t('components.notificationTester.subtitle')}</Text>
+          <Text style={styles.title}>
+            {t("components.notificationTester.title")}
+          </Text>
+          <Text style={styles.subtitle}>
+            {t("components.notificationTester.subtitle")}
+          </Text>
         </View>
         <View style={styles.devBadge}>
-          <Text style={styles.devBadgeText}>{t('components.notificationTester.devBadge')}</Text>
+          <Text style={styles.devBadgeText}>
+            {t("components.notificationTester.devBadge")}
+          </Text>
         </View>
       </View>
-      
+
       {notificationStatus && (
         <View style={styles.statusContainer}>
-          <Text style={styles.statusTitle}>{t('components.notificationTester.currentStatus')}</Text>
+          <Text style={styles.statusTitle}>
+            {t("components.notificationTester.currentStatus")}
+          </Text>
           <View style={styles.statusGrid}>
             <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>{t('components.notificationTester.enabled')}</Text>
+              <Text style={styles.statusLabel}>
+                {t("components.notificationTester.enabled")}
+              </Text>
               <Text style={styles.statusValue}>
-                {notificationStatus.enabled ? '✅' : '❌'}
+                {notificationStatus.enabled ? "✅" : "❌"}
               </Text>
             </View>
             <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>{t('components.notificationTester.permission')}</Text>
+              <Text style={styles.statusLabel}>
+                {t("components.notificationTester.permission")}
+              </Text>
               <Text style={styles.statusValue}>
-                {notificationStatus.hasPermission ? '✅' : '❌'}
+                {notificationStatus.hasPermission ? "✅" : "❌"}
               </Text>
             </View>
             <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>{t('components.notificationTester.scheduled')}</Text>
+              <Text style={styles.statusLabel}>
+                {t("components.notificationTester.scheduled")}
+              </Text>
               <Text style={styles.statusValue}>
                 {notificationStatus.scheduledNotifications}
               </Text>
             </View>
             <View style={styles.statusItemWide}>
-              <Text style={styles.statusLabel}>{t('components.notificationTester.lastOpened')}</Text>
+              <Text style={styles.statusLabel}>
+                {t("components.notificationTester.lastOpened")}
+              </Text>
               <Text style={styles.statusValue}>
-                {notificationStatus.lastOpenedTime 
+                {notificationStatus.lastOpenedTime
                   ? new Date(notificationStatus.lastOpenedTime).toLocaleString()
-                  : t('components.notificationTester.never')
-                }
+                  : t("components.notificationTester.never")}
               </Text>
             </View>
           </View>
@@ -136,39 +182,71 @@ const NotificationTester: React.FC = () => {
       )}
 
       <View style={styles.actionsContainer}>
-        <Text style={styles.actionsTitle}>{t('components.notificationTester.testActions')}</Text>
-        
+        <Text style={styles.actionsTitle}>
+          {t("components.notificationTester.testActions")}
+        </Text>
+
         <View style={styles.buttonGrid}>
-          <TouchableOpacity style={[styles.button, styles.immediateButton]} onPress={handleSendImmediateTest}>
-            <Ionicons name="flash" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>{t('components.notificationTester.immediateTest')}</Text>
+          <TouchableOpacity
+            style={[styles.button, styles.immediateButton]}
+            onPress={handleSendImmediateTest}
+          >
+            <Ionicons name="flash" size={18} color={COLORS.white} />
+            <Text style={styles.buttonText}>
+              {t("components.notificationTester.immediateTest")}
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.button, styles.timedButton]} onPress={handleSchedule1MinuteTest}>
-            <Ionicons name="time" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>{t('components.notificationTester.oneMinuteTest')}</Text>
+          <TouchableOpacity
+            style={[styles.button, styles.timedButton]}
+            onPress={handleSchedule1MinuteTest}
+          >
+            <Ionicons name="time" size={18} color={COLORS.white} />
+            <Text style={styles.buttonText}>
+              {t("components.notificationTester.oneMinuteTest")}
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.button, styles.timedButton]} onPress={handleSchedule5MinuteTest}>
-            <Ionicons name="timer" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>{t('components.notificationTester.fiveMinuteTest')}</Text>
+          <TouchableOpacity
+            style={[styles.button, styles.timedButton]}
+            onPress={handleSchedule5MinuteTest}
+          >
+            <Ionicons name="timer" size={18} color={COLORS.white} />
+            <Text style={styles.buttonText}>
+              {t("components.notificationTester.fiveMinuteTest")}
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.button, styles.usageButton]} onPress={handleCheckSchedule}>
-            <Ionicons name="analytics" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>{t('components.notificationTester.usageTest')}</Text>
+          <TouchableOpacity
+            style={[styles.button, styles.usageButton]}
+            onPress={handleCheckSchedule}
+          >
+            <Ionicons name="analytics" size={18} color={COLORS.white} />
+            <Text style={styles.buttonText}>
+              {t("components.notificationTester.usageTest")}
+            </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.controlButtons}>
-          <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={handleCancelNotifications}>
-            <Ionicons name="close-circle" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>{t('components.notificationTester.cancelAll')}</Text>
+          <TouchableOpacity
+            style={[styles.button, styles.cancelButton]}
+            onPress={handleCancelNotifications}
+          >
+            <Ionicons name="close-circle" size={18} color={COLORS.white} />
+            <Text style={styles.buttonText}>
+              {t("components.notificationTester.cancelAll")}
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.button, styles.refreshButton]} onPress={loadNotificationStatus}>
-            <Ionicons name="refresh" size={18} color="#FFFFFF" />
-            <Text style={styles.buttonText}>{t('components.notificationTester.refreshStatus')}</Text>
+          <TouchableOpacity
+            style={[styles.button, styles.refreshButton]}
+            onPress={loadNotificationStatus}
+          >
+            <Ionicons name="refresh" size={18} color={COLORS.white} />
+            <Text style={styles.buttonText}>
+              {t("components.notificationTester.refreshStatus")}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -178,32 +256,32 @@ const NotificationTester: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#FF6B6B',
-    shadowColor: '#FF6B6B',
+    borderColor: COLORS.state.dangerStrong,
+    shadowColor: COLORS.state.dangerStrong,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#FFF5F5',
+    backgroundColor: COLORS.state.dangerSoft,
     borderBottomWidth: 1,
-    borderBottomColor: '#FECACA',
+    borderBottomColor: COLORS.state.dangerBorder,
   },
   headerIcon: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FFEBEE',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.state.dangerSoft,
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   headerText: {
@@ -211,120 +289,120 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#991B1B',
+    fontWeight: "700",
+    color: COLORS.state.dangerText,
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 14,
-    color: '#DC2626',
+    color: COLORS.state.dangerText,
   },
   devBadge: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: COLORS.state.dangerStrong,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   devBadgeText: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   statusContainer: {
     padding: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COLORS.neutral[50],
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: COLORS.neutral[200],
   },
   statusTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: COLORS.neutral[700],
     marginBottom: 12,
   },
   statusGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   statusItem: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     padding: 12,
     borderRadius: 8,
-    minWidth: '30%',
-    alignItems: 'center',
+    minWidth: "30%",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: COLORS.neutral[200],
   },
   statusItemWide: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     padding: 12,
     borderRadius: 8,
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: COLORS.neutral[200],
   },
   statusLabel: {
     fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
+    color: COLORS.neutral[500],
+    fontWeight: "500",
     marginBottom: 4,
   },
   statusValue: {
     fontSize: 14,
-    color: '#111827',
-    fontWeight: '600',
-    textAlign: 'center',
+    color: COLORS.neutral[800],
+    fontWeight: "600",
+    textAlign: "center",
   },
   actionsContainer: {
     padding: 20,
   },
   actionsTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: COLORS.neutral[700],
     marginBottom: 16,
   },
   buttonGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
     marginBottom: 16,
   },
   button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 12,
     borderRadius: 8,
-    minWidth: '45%',
+    minWidth: "45%",
     flex: 1,
   },
   immediateButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: COLORS.danger,
   },
   timedButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: COLORS.info,
   },
   usageButton: {
-    backgroundColor: '#8B5CF6',
-    minWidth: '100%',
+    backgroundColor: COLORS.state.readingHeat4,
+    minWidth: "100%",
   },
   controlButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   cancelButton: {
-    backgroundColor: '#6B7280',
+    backgroundColor: COLORS.neutral[500],
   },
   refreshButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: COLORS.success,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 6,
   },
 });

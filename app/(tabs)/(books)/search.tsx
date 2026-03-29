@@ -1,6 +1,7 @@
-import { Stack, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -14,28 +15,40 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-} from 'react-native';
-import BookStatusModal, { BookStatus } from '../../../components/BookStatusModal';
-import { execute } from '../../../db/db';
-import { OpenLibraryService, SearchBookResult } from '../../../services/openLibrary';
+} from "react-native";
+import BookStatusModal, {
+  BookStatus,
+} from "../../../components/BookStatusModal";
+import { execute } from "../../../db/db";
+import {
+  OpenLibraryService,
+  SearchBookResult,
+} from "../../../services/openLibrary";
+import { COLORS } from "../../../themes/colors";
+import { SPACING } from "../../../themes/spacing";
+import { TYPE } from "../../../themes/typography";
 
 export default function BookSearchScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchBookResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchType, setSearchType] = useState<'general' | 'title' | 'author'>('general');
+  const [searchType, setSearchType] = useState<"general" | "title" | "author">(
+    "general",
+  );
   const [statusModalVisible, setStatusModalVisible] = useState(false);
-  const [selectedBook, setSelectedBook] = useState<SearchBookResult | null>(null);
+  const [selectedBook, setSelectedBook] = useState<SearchBookResult | null>(
+    null,
+  );
   const [statusModalFadeAnim] = useState(new Animated.Value(0));
   const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
   const [clickedSearch, setClickedSearch] = useState(false);
 
   const searchTypeLabels = {
-    general: t('booksPage.search.general'),
-    title: t('booksPage.search.title'),
-    author: t('booksPage.search.author'),
+    general: t("booksPage.search.general"),
+    title: t("booksPage.search.title"),
+    author: t("booksPage.search.author"),
   };
 
   useEffect(() => {
@@ -44,7 +57,10 @@ export default function BookSearchScreen() {
   }, []);
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      Alert.alert(t('booksPage.search.error'), t('booksPage.search.enterSearchTerm'));
+      Alert.alert(
+        t("booksPage.search.error"),
+        t("booksPage.search.enterSearchTerm"),
+      );
       return;
     }
 
@@ -53,27 +69,35 @@ export default function BookSearchScreen() {
     setClickedSearch(true);
     try {
       let results: SearchBookResult[] = [];
-      
+
       switch (searchType) {
-        case 'title':
+        case "title":
           results = await OpenLibraryService.searchByTitle(searchQuery.trim());
           break;
-        case 'author':
+        case "author":
           results = await OpenLibraryService.searchByAuthor(searchQuery.trim());
           break;
         default:
           results = await OpenLibraryService.searchBooks(searchQuery.trim());
           break;
       }
-      
+
       setSearchResults(results);
-      
+
       if (results.length === 0) {
-        Alert.alert(t('booksPage.search.noResults'), t('booksPage.search.noResultsMessage'));
+        Alert.alert(
+          t("booksPage.search.noResults"),
+          t("booksPage.search.noResultsMessage"),
+        );
       }
     } catch (error) {
-      console.error('Search error:', error);
-      Alert.alert(t('booksPage.search.error'), error instanceof Error ? error.message : t('booksPage.search.failedToSearchBooks'));
+      console.error("Search error:", error);
+      Alert.alert(
+        t("booksPage.search.error"),
+        error instanceof Error
+          ? error.message
+          : t("booksPage.search.failedToSearchBooks"),
+      );
     } finally {
       setLoading(false);
     }
@@ -123,17 +147,19 @@ export default function BookSearchScreen() {
     if (!selectedBook) return;
 
     try {
-      const subjects = selectedBook.subjects ? JSON.stringify(selectedBook.subjects) : null;
-      
-      let dateField = '';
+      const subjects = selectedBook.subjects
+        ? JSON.stringify(selectedBook.subjects)
+        : null;
+
+      let dateField = "";
       let dateValue = null;
 
       // Set appropriate date fields based on status
-      if (status === 'currently_reading') {
-        dateField = ', date_started';
+      if (status === "currently_reading") {
+        dateField = ", date_started";
         dateValue = new Date().toISOString();
-      } else if (status === 'read') {
-        dateField = ', date_finished';
+      } else if (status === "read") {
+        dateField = ", date_finished";
         dateValue = new Date().toISOString();
       }
 
@@ -142,19 +168,19 @@ export default function BookSearchScreen() {
           name, author, page, isbn, cover_id, cover_url,
           first_publish_year, publisher, language, subjects,
           open_library_key, author_key, rating, reading_status, date_added${dateField}
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${dateValue ? ', ?' : ''})
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${dateValue ? ", ?" : ""})
       `;
 
       const params = [
         selectedBook.title,
-        selectedBook.authors.join(', '),
+        selectedBook.authors.join(", "),
         selectedBook.pageCount || 0,
         selectedBook.isbn || null,
         selectedBook.coverId || null,
         selectedBook.coverUrl || null,
         selectedBook.firstPublishYear || null,
         selectedBook.publisher || null,
-        selectedBook.language || 'eng',
+        selectedBook.language || "eng",
         subjects,
         selectedBook.key,
         null, // author_key - would need additional processing
@@ -166,29 +192,42 @@ export default function BookSearchScreen() {
       if (dateValue) {
         params.push(dateValue);
       }
-      
+
       await execute(query, params);
-      
+
       const statusText = t(`booksPage.search.statusLabels.${status}`);
-      
-      Alert.alert(t('booksPage.search.success'), t('booksPage.search.bookAddedMessage', { 
-        title: selectedBook.title, 
-        status: statusText 
-      }), [
-        {
-          text: t('booksPage.search.ok'),
-          onPress: () => router.back(),
-        }
-      ]);
+
+      Alert.alert(
+        t("booksPage.search.success"),
+        t("booksPage.search.bookAddedMessage", {
+          title: selectedBook.title,
+          status: statusText,
+        }),
+        [
+          {
+            text: t("booksPage.search.ok"),
+            onPress: () => router.back(),
+          },
+        ],
+      );
     } catch (error) {
-      console.error('Error adding book:', error);
-      Alert.alert(t('error'), t('booksPage.search.failedToAddBook'));
+      console.error("Error adding book:", error);
+      Alert.alert(t("error"), t("booksPage.search.failedToAddBook"));
     }
   };
 
-  const renderBookItem = ({ item, index }: { item: SearchBookResult; index: number }) => (
-    <TouchableOpacity 
-      style={[styles.bookItem, index === searchResults.length - 1 && styles.lastBookItem]} 
+  const renderBookItem = ({
+    item,
+    index,
+  }: {
+    item: SearchBookResult;
+    index: number;
+  }) => (
+    <TouchableOpacity
+      style={[
+        styles.bookItem,
+        index === searchResults.length - 1 && styles.lastBookItem,
+      ]}
       onPress={() => handleSelectBook(item)}
     >
       <View style={styles.bookCoverContainer}>
@@ -196,7 +235,7 @@ export default function BookSearchScreen() {
           <Image
             source={{ uri: item.coverUrl }}
             style={styles.bookCover}
-            defaultSource={require('../../../assets/images/icon.png')}
+            defaultSource={require("../../../assets/images/icon.png")}
           />
         ) : (
           <View style={styles.bookCoverPlaceholder}>
@@ -204,46 +243,47 @@ export default function BookSearchScreen() {
           </View>
         )}
       </View>
-      
+
       <View style={styles.bookInfo}>
         <Text style={styles.bookTitle} numberOfLines={2}>
           {item.title}
         </Text>
         <Text style={styles.bookAuthor} numberOfLines={1}>
-          {t('booksPage.search.by')} {item.authors.join(', ')}
+          {t("booksPage.search.by")} {item.authors.join(", ")}
         </Text>
-        
+
         <View style={styles.bookMetadata}>
           {item.firstPublishYear && (
             <View style={styles.metadataItem}>
-              <Text style={styles.metadataIcon}>📅</Text>
               <Text style={styles.metadataText}>{item.firstPublishYear}</Text>
             </View>
           )}
           {item.pageCount && (
             <View style={styles.metadataItem}>
-              <Text style={styles.metadataIcon}>📄</Text>
-              <Text style={styles.metadataText}>{item.pageCount} {t('booksPage.search.pages')}</Text>
+              <Text style={styles.metadataText}>
+                {item.pageCount} {t("booksPage.search.pages")}
+              </Text>
             </View>
           )}
         </View>
-        
+
         {item.publisher && (
           <View style={styles.publisherContainer}>
-            <Text style={styles.metadataIcon}>🏢</Text>
             <Text style={styles.publisherText} numberOfLines={1}>
               {item.publisher}
             </Text>
           </View>
         )}
-        
+
         {item.rating && item.ratingsCount && (
           <View style={styles.ratingContainer}>
             <Text style={styles.ratingText}>⭐ {item.rating.toFixed(1)}</Text>
-            <Text style={styles.ratingCount}>({item.ratingsCount} {t('booksPage.search.ratings')})</Text>
+            <Text style={styles.ratingCount}>
+              ({item.ratingsCount} {t("booksPage.search.ratings")})
+            </Text>
           </View>
         )}
-        
+
         {item.subjects && item.subjects.length > 0 && (
           <View style={styles.subjectsContainer}>
             {item.subjects.slice(0, 3).map((subject, index) => (
@@ -254,7 +294,7 @@ export default function BookSearchScreen() {
           </View>
         )}
       </View>
-      
+
       <View style={styles.addButtonContainer}>
         <View style={styles.addButton}>
           <Text style={styles.addButtonText}>+</Text>
@@ -270,19 +310,23 @@ export default function BookSearchScreen() {
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
       <View style={styles.container}>
-        <Stack.Screen 
-          options={{ 
-            title: t('booksPage.search.headerTitle'),
-            headerStyle: { backgroundColor: '#6C63FF' },
-            headerTintColor: '#FFFFFF',
-            headerTitleStyle: { fontWeight: 'bold' },
-          }} 
+        <Stack.Screen
+          options={{
+            title: t("booksPage.search.headerTitle"),
+            headerStyle: { backgroundColor: COLORS.surface.page },
+            headerTintColor: COLORS.text.primary,
+            headerTitleStyle: { fontWeight: "600" },
+          }}
         />
-        
+
         {/* Search Header */}
         <View style={styles.searchHeader}>
-          <Text style={styles.searchTitle}>{t('booksPage.search.searchTitle')}</Text>
-          <Text style={styles.searchSubtitle}>{t('booksPage.search.searchSubtitle')}</Text>
+          <Text style={styles.searchTitle}>
+            {t("booksPage.search.searchTitle")}
+          </Text>
+          <Text style={styles.searchSubtitle}>
+            {t("booksPage.search.searchSubtitle")}
+          </Text>
         </View>
 
         {/* Search Type Selection */}
@@ -290,42 +334,48 @@ export default function BookSearchScreen() {
           <TouchableOpacity
             style={[
               styles.searchTypeButton,
-              searchType === 'general' && styles.searchTypeButtonActive,
+              searchType === "general" && styles.searchTypeButtonActive,
             ]}
-            onPress={() => setSearchType('general')}
+            onPress={() => setSearchType("general")}
           >
-            <Text style={[
-              styles.searchTypeText,
-              searchType === 'general' && styles.searchTypeTextActive,
-            ]}>
+            <Text
+              style={[
+                styles.searchTypeText,
+                searchType === "general" && styles.searchTypeTextActive,
+              ]}
+            >
               {searchTypeLabels.general}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.searchTypeButton,
-              searchType === 'title' && styles.searchTypeButtonActive,
+              searchType === "title" && styles.searchTypeButtonActive,
             ]}
-            onPress={() => setSearchType('title')}
+            onPress={() => setSearchType("title")}
           >
-            <Text style={[
-              styles.searchTypeText,
-              searchType === 'title' && styles.searchTypeTextActive,
-            ]}>
+            <Text
+              style={[
+                styles.searchTypeText,
+                searchType === "title" && styles.searchTypeTextActive,
+              ]}
+            >
               {searchTypeLabels.title}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.searchTypeButton,
-              searchType === 'author' && styles.searchTypeButtonActive,
+              searchType === "author" && styles.searchTypeButtonActive,
             ]}
-            onPress={() => setSearchType('author')}
+            onPress={() => setSearchType("author")}
           >
-            <Text style={[
-              styles.searchTypeText,
-              searchType === 'author' && styles.searchTypeTextActive,
-            ]}>
+            <Text
+              style={[
+                styles.searchTypeText,
+                searchType === "author" && styles.searchTypeTextActive,
+              ]}
+            >
               {searchTypeLabels.author}
             </Text>
           </TouchableOpacity>
@@ -336,7 +386,7 @@ export default function BookSearchScreen() {
           <TextInput
             style={styles.searchInput}
             placeholder={t(`booksPage.search.placeholder`)}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={COLORS.neutral[400]}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
@@ -345,12 +395,17 @@ export default function BookSearchScreen() {
             autoCorrect={false}
           />
           <TouchableOpacity
-            style={[styles.searchButton, loading && styles.searchButtonDisabled]}
+            style={[
+              styles.searchButton,
+              loading && styles.searchButtonDisabled,
+            ]}
             onPress={handleSearch}
             disabled={loading}
           >
             <Text style={styles.searchButtonText}>
-              {loading ? t('booksPage.search.searching') : t('booksPage.search.searchBtn')}
+              {loading
+                ? t("booksPage.search.searching")
+                : t("booksPage.search.searchBtn")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -359,13 +414,16 @@ export default function BookSearchScreen() {
         <View style={styles.resultsContainer}>
           {searchResults.length > 0 && (
             <Text style={styles.resultsCount}>
-              {searchResults.length === 1 
-                ? t('booksPage.search.foundBooks', { count: searchResults.length })
-                : t('booksPage.search.foundBooksPlural', { count: searchResults.length })
-              }
+              {searchResults.length === 1
+                ? t("booksPage.search.foundBooks", {
+                    count: searchResults.length,
+                  })
+                : t("booksPage.search.foundBooksPlural", {
+                    count: searchResults.length,
+                  })}
             </Text>
           )}
-          
+
           <FlatList
             data={searchResults}
             keyExtractor={(item) => item.key}
@@ -374,39 +432,56 @@ export default function BookSearchScreen() {
             contentContainerStyle={styles.resultsListContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              !loading && clickedSearch &&
-              searchQuery.trim() !== '' &&
+              !loading &&
+              clickedSearch &&
+              searchQuery.trim() !== "" &&
               searchResults.length === 0 ? (
                 <View style={styles.emptyResults}>
-                  <Text style={styles.emptyResultsIcon}>📚</Text>
-                  <Text style={styles.emptyResultsText}>{t('booksPage.search.noBooksfound')}</Text>
+                  <Ionicons
+                    name="book-outline"
+                    size={40}
+                    color={COLORS.neutral[400]}
+                    style={styles.emptyResultsIconGlyph}
+                  />
+                  <Text style={styles.emptyResultsText}>
+                    {t("booksPage.search.noBooksfound")}
+                  </Text>
                   <Text style={styles.emptyResultsSubtext}>
-                    {t('booksPage.search.noResultsMessage')}
+                    {t("booksPage.search.noResultsMessage")}
                   </Text>
                 </View>
               ) : searchResults.length === 0 && !clickedSearch ? (
                 <View style={styles.emptyResults}>
-                  <Text style={styles.emptyResultsIcon}>🔍</Text>
-                  <Text style={styles.emptyResultsText}>{t('booksPage.search.startSearching')}</Text>
+                  <Ionicons
+                    name="search-outline"
+                    size={40}
+                    color={COLORS.neutral[400]}
+                    style={styles.emptyResultsIconGlyph}
+                  />
+                  <Text style={styles.emptyResultsText}>
+                    {t("booksPage.search.startSearching")}
+                  </Text>
                   <Text style={styles.emptyResultsSubtext}>
-                    {t('booksPage.search.startSearchingSubtext')}
+                    {t("booksPage.search.startSearchingSubtext")}
                   </Text>
                 </View>
               ) : null
             }
           />
-          
+
           {loading && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#6C63FF" />
-              <Text style={styles.loadingText}>{t('booksPage.search.searchingBooks')}</Text>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={styles.loadingText}>
+                {t("booksPage.search.searchingBooks")}
+              </Text>
             </View>
           )}
         </View>
 
         <BookStatusModal
           visible={statusModalVisible}
-          bookTitle={selectedBook?.title || ''}
+          bookTitle={selectedBook?.title || ""}
           currentStatus="currently_reading"
           onStatusChange={handleStatusChange}
           onClose={closeStatusModal}
@@ -421,109 +496,101 @@ export default function BookSearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.surface.page,
   },
   searchHeader: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: SPACING[4],
+    paddingTop: SPACING[4],
+    paddingBottom: SPACING[3],
+    backgroundColor: COLORS.surface.page,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: COLORS.neutral[100],
   },
   searchTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
+    ...TYPE.sectionTitle,
+    marginBottom: 2,
   },
   searchSubtitle: {
-    fontSize: 16,
-    color: '#64748B',
+    ...TYPE.body,
   },
   searchTypeContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 12,
-    gap: 8,
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    paddingHorizontal: SPACING[4],
+    paddingTop: SPACING[3],
+    paddingBottom: SPACING[2],
+    gap: SPACING[2],
+    backgroundColor: COLORS.surface.page,
   },
   searchTypeButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: COLORS.surface.muted,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.neutral[200],
   },
   searchTypeButtonActive: {
-    backgroundColor: '#6C63FF',
-    borderColor: '#6C63FF',
+    backgroundColor: COLORS.accent.soft,
+    borderColor: COLORS.accent.primary,
   },
   searchTypeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.text.secondary,
   },
   searchTypeTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.accent.strong,
   },
   searchContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    gap: 12,
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[3],
+    gap: SPACING[2],
+    backgroundColor: COLORS.surface.page,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: COLORS.neutral[100],
   },
   searchInput: {
     flex: 1,
-    height: 52,
-    borderColor: '#E2E8F0',
-    borderWidth: 2,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    fontSize: 16,
-    color: '#1E293B',
+    height: 46,
+    borderColor: COLORS.neutral[200],
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    backgroundColor: COLORS.surface.raised,
+    fontSize: 15,
+    color: COLORS.text.primary,
   },
   searchButton: {
-    backgroundColor: '#6C63FF',
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 100,
-    shadowColor: '#6C63FF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: COLORS.accent.primary,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    minWidth: 84,
   },
   searchButtonDisabled: {
-    backgroundColor: '#CBD5E1',
+    backgroundColor: COLORS.neutral[300],
     shadowOpacity: 0,
     elevation: 0,
   },
   searchButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: COLORS.text.inverse,
+    fontWeight: "600",
+    fontSize: 14,
   },
   resultsContainer: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingHorizontal: SPACING[4],
+    paddingTop: SPACING[3],
   },
   resultsCount: {
-    fontSize: 16,
-    color: '#64748B',
-    marginBottom: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING[3],
+    fontWeight: "600",
   },
   resultsList: {
     flex: 1,
@@ -532,170 +599,156 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   bookItem: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
+    flexDirection: "row",
+    backgroundColor: COLORS.surface.raised,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: SPACING[2],
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.neutral[100],
   },
   lastBookItem: {
     marginBottom: 0,
   },
   bookCoverContainer: {
-    marginRight: 16,
+    marginRight: 12,
   },
   bookCover: {
-    width: 80,
-    height: 120,
-    borderRadius: 12,
+    width: 62,
+    height: 92,
+    borderRadius: 8,
   },
   bookCoverPlaceholder: {
-    width: 80,
-    height: 120,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 62,
+    height: 92,
+    borderRadius: 8,
+    backgroundColor: COLORS.neutral[100],
+    justifyContent: "center",
+    alignItems: "center",
   },
   bookCoverPlaceholderText: {
-    fontSize: 32,
+    fontSize: 24,
   },
   bookInfo: {
     flex: 1,
     paddingRight: 12,
   },
   bookTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 6,
-    lineHeight: 24,
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text.primary,
+    marginBottom: 4,
+    lineHeight: 22,
   },
   bookAuthor: {
-    fontSize: 16,
-    color: '#6C63FF',
-    fontWeight: '600',
-    marginBottom: 12,
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    fontWeight: "500",
+    marginBottom: 8,
   },
   bookMetadata: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 8,
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 6,
   },
   metadataItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metadataIcon: {
-    fontSize: 12,
-    marginRight: 4,
+    alignItems: "center",
   },
   metadataText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
+    fontSize: 12,
+    color: COLORS.text.secondary,
+    fontWeight: "500",
   },
   publisherContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   publisherText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
-    marginLeft: 4,
+    fontSize: 12,
+    color: COLORS.text.secondary,
+    fontWeight: "500",
   },
   ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 10,
   },
   ratingText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#F59E0B',
+    fontWeight: "600",
+    color: COLORS.warning,
     marginRight: 6,
   },
   ratingCount: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: COLORS.neutral[400],
   },
   subjectsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 6,
   },
   subjectTag: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: COLORS.state.primarySoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   subjectText: {
     fontSize: 12,
-    color: '#6C63FF',
-    fontWeight: '600',
+    color: COLORS.primary,
+    fontWeight: "600",
   },
   addButtonContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.accent.soft,
+    justifyContent: "center",
+    alignItems: "center",
   },
   addButtonText: {
-    fontSize: 24,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontSize: 20,
+    color: COLORS.accent.strong,
+    fontWeight: "bold",
   },
   emptyResults: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 60,
   },
-  emptyResultsIcon: {
-    fontSize: 64,
-    marginBottom: 20,
+  emptyResultsIconGlyph: {
+    marginBottom: SPACING[3],
   },
   emptyResultsText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#64748B',
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.text.secondary,
     marginBottom: 8,
   },
   emptyResultsSubtext: {
-    fontSize: 16,
-    color: '#94A3B8',
-    textAlign: 'center',
-    lineHeight: 22,
+    fontSize: 14,
+    color: COLORS.text.tertiary,
+    textAlign: "center",
+    lineHeight: 20,
   },
   loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 60,
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748B',
+    color: COLORS.neutral[500],
     marginTop: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

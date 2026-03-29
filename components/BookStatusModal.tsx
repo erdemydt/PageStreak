@@ -1,5 +1,4 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from "react-i18next";
 import {
     Animated,
     Modal,
@@ -7,9 +6,11 @@ import {
     Text,
     TouchableOpacity,
     View,
-} from 'react-native';
+} from "react-native";
+import { COLORS } from "../themes/colors";
+import { getStatusColor } from "../utils/bookStatus";
 
-export type BookStatus = 'want_to_read' | 'currently_reading' | 'read';
+export type BookStatus = "want_to_read" | "currently_reading" | "read";
 
 interface BookStatusModalProps {
   visible: boolean;
@@ -40,25 +41,25 @@ export default function BookStatusModal({
     color: string;
   }> = [
     {
-      value: 'want_to_read',
-      label: t('bookStatus.options.wantToRead.label'),
-      description: t('bookStatus.options.wantToRead.description'),
-      emoji: '📚',
-      color: '#F59E0B',
+      value: "want_to_read",
+      label: t("bookStatus.options.wantToRead.label"),
+      description: t("bookStatus.options.wantToRead.description"),
+      emoji: "📚",
+      color: getStatusColor("want_to_read"),
     },
     {
-      value: 'currently_reading',
-      label: t('bookStatus.options.currentlyReading.label'),
-      description: t('bookStatus.options.currentlyReading.description'),
-      emoji: '📖',
-      color: '#3B82F6',
+      value: "currently_reading",
+      label: t("bookStatus.options.currentlyReading.label"),
+      description: t("bookStatus.options.currentlyReading.description"),
+      emoji: "📖",
+      color: getStatusColor("currently_reading"),
     },
     {
-      value: 'read',
-      label: t('bookStatus.options.read.label'),
-      description: t('bookStatus.options.read.description'),
-      emoji: '✅',
-      color: '#10B981',
+      value: "read",
+      label: t("bookStatus.options.read.label"),
+      description: t("bookStatus.options.read.description"),
+      emoji: "✅",
+      color: getStatusColor("read"),
     },
   ];
 
@@ -85,9 +86,11 @@ export default function BookStatusModal({
           ]}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t('bookStatus.title')}</Text>
+            <Text style={styles.modalTitle}>{t("bookStatus.title")}</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>{t('bookStatus.close')}</Text>
+              <Text style={styles.closeButtonText}>
+                {t("bookStatus.close")}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -110,7 +113,7 @@ export default function BookStatusModal({
                   <View
                     style={[
                       styles.statusEmoji,
-                      { backgroundColor: option.color + '20' },
+                      { backgroundColor: option.color + "20" },
                     ]}
                   >
                     <Text style={styles.statusEmojiText}>{option.emoji}</Text>
@@ -144,111 +147,111 @@ export default function BookStatusModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.overlay,
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   modalContainer: {
-    backgroundColor: '#FFFFFF',
-    width: '100%',
+    backgroundColor: COLORS.white,
+    width: "100%",
     maxWidth: 400,
     borderRadius: 20,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 10,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.neutral[800],
     flex: 1,
   },
   closeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.neutral[100],
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#64748B',
+    fontWeight: "bold",
+    color: COLORS.neutral[500],
   },
   bookTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.neutral[500],
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 22,
   },
   statusOptions: {
     gap: 12,
   },
   statusOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
   },
   statusOptionActive: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.neutral[50],
     borderWidth: 2,
   },
   statusOptionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   statusEmoji: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   statusEmojiText: {
-    fontSize: 20,
+    fontSize: 18,
   },
   statusTextContainer: {
     flex: 1,
   },
   statusLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.neutral[800],
     marginBottom: 2,
   },
   statusDescription: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 13,
+    color: COLORS.neutral[500],
   },
   selectedIndicator: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   selectedIndicatorText: {
     fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: COLORS.white,
+    fontWeight: "bold",
   },
 });

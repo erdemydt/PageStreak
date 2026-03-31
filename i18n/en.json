@@ -31,6 +31,20 @@
       "errorBody": "Something went wrong while applying your new goal. Please try again."
     }
   },
+  "goalIncreaseCriteria": {
+    "title": "Weekly consistency criteria",
+    "rule": "Meet your daily goal on at least {{required}} of {{total}} days.",
+    "progress": "This week: {{met}}/{{required}} days",
+    "helperOn": "Current daily goal: {{currentGoal}} min/day. Active reading days this week: {{activeDays}}.",
+    "helperOff": "Auto-increase is turned off. Enable it to become eligible for weekly increases.",
+    "status": {
+      "loading": "Checking...",
+      "disabled": "Disabled",
+      "newUser": "Start your first week",
+      "eligible": "Eligible",
+      "inProgress": "{{remaining}} day(s) left"
+    }
+  },
   "components": {
     "bookCard": {
       "by": "by",

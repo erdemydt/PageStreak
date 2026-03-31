@@ -14,9 +14,11 @@ import {
 
 import BookCard from "../../../components/books/BookCard";
 import DailyProgressCard from "../../../components/reading/DailyProgressCard";
+import GoalIncreaseCriteriaCard from "../../../components/reading/GoalIncreaseCriteriaCard";
 import ReadingTimeLogger from "../../../components/reading/ReadingTimeLogger";
 import type { EnhancedBook } from "../../../db/db";
 import { useGoalIncrease } from "../../../hooks/useGoalIncrease";
+import { useGoalIncreaseCriteria } from "../../../hooks/useGoalIncreaseCriteria";
 import { useReadingStats } from "../../../hooks/useReadingStats";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
@@ -38,6 +40,17 @@ const GOAL_INCREASE_SNOOZE_DAYS = 7;
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { applyGoalIncreaseProposal } = useGoalIncrease();
+  const {
+    loading: criteriaLoading,
+    hasUserPreferences,
+    autoIncreaseEnabled,
+    currentDailyGoal,
+    goalMetDays,
+    activeDays,
+    requiredGoalMetDays,
+    windowDays,
+    reloadCriteria,
+  } = useGoalIncreaseCriteria();
   const {
     books,
     userPreferences,
@@ -140,7 +153,7 @@ export default function HomeScreen() {
         ]);
 
         setGoalIncreaseProposal(null);
-        await Promise.all([loadGoalIncreaseBanner(), loadData()]);
+        await Promise.all([loadGoalIncreaseBanner(), loadData(), reloadCriteria()]);
         return;
       }
 
@@ -158,7 +171,13 @@ export default function HomeScreen() {
         t("home.goalIncreasePrompt.errorBody"),
       );
     }
-  }, [applyGoalIncreaseProposal, goalIncreaseProposal, loadData, t]);
+  }, [
+    applyGoalIncreaseProposal,
+    goalIncreaseProposal,
+    loadData,
+    reloadCriteria,
+    t,
+  ]);
 
   useEffect(() => {
     if (!goalIncreaseProposal) {
@@ -305,6 +324,19 @@ export default function HomeScreen() {
           userPreferences?.current_reading_rate_minutes_per_day || 30
         }
       />
+
+      <View style={styles.goalCriteriaContainer}>
+        <GoalIncreaseCriteriaCard
+          autoIncreaseEnabled={autoIncreaseEnabled}
+          currentDailyGoal={currentDailyGoal}
+          goalMetDays={goalMetDays}
+          activeDays={activeDays}
+          requiredGoalMetDays={requiredGoalMetDays}
+          windowDays={windowDays}
+          loading={criteriaLoading}
+          isNewUser={!hasUserPreferences}
+        />
+      </View>
 
       <View style={styles.actionsRow}>
         <Link href={"/readinglogs"} asChild>
@@ -567,6 +599,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 1,
+  },
+  goalCriteriaContainer: {
+    marginHorizontal: SPACING[4],
+    marginTop: SPACING[3],
   },
   cardTitle: {
     ...TYPE.cardTitle,

@@ -43,30 +43,31 @@ const parseStoredJson = <T extends object>(storedValue: string | null) => {
   }
 };
 
-export const loadGoalIncreaseBannerEvent = async () => {
-  const parsed = parseStoredJson<GoalIncreaseBannerEvent>(
-    await AsyncStorage.getItem(GOAL_INCREASE_BANNER_EVENT_KEY),
-  );
+export const loadGoalIncreaseBannerEvent =
+  async (): Promise<GoalIncreaseBannerEvent | null> => {
+    const parsed = parseStoredJson<GoalIncreaseBannerEvent>(
+      await AsyncStorage.getItem(GOAL_INCREASE_BANNER_EVENT_KEY),
+    );
 
-  if (!parsed) {
-    return null;
-  }
+    if (!parsed) {
+      return null;
+    }
 
-  if (
-    !isValidNumber(parsed.oldGoal) ||
-    !isValidNumber(parsed.newGoal) ||
-    !isValidIsoString(parsed.timestamp)
-  ) {
-    await AsyncStorage.removeItem(GOAL_INCREASE_BANNER_EVENT_KEY);
-    return null;
-  }
+    if (
+      !isValidNumber(parsed.oldGoal) ||
+      !isValidNumber(parsed.newGoal) ||
+      !isValidIsoString(parsed.timestamp)
+    ) {
+      await AsyncStorage.removeItem(GOAL_INCREASE_BANNER_EVENT_KEY);
+      return null;
+    }
 
-  return {
-    oldGoal: parsed.oldGoal,
-    newGoal: parsed.newGoal,
-    timestamp: parsed.timestamp,
+    return {
+      oldGoal: Number(parsed.oldGoal),
+      newGoal: Number(parsed.newGoal),
+      timestamp: String(parsed.timestamp),
+    };
   };
-};
 
 export const saveGoalIncreaseBannerEvent = async (
   event: GoalIncreaseBannerEvent,
@@ -81,30 +82,31 @@ export const clearGoalIncreaseBannerEvent = async () => {
   await AsyncStorage.removeItem(GOAL_INCREASE_BANNER_EVENT_KEY);
 };
 
-export const loadGoalIncreaseProposalEvent = async () => {
-  const parsed = parseStoredJson<GoalIncreaseProposalEvent>(
-    await AsyncStorage.getItem(GOAL_INCREASE_PROPOSAL_EVENT_KEY),
-  );
+export const loadGoalIncreaseProposalEvent =
+  async (): Promise<GoalIncreaseProposalEvent | null> => {
+    const parsed = parseStoredJson<GoalIncreaseProposalEvent>(
+      await AsyncStorage.getItem(GOAL_INCREASE_PROPOSAL_EVENT_KEY),
+    );
 
-  if (!parsed) {
-    return null;
-  }
+    if (!parsed) {
+      return null;
+    }
 
-  if (
-    !isValidNumber(parsed.oldGoal) ||
-    !isValidNumber(parsed.newGoal) ||
-    !isValidIsoString(parsed.checkedAt)
-  ) {
-    await AsyncStorage.removeItem(GOAL_INCREASE_PROPOSAL_EVENT_KEY);
-    return null;
-  }
+    if (
+      !isValidNumber(parsed.oldGoal) ||
+      !isValidNumber(parsed.newGoal) ||
+      !isValidIsoString(parsed.checkedAt)
+    ) {
+      await AsyncStorage.removeItem(GOAL_INCREASE_PROPOSAL_EVENT_KEY);
+      return null;
+    }
 
-  return {
-    oldGoal: parsed.oldGoal,
-    newGoal: parsed.newGoal,
-    checkedAt: parsed.checkedAt,
+    return {
+      oldGoal: Number(parsed.oldGoal),
+      newGoal: Number(parsed.newGoal),
+      checkedAt: String(parsed.checkedAt),
+    };
   };
-};
 
 export const saveGoalIncreaseProposalEvent = async (
   event: GoalIncreaseProposalEvent,

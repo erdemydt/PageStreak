@@ -10,12 +10,14 @@ import {
     Text,
     View,
 } from "react-native";
+import GoalIncreaseCriteriaCard from "../../components/reading/GoalIncreaseCriteriaCard";
 import DataExportModal from "../../components/settings/DataExportModal";
 import DataImportModal from "../../components/settings/DataImportModal";
 import LanguageSelector from "../../components/settings/LanguageSelector";
 import NotificationSettings from "../../components/settings/NotificationSettings";
 import SettingsRow from "../../components/settings/SettingsRow";
 import { execute, queryFirst } from "../../db/db";
+import { useGoalIncreaseCriteria } from "../../hooks/useGoalIncreaseCriteria";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import { TYPE } from "../../themes/typography";
@@ -31,6 +33,16 @@ export default function SettingsScreen() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [autoIncreaseEnabled, setAutoIncreaseEnabled] = useState(true);
   const [updatingAutoIncrease, setUpdatingAutoIncrease] = useState(false);
+  const {
+    loading: criteriaLoading,
+    hasUserPreferences,
+    currentDailyGoal,
+    goalMetDays,
+    activeDays,
+    requiredGoalMetDays,
+    windowDays,
+    reloadCriteria,
+  } = useGoalIncreaseCriteria();
 
   useEffect(() => {
     loadUserPreferences();
@@ -121,6 +133,7 @@ export default function SettingsScreen() {
       );
     } finally {
       setUpdatingAutoIncrease(false);
+      reloadCriteria();
     }
   };
 
@@ -246,6 +259,19 @@ export default function SettingsScreen() {
                     />
                   }
                   isLast
+                />
+              </View>
+              <View style={styles.goalCriteriaContainer}>
+                <GoalIncreaseCriteriaCard
+                  autoIncreaseEnabled={autoIncreaseEnabled}
+                  currentDailyGoal={currentDailyGoal}
+                  goalMetDays={goalMetDays}
+                  activeDays={activeDays}
+                  requiredGoalMetDays={requiredGoalMetDays}
+                  windowDays={windowDays}
+                  loading={criteriaLoading}
+                  compact
+                  isNewUser={!hasUserPreferences}
                 />
               </View>
             </View>
@@ -389,6 +415,9 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
     overflow: "hidden",
+  },
+  goalCriteriaContainer: {
+    marginTop: SPACING[2],
   },
   footer: {
     alignItems: "center",

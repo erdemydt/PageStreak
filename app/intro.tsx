@@ -15,15 +15,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import GoalIncreaseCriteriaCard from "../components/reading/GoalIncreaseCriteriaCard";
 import { execute } from "../db/db";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
+import { evaluateWeeklyConsistency } from "../utils/goalIncrease";
 
 type Step = 1 | 2 | 3 | 4;
 
 const MAX_YEARLY_GOAL = 1000;
 const MAX_DAILY_MINUTES = 480;
 const MS_IN_WEEK = 1000 * 60 * 60 * 24 * 7;
+const REQUIRED_GOAL_MET_DAYS = evaluateWeeklyConsistency(0).requiredGoalMetDays;
+const CONSISTENCY_WINDOW_DAYS = 7;
 
 const getEndOfCurrentYearIso = () => {
   const now = new Date();
@@ -440,6 +444,19 @@ export default function IntroScreen() {
           }
         />
       </View>
+
+      <View style={styles.criteriaCardContainer}>
+        <GoalIncreaseCriteriaCard
+          autoIncreaseEnabled={autoIncreaseEnabled}
+          currentDailyGoal={dailyGoalNum > 0 ? dailyGoalNum : null}
+          goalMetDays={0}
+          activeDays={0}
+          requiredGoalMetDays={REQUIRED_GOAL_MET_DAYS}
+          windowDays={CONSISTENCY_WINDOW_DAYS}
+          showProgress={false}
+          isNewUser
+        />
+      </View>
     </>
   );
 
@@ -780,6 +797,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     gap: 12,
+  },
+  criteriaCardContainer: {
+    marginTop: 10,
+    width: "100%",
   },
   autoIncreaseTextContainer: {
     flex: 1,

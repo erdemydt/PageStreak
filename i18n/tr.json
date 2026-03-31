@@ -31,6 +31,20 @@
       "errorBody": "Yeni hedef uygulanırken bir sorun oluştu. Lütfen tekrar deneyin."
     }
   },
+  "goalIncreaseCriteria": {
+    "title": "Haftalık tutarlılık kriteri",
+    "rule": "Günlük hedefinizi {{total}} günün en az {{required}} gününde karşılayın.",
+    "progress": "Bu hafta: {{met}}/{{required}} gün",
+    "helperOn": "Mevcut günlük hedef: {{currentGoal}} dk/gün. Bu hafta aktif okuma günü: {{activeDays}}.",
+    "helperOff": "Otomatik artış kapalı. Haftalık artış uygunluğu için açabilirsiniz.",
+    "status": {
+      "loading": "Kontrol ediliyor...",
+      "disabled": "Kapalı",
+      "newUser": "İlk haftana başla",
+      "eligible": "Uygun",
+      "inProgress": "{{remaining}} gün kaldı"
+    }
+  },
   "components": {
     "bookCard": {
       "by": "Yazar:",

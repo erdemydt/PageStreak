@@ -30,6 +30,8 @@ export default function ProfileScreen() {
     setEditedDailyGoal,
     editedTargetGoal,
     setEditedTargetGoal,
+    editedTargetDate,
+    setEditedTargetDate,
     loading,
     loadUserPreferences,
     savePreferences,
@@ -46,6 +48,19 @@ export default function ProfileScreen() {
       loadUserPreferences();
     }, [loadUserPreferences]),
   );
+
+  const totalIncreasePercentage = (() => {
+    const currentRate =
+      userPreferences?.current_reading_rate_minutes_per_day ?? 0;
+    const initialRate =
+      userPreferences?.initial_reading_rate_minutes_per_day ?? 0;
+
+    if (initialRate <= 0) {
+      return "0.00";
+    }
+
+    return (((currentRate - initialRate) / initialRate) * 100).toFixed(2);
+  })();
 
   const renderViewMode = () => (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -122,6 +137,22 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Ionicons name="flag" size={20} color={COLORS.state.accentRose} />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>
+                {t("profile.stats.goalTargetDate")}
+              </Text>
+              <Text style={styles.infoValue}>
+                {formatDate(userPreferences?.end_reading_rate_goal_date)}
+              </Text>
+            </View>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -169,119 +200,7 @@ export default function ProfileScreen() {
               <Text style={styles.infoLabel}>
                 {t("profile.stats.totalIncrease")}
               </Text>
-              <Text style={styles.infoValue}>
-                {userPreferences?.current_reading_rate_minutes_per_day !=
-                  null &&
-                userPreferences?.initial_reading_rate_minutes_per_day != null
-                  ? (
-                      ((userPreferences.current_reading_rate_minutes_per_day -
-                        userPreferences.initial_reading_rate_minutes_per_day) /
-                        userPreferences.initial_reading_rate_minutes_per_day) *
-                      100
-                    ).toFixed(2)
-                  : 0}
-                %
-              </Text>
-            </View>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <View style={styles.infoIcon}>
-              <Ionicons
-                name="speedometer"
-                size={20}
-                color={COLORS.state.readingHeat4}
-              />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>
-                {t("profile.stats.currentRate")}
-              </Text>
-              <Text style={styles.infoValue}>
-                {userPreferences?.current_reading_rate_minutes_per_day || 0}{" "}
-                {t("profile.units.minPerDay")}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoIcon}>
-              <Ionicons
-                name="stats-chart"
-                size={20}
-                color={COLORS.state.accentCyan}
-              />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>
-                {t("profile.stats.startingRate")}
-              </Text>
-              <Text style={styles.infoValue}>
-                {userPreferences?.initial_reading_rate_minutes_per_day || 0}{" "}
-                {t("profile.units.minPerDay")}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoIcon}>
-              <Ionicons name="flag" size={20} color={COLORS.state.accentRose} />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>
-                {t("profile.stats.goalTargetDate")}
-              </Text>
-              <Text style={styles.infoValue}>
-                {formatDate(userPreferences?.end_reading_rate_goal_date)}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Account Info Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("profile.sections.account")}</Text>
-        <View style={styles.card}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoIcon}>
-              <Ionicons
-                name="calendar-outline"
-                size={20}
-                color={COLORS.neutral[500]}
-              />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>
-                {t("profile.account.memberSince")}
-              </Text>
-              <Text style={styles.infoValue}>
-                {formatDate(userPreferences?.created_at)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoIcon}>
-              <Ionicons
-                name="refresh-outline"
-                size={20}
-                color={COLORS.neutral[500]}
-              />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>
-                {t("profile.account.lastUpdated")}
-              </Text>
-              <Text style={styles.infoValue}>
-                {formatDate(userPreferences?.updated_at)}
-              </Text>
+              <Text style={styles.infoValue}>{totalIncreasePercentage}%</Text>
             </View>
           </View>
         </View>
@@ -371,6 +290,24 @@ export default function ProfileScreen() {
               onChangeText={setEditedTargetGoal}
               placeholder={t("profile.placeholders.targetGoal")}
               keyboardType="numeric"
+              editable={!loading}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={COLORS.state.accentRose}
+              />{" "}
+              {t("growthJourney.edit.targetDate")}
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={editedTargetDate}
+              onChangeText={setEditedTargetDate}
+              placeholder="DD/MM/YYYY"
               editable={!loading}
             />
           </View>

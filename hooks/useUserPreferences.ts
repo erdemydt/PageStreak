@@ -12,6 +12,21 @@ type UseUserPreferencesParams = {
   t: TFunction;
 };
 
+const formatDateForInput = (dateString?: string | null) => {
+  if (!dateString) {
+    return "";
+  }
+
+  const parsedDate = new Date(dateString);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  return `${String(parsedDate.getDate()).padStart(2, "0")}/${String(
+    parsedDate.getMonth() + 1,
+  ).padStart(2, "0")}/${parsedDate.getFullYear()}`;
+};
+
 export const useUserPreferences = ({ t }: UseUserPreferencesParams) => {
   const [userPreferences, setUserPreferences] =
     useState<UserPreferences | null>(null);
@@ -20,6 +35,7 @@ export const useUserPreferences = ({ t }: UseUserPreferencesParams) => {
   const [editedYearlyGoal, setEditedYearlyGoal] = useState("");
   const [editedDailyGoal, setEditedDailyGoal] = useState("");
   const [editedTargetGoal, setEditedTargetGoal] = useState("");
+  const [editedTargetDate, setEditedTargetDate] = useState("");
   const [loading, setLoading] = useState(false);
 
   const populateEditFields = useCallback((user: UserPreferences) => {
@@ -31,6 +47,7 @@ export const useUserPreferences = ({ t }: UseUserPreferencesParams) => {
     setEditedTargetGoal(
       user.end_reading_rate_goal_minutes_per_day?.toString() || "60",
     );
+    setEditedTargetDate(formatDateForInput(user.end_reading_rate_goal_date));
   }, []);
 
   const loadUserPreferences = useCallback(async () => {
@@ -51,6 +68,7 @@ export const useUserPreferences = ({ t }: UseUserPreferencesParams) => {
     const yearlyGoal = Number(editedYearlyGoal);
     const currentDailyGoal = Number(editedDailyGoal);
     const targetDailyGoal = Number(editedTargetGoal);
+    const normalizedTargetDate = editedTargetDate.trim() || null;
 
     if (!editedUsername.trim()) {
       Alert.alert(
@@ -71,7 +89,7 @@ export const useUserPreferences = ({ t }: UseUserPreferencesParams) => {
     const growthValidation = validateGrowthGoals({
       currentDailyGoal,
       targetDailyGoal,
-      targetDate: userPreferences?.end_reading_rate_goal_date,
+      targetDate: normalizedTargetDate,
     });
 
     if (growthValidation) {
@@ -90,7 +108,7 @@ export const useUserPreferences = ({ t }: UseUserPreferencesParams) => {
       const computedGoals = computeGrowthGoalFields({
         currentDailyGoal,
         targetDailyGoal,
-        targetDate: userPreferences?.end_reading_rate_goal_date,
+        targetDate: normalizedTargetDate,
       });
 
       await execute(
@@ -130,12 +148,12 @@ export const useUserPreferences = ({ t }: UseUserPreferencesParams) => {
     }
   }, [
     editedDailyGoal,
+    editedTargetDate,
     editedTargetGoal,
     editedUsername,
     editedYearlyGoal,
     loadUserPreferences,
     t,
-    userPreferences?.end_reading_rate_goal_date,
   ]);
 
   const cancelEdit = useCallback(() => {
@@ -168,6 +186,8 @@ export const useUserPreferences = ({ t }: UseUserPreferencesParams) => {
     setEditedDailyGoal,
     editedTargetGoal,
     setEditedTargetGoal,
+    editedTargetDate,
+    setEditedTargetDate,
     loading,
     loadUserPreferences,
     savePreferences,

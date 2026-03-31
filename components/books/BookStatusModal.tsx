@@ -33,13 +33,13 @@ export default function BookStatusModal({
 }: BookStatusModalProps) {
   const { t } = useTranslation();
 
-  const statusOptions: Array<{
+  const statusOptions: {
     value: BookStatus;
     label: string;
     description: string;
     emoji: string;
     color: string;
-  }> = [
+  }[] = [
     {
       value: "want_to_read",
       label: t("bookStatus.options.wantToRead.label"),

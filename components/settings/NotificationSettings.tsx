@@ -14,7 +14,7 @@ import {
     View,
 } from "react-native";
 import { NotificationPreferences } from "../../db/db";
-import NotificationService from "../../services/notificationService";
+import notificationService from "../../services/notificationService";
 import { COLORS } from "../../themes/colors";
 
 export default function NotificationSettings() {
@@ -25,47 +25,33 @@ export default function NotificationSettings() {
   const [saving, setSaving] = useState(false);
   const [hasSystemPermission, setHasSystemPermission] = useState(false);
 
-  useEffect(() => {
-    loadPreferences();
-    checkSystemPermissions();
-
-    // Listen for app state changes to detect when user returns from settings
-    const handleAppStateChange = (nextAppState: string) => {
-      if (nextAppState === "active") {
-        // Add a small delay to ensure system settings have been processed
-        setTimeout(() => {
-          checkSystemPermissions();
-        }, 500);
-      }
-    };
-
-    const subscription = AppState.addEventListener(
-      "change",
-      handleAppStateChange,
-    );
-    return () => subscription?.remove();
+  const openSystemSettings = useCallback(() => {
+    if (Platform.OS === "ios") {
+      Linking.openURL("app-settings:");
+    } else {
+      Linking.openSettings();
+    }
   }, []);
 
-  const checkSystemPermissions = useCallback(async () => {
-    try {
-      const hasPermission = await NotificationService.checkCurrentPermissions();
-      setHasSystemPermission(hasPermission);
+  const showPermissionDeniedAlert = useCallback(() => {
+    Alert.alert(
+      t("settings.permissionRequired"),
+      t("settings.notificationPermissionDenied"),
+      [
+        { text: t("settings.cancel"), style: "cancel" },
+        {
+          text: t("settings.openSettings"),
+          style: "default",
+          onPress: openSystemSettings,
+        },
+      ],
+    );
+  }, [openSystemSettings, t]);
 
-      // If system permissions changed, sync with database
-      if (preferences && hasPermission !== preferences.notifications_enabled) {
-        console.log("🔄 System permissions changed, syncing with database");
-        await NotificationService.syncPermissionsWithDatabase();
-        await loadPreferences(); // Reload preferences to reflect changes
-      }
-    } catch (error) {
-      console.error("❌ Error checking system permissions:", error);
-    }
-  }, [preferences]);
-
-  const loadPreferences = async () => {
+  const loadPreferences = useCallback(async () => {
     try {
       setLoading(true);
-      const prefs = await NotificationService.getNotificationPreferences();
+      const prefs = await notificationService.getNotificationPreferences();
       console.log("🔔 Raw preferences from database:", prefs);
 
       if (prefs) {
@@ -86,9 +72,53 @@ export default function NotificationSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const updatePreferences = async (
+  const checkSystemPermissions = useCallback(async () => {
+    try {
+      const hasPermission = await notificationService.checkCurrentPermissions();
+      setHasSystemPermission(hasPermission);
+
+      // If system permissions changed, sync with database
+      if (
+        preferences &&
+        !hasPermission &&
+        (preferences.notifications_enabled || preferences.daily_reminder_enabled)
+      ) {
+        console.log("🔄 System permissions changed, syncing with database");
+        await notificationService.syncPermissionsWithDatabase();
+        await loadPreferences(); // Reload preferences to reflect changes
+      }
+    } catch (error) {
+      console.error("❌ Error checking system permissions:", error);
+    }
+  }, [loadPreferences, preferences]);
+
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
+
+  useEffect(() => {
+    checkSystemPermissions();
+
+    // Listen for app state changes to detect when user returns from settings
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === "active") {
+        // Add a small delay to ensure system settings have been processed
+        setTimeout(() => {
+          checkSystemPermissions();
+        }, 500);
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange,
+    );
+    return () => subscription?.remove();
+  }, [checkSystemPermissions]);
+
+  const updatePreferences = useCallback(async (
     updates: Partial<NotificationPreferences>,
   ) => {
     if (!preferences) return;
@@ -102,7 +132,7 @@ export default function NotificationSettings() {
     try {
       setSaving(true);
       const success =
-        await NotificationService.updateNotificationPreferences(updates);
+        await notificationService.updateNotificationPreferences(updates);
       console.log("✅ Update success:", success);
 
       if (success) {
@@ -124,43 +154,26 @@ export default function NotificationSettings() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [preferences, t]);
 
-  const handleNotificationToggle = async (enabled: boolean) => {
-    console.log("🔔 Main notification toggle changed to:", enabled);
+  const handleReminderToggle = async (enabled: boolean) => {
+    console.log("🔔 Reminder toggle changed to:", enabled);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     if (enabled) {
       // Check current system permissions first
       const currentSystemPermission =
-        await NotificationService.checkCurrentPermissions();
+        await notificationService.checkCurrentPermissions();
 
       if (!currentSystemPermission) {
         // Try to request permission
         console.log("🔐 Requesting notification permissions...");
-        const hasPermission = await NotificationService.requestPermissions();
+        const hasPermission = await notificationService.requestPermissions();
         console.log("🔐 Permission granted:", hasPermission);
 
         if (!hasPermission) {
           console.warn("⚠️ Permission denied, showing settings alert");
-          Alert.alert(
-            t("settings.permissionRequired"),
-            t("settings.notificationPermissionDenied"),
-            [
-              { text: t("settings.cancel"), style: "cancel" },
-              {
-                text: t("settings.openSettings"),
-                style: "default",
-                onPress: () => {
-                  if (Platform.OS === "ios") {
-                    Linking.openURL("app-settings:");
-                  } else {
-                    Linking.openSettings();
-                  }
-                },
-              },
-            ],
-          );
+          showPermissionDeniedAlert();
           return;
         }
 
@@ -169,42 +182,54 @@ export default function NotificationSettings() {
       }
     }
 
-    console.log("📱 Updating main notification preference to:", enabled);
-    await updatePreferences({ notifications_enabled: enabled });
+    console.log("📱 Updating reminder preferences to:", enabled);
+    await updatePreferences({
+      notifications_enabled: enabled,
+      daily_reminder_enabled: enabled,
+    });
+  };
+
+  const handleHourOptionPress = async (hours: number) => {
+    if (!preferences) {
+      return;
+    }
+
+    const remindersEnabled =
+      preferences.notifications_enabled && preferences.daily_reminder_enabled;
+
+    if (!remindersEnabled) {
+      Alert.alert(t("settings.error"), t("settings.reminderSetupHintDisabled"));
+      return;
+    }
+
+    if (!hasSystemPermission) {
+      showPermissionDeniedAlert();
+      return;
+    }
+
+    console.log("⏱️ Hour option changed to:", hours);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await updatePreferences({
+      daily_reminder_hours_after_last_open: hours,
+    });
   };
 
   const handleTestNotification = async () => {
     try {
-      // Check current system permissions first
-      const currentSystemPermission =
-        await NotificationService.checkCurrentPermissions();
+      const remindersEnabled =
+        preferences?.notifications_enabled && preferences?.daily_reminder_enabled;
 
-      if (!currentSystemPermission) {
-        const hasPermission = await NotificationService.requestPermissions();
-        if (!hasPermission) {
-          Alert.alert(
-            t("settings.permissionRequired"),
-            t("settings.notificationPermissionDenied"),
-            [
-              { text: t("settings.cancel"), style: "cancel" },
-              {
-                text: t("settings.openSettings"),
-                style: "default",
-                onPress: () => {
-                  if (Platform.OS === "ios") {
-                    Linking.openURL("app-settings:");
-                  } else {
-                    Linking.openSettings();
-                  }
-                },
-              },
-            ],
-          );
-          return;
-        }
+      if (!remindersEnabled) {
+        Alert.alert(t("settings.error"), t("settings.reminderSetupHintDisabled"));
+        return;
       }
 
-      await NotificationService.scheduleDailyReminderNotification();
+      if (!hasSystemPermission) {
+        showPermissionDeniedAlert();
+        return;
+      }
+
+      await notificationService.scheduleDailyReminderNotification();
       Alert.alert(
         t("settings.testScheduled"),
         t("settings.testScheduledMessage", {
@@ -245,8 +270,16 @@ export default function NotificationSettings() {
   });
 
   // Show system permission warning if needed
-  const showPermissionWarning =
-    preferences.notifications_enabled && !hasSystemPermission;
+  const remindersEnabled =
+    preferences.notifications_enabled && preferences.daily_reminder_enabled;
+  const canConfigureReminders = remindersEnabled && hasSystemPermission;
+  const reminderHours = preferences.daily_reminder_hours_after_last_open || 5;
+  const showPermissionWarning = remindersEnabled && !hasSystemPermission;
+  const reminderStatusText = !remindersEnabled
+    ? t("settings.reminderSetupHintDisabled")
+    : !hasSystemPermission
+      ? t("settings.reminderSetupHintSystem")
+      : t("settings.reminderTimingDescription", { hours: reminderHours });
 
   return (
     <View style={styles.container}>
@@ -260,13 +293,7 @@ export default function NotificationSettings() {
             </Text>
             <TouchableOpacity
               style={styles.settingsButton}
-              onPress={() => {
-                if (Platform.OS === "ios") {
-                  Linking.openURL("app-settings:");
-                } else {
-                  Linking.openSettings();
-                }
-              }}
+              onPress={openSystemSettings}
             >
               <Text style={styles.settingsButtonText}>
                 {t("settings.openSettings")}
@@ -294,22 +321,20 @@ export default function NotificationSettings() {
             />
           </View>
           <View style={styles.toggleInfo}>
-            <Text style={styles.toggleTitle}>
-              {t("settings.pushNotifications")}
-            </Text>
+            <Text style={styles.toggleTitle}>{t("settings.dailyReadingReminders")}</Text>
             <Text style={styles.toggleSubtitle}>
-              {t("settings.pushNotificationsDescription")}
+              {t("settings.dailyReadingRemindersDescription")}
             </Text>
           </View>
           <Switch
-            value={preferences.notifications_enabled && hasSystemPermission}
-            onValueChange={handleNotificationToggle}
+            value={remindersEnabled}
+            onValueChange={handleReminderToggle}
             trackColor={{
               false: COLORS.neutral[200],
               true: COLORS.state.primarySoft,
             }}
             thumbColor={
-              preferences.notifications_enabled && hasSystemPermission
+              remindersEnabled
                 ? COLORS.primary
                 : COLORS.neutral[400]
             }
@@ -319,143 +344,105 @@ export default function NotificationSettings() {
         </View>
       </View>
 
-      {/* Daily Reminders Section - Only show when notifications are enabled */}
-      {preferences.notifications_enabled && hasSystemPermission && (
-        <View style={styles.dailyRemindersContainer}>
-          <View style={styles.subToggleContainer}>
-            <View style={styles.subToggleHeader}>
-              <View style={styles.subIconContainer}>
-                <Ionicons name="alarm" size={20} color={COLORS.success} />
-              </View>
-              <View style={styles.subToggleInfo}>
-                <Text style={styles.subToggleTitle}>
-                  {t("settings.dailyReadingReminders")}
-                </Text>
-                <Text style={styles.subToggleSubtitle}>
-                  {t("settings.dailyReadingRemindersDescription")}
-                </Text>
-              </View>
-              <Switch
-                value={preferences.daily_reminder_enabled}
-                onValueChange={(enabled) => {
-                  console.log("⏰ Daily reminder toggle changed to:", enabled);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  updatePreferences({ daily_reminder_enabled: enabled });
-                }}
-                trackColor={{
-                  false: COLORS.neutral[200],
-                  true: COLORS.state.successBorder,
-                }}
-                thumbColor={
-                  preferences.daily_reminder_enabled
-                    ? COLORS.success
-                    : COLORS.neutral[400]
-                }
-                disabled={saving}
-                style={styles.subToggle}
-              />
+      <View style={styles.settingsContainer}>
+        <View
+          style={[
+            styles.hourSettingContainer,
+            !canConfigureReminders && styles.hourSettingContainerDisabled,
+          ]}
+        >
+          <View style={styles.hourSettingHeader}>
+            <Ionicons
+              name="time-outline"
+              size={20}
+              color={COLORS.warning}
+            />
+            <Text style={styles.hourSettingTitle}>{t("settings.reminderTiming")}</Text>
+          </View>
+
+          <Text style={styles.hourSectionTitle}>
+            {t("settings.hourSelectionDescription")}:
+          </Text>
+
+          <View style={styles.hourSectionContainer}>
+            <View style={styles.hourGridContainer}>
+              {[1, 3, 5, 8, 12, 24].map((hours) => (
+                <TouchableOpacity
+                  key={hours}
+                  style={[
+                    styles.hourOptionCard,
+                    reminderHours === hours && styles.hourOptionCardSelected,
+                    !canConfigureReminders && styles.hourOptionCardDisabled,
+                  ]}
+                  onPress={() => handleHourOptionPress(hours)}
+                  disabled={saving || !canConfigureReminders}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.hourOptionContent}>
+                    <Text
+                      style={[
+                        styles.hourOptionNumber,
+                        reminderHours === hours && styles.hourOptionNumberSelected,
+                      ]}
+                    >
+                      {hours}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.hourOptionLabel,
+                        reminderHours === hours && styles.hourOptionLabelSelected,
+                      ]}
+                    >
+                      {hours === 1
+                        ? t("settings.hourSingular")
+                        : t("settings.hourPlural")}
+                    </Text>
+                  </View>
+                  {reminderHours === hours && (
+                    <View style={styles.selectedIndicator}>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={16}
+                        color={COLORS.primary}
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
-          {/* Hours Setting - Only show when daily reminders are enabled */}
-          {preferences.daily_reminder_enabled && (
-            <View style={styles.settingsContainer}>
-              <View style={styles.hourSettingContainer}>
-                <View style={styles.hourSettingHeader}>
-                  <Ionicons
-                    name="time-outline"
-                    size={20}
-                    color={COLORS.warning}
-                  />
-                  <Text style={styles.hourSettingTitle}>
-                    {t("settings.reminderTiming")}
-                  </Text>
-                </View>
+          <Text
+            style={[
+              styles.hourSettingDescription,
+              !canConfigureReminders && styles.hourSettingDescriptionDisabled,
+            ]}
+          >
+            {reminderStatusText}
+          </Text>
 
-                <Text style={styles.hourSectionTitle}>
-                  {t("settings.hourSelectionDescription")}:
-                </Text>
-
-                <View style={styles.hourSectionContainer}>
-                  <View style={styles.hourGridContainer}>
-                    {[1, 3, 5, 8, 12, 24].map((hours) => (
-                      <TouchableOpacity
-                        key={hours}
-                        style={[
-                          styles.hourOptionCard,
-                          preferences.daily_reminder_hours_after_last_open ===
-                            hours && styles.hourOptionCardSelected,
-                        ]}
-                        onPress={() => {
-                          console.log("⏱️ Hour option changed to:", hours);
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                          updatePreferences({
-                            daily_reminder_hours_after_last_open: hours,
-                          });
-                        }}
-                        disabled={saving}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.hourOptionContent}>
-                          <Text
-                            style={[
-                              styles.hourOptionNumber,
-                              preferences.daily_reminder_hours_after_last_open ===
-                                hours && styles.hourOptionNumberSelected,
-                            ]}
-                          >
-                            {hours}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.hourOptionLabel,
-                              preferences.daily_reminder_hours_after_last_open ===
-                                hours && styles.hourOptionLabelSelected,
-                            ]}
-                          >
-                            {hours === 1
-                              ? t("settings.hourSingular")
-                              : t("settings.hourPlural")}
-                          </Text>
-                        </View>
-                        {preferences.daily_reminder_hours_after_last_open ===
-                          hours && (
-                          <View style={styles.selectedIndicator}>
-                            <Ionicons
-                              name="checkmark-circle"
-                              size={16}
-                              color={COLORS.primary}
-                            />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                <Text style={styles.hourSettingDescription}>
-                  {t("settings.reminderTimingDescription", {
-                    hours: preferences.daily_reminder_hours_after_last_open,
-                  })}
-                </Text>
-              </View>
-
-              {/* Test Notification Button */}
-              <TouchableOpacity
-                style={styles.testButton}
-                onPress={handleTestNotification}
-                disabled={saving}
-              >
-                <Ionicons name="send" size={18} color={COLORS.white} />
-                <Text style={styles.testButtonText}>
-                  {t("settings.sendTest")}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          {!hasSystemPermission && remindersEnabled ? (
+            <TouchableOpacity
+              style={styles.inlineSettingsButton}
+              onPress={openSystemSettings}
+            >
+              <Text style={styles.settingsButtonText}>
+                {t("settings.openSettings")}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
-      )}
+
+        {/* Test Notification Button */}
+        <TouchableOpacity
+          style={[styles.testButton, !canConfigureReminders && styles.testButtonDisabled]}
+          onPress={handleTestNotification}
+          disabled={saving || !canConfigureReminders}
+        >
+          <Ionicons name="send" size={18} color={COLORS.white} />
+          <Text style={styles.testButtonText}>{t("settings.sendTest")}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -575,6 +562,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.neutral[200],
   },
+  hourSettingContainerDisabled: {
+    backgroundColor: COLORS.neutral[50],
+  },
   hourSettingHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -591,6 +581,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: COLORS.neutral[400],
     lineHeight: 20,
+  },
+  hourSettingDescriptionDisabled: {
+    color: COLORS.neutral[500],
   },
   hourInputContainer: {
     flexDirection: "row",
@@ -681,6 +674,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  hourOptionCardDisabled: {
+    opacity: 0.55,
+  },
   hourOptionContent: {
     alignItems: "center",
     width: "100%",
@@ -707,6 +703,14 @@ const styles = StyleSheet.create({
     top: 4,
     right: 4,
   },
+  inlineSettingsButton: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    backgroundColor: COLORS.warning,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
 
   testButton: {
     flexDirection: "row",
@@ -720,6 +724,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+  },
+  testButtonDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   testButtonText: {
     color: COLORS.white,

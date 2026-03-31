@@ -230,7 +230,11 @@
       "weeklyGoalAchieved": "🎉 Congratulations! You achieved your weekly reading goal!",
       "greatStreak": "🔥 Amazing! You have a {{streak}}-day reading streak!",
       "consistentReader": "⭐ Excellent consistency! You read almost every day this week.",
-      "diverseReader": "📚 Great variety! You read from {{count}} different books this week."
+      "diverseReader": "📚 Great variety! You read from {{count}} different books this week.",
+      "noReadingData": "No reading logged this week yet.",
+      "showDetails": "Show more details",
+      "hideDetails": "Hide extra details",
+      "detailsHint": "Top book, hourly distribution, and insight cards"
     },
     "bookSearchModal": {
       "searchBooks": "📚 Search Books",
@@ -386,7 +390,7 @@
   },
   "error": "Error",
   "settings": {
-    "title": "⚙️ Settings",
+    "title": "Settings",
     "subtitle": "Manage your PageStreak preferences",
     "profile": "Profile",
     "goal": "📖 Goal: {{goal}} books this year",
@@ -418,12 +422,14 @@
     "dailyReadingReminders": "Daily Reading Reminders",
     "dailyReadingRemindersDescription": "Remind me if I haven't read yet",
     "reminderTiming": "Reminder Timing",
-    "reminderTimingDescription": "Send reminder {{hours}} hours after I close the app",
+    "reminderTimingDescription": "Send a reminder {{hours}} hours after you leave the app",
     "hoursAfterClosingApp": "Hours after closing app:",
     "hourSelectionDescription": "Choose when to receive reading reminders after closing the app",
     "hourSingular": "hour",
     "hourPlural": "hours",
-    "sendTest": "Send Test",
+    "sendTest": "Schedule Test Reminder",
+    "reminderSetupHintDisabled": "Turn on daily reading reminders to configure timing and schedule a test.",
+    "reminderSetupHintSystem": "Enable system notifications to activate reminder timing and test scheduling.",
     "sendTestDev": "Send Test (1 min)",
     "loadingNotificationSettings": "Loading notification settings...",
     "devTestScheduled": "Dev Test Scheduled",
@@ -725,25 +731,25 @@
     }
   },
   "profile": {
-    "title": "👤 Profile",
+    "title": "Profile",
     "subtitle": "Manage your preferences",
     "edit": "Edit Profile",
     "save": "Save Changes",
     "cancel": "Cancel",
     "saving": "Saving...",
     "sections": {
-      "personal": "👤 Personal Information",
-      "goals": "🎯 Reading Goals",
-      "preferences": "📚 Reading Preferences",
-      "preferredGenres": "🎭 Preferred Genres",
-      "statistics": "📊 Statistics",
-      "account": "ℹ️ Account Information"
+      "personal": "Personal Information",
+      "goals": "Reading Goals",
+      "preferences": "Reading Preferences",
+      "preferredGenres": "Preferred Genres",
+      "statistics": "Progress Snapshot",
+      "account": "Account Information"
     },
     "fields": {
       "username": "Username",
       "yearlyGoal": "Yearly Book Goal",
-      "currentDailyGoal": "Current Daily Reading (minutes)",
-      "targetDailyGoal": "Target Daily Reading (minutes)",
+      "currentDailyGoal": "Current Daily Goal (minutes)",
+      "targetDailyGoal": "Target Daily Goal (minutes)",
       "favoriteGenres": "Favorite Genres"
     },
     "labels": {
@@ -751,8 +757,8 @@
       "weeklyGoal": "Weekly Goal"
     },
     "growth": {
-      "title": "Weekly Minutes Growth",
-      "subtitle": "See fixed-step weekly goals and consistency checks"
+      "title": "Reading Growth Journey",
+      "subtitle": "View weekly targets and consistency checks"
     },
     "units": {
       "minutes": "minutes",
@@ -774,7 +780,7 @@
       "totalIncrease": "Total Increase",
       "currentRate": "Current Rate",
       "startingRate": "Starting Rate",
-      "goalTargetDate": "Goal Target Date",
+      "goalTargetDate": "Reading Goal Deadline",
       "noGenres": "No genres selected",
       "days": "{{count}} days",
       "hours": "{{count}}h {{minutes}}m",
@@ -816,7 +822,7 @@
       "enabled": "Enabled: your daily goal can rise by +{{increment}} min/day when you meet your goal on at least {{requiredDays}} of 7 days.",
       "enabledNoIncrement": "Enabled: your current daily goal is already at the target, so no further weekly increase is needed.",
       "disabled": "Disabled: weekly target stays at {{currentGoal}} min/day until you enable auto-increase in Settings.",
-      "details": "Current {{currentGoal}} min/day • Target {{targetGoal}} min/day • {{weeksRemaining}} week(s) remaining"
+      "details": "Current goal {{currentGoal}} min/day • Target goal {{targetGoal}} min/day • {{weeksRemaining}} week(s) remaining"
     },
     "controls": {
       "range": "Range",
@@ -827,7 +833,9 @@
     },
     "chart": {
       "target": "Required",
-      "actual": "Logged"
+      "actual": "Logged",
+      "noData": "No weekly data is available for this range yet.",
+      "lowActivityHint": "Targets are set, but no reading has been logged in this window yet."
     },
     "summary": {
       "title": "Summary",
@@ -845,7 +853,7 @@
     "edit": {
       "title": "Edit Growth Goals",
       "subtitle": "Changes here sync with Profile goals and recalculate fixed weekly steps.",
-      "targetDate": "Target date (optional)",
+      "targetDate": "Reading goal deadline (optional)",
       "save": "Save Growth Goals"
     }
   },

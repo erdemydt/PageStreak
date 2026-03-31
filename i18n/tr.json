@@ -230,7 +230,11 @@
       "weeklyGoalAchieved": "🎉 Tebrikler! Haftalık okuma hedefinizi başardınız!",
       "greatStreak": "🔥 Harika! {{streak}} günlük okuma seriniz var!",
       "consistentReader": "⭐ Mükemmel tutarlılık! Bu hafta neredeyse her gün okudunuz.",
-      "diverseReader": "📚 Harika çeşitlilik! Bu hafta {{count}} farklı kitaptan okudunuz."
+      "diverseReader": "📚 Harika çeşitlilik! Bu hafta {{count}} farklı kitaptan okudunuz.",
+      "noReadingData": "Bu hafta henüz okuma kaydı yok.",
+      "showDetails": "Daha fazla detay göster",
+      "hideDetails": "Ek detayları gizle",
+      "detailsHint": "En çok okunan kitap, saatlik dağılım ve içgörü kartları"
     },
     "bookSearchModal": {
       "searchBooks": "📚 Kitap Ara",
@@ -386,7 +390,7 @@
   },
   "error": "Hata",
   "settings": {
-    "title": "⚙️ Ayarlar",
+    "title": "Ayarlar",
     "subtitle": "PageStreak tercihlerinizi yönetin",
     "profile": "Profil",
     "goal": "📖 Hedef: Bu yıl {{goal}} kitap",
@@ -418,12 +422,14 @@
     "dailyReadingReminders": "Günlük Okuma Hatırlatıcıları",
     "dailyReadingRemindersDescription": "Henüz okumadıysam beni hatırlat",
     "reminderTiming": "Hatırlatıcı Zamanlaması",
-    "reminderTimingDescription": "Uygulamayı kapattıktan {{hours}} saat sonra hatırlatıcı gönder",
+    "reminderTimingDescription": "Uygulamadan ayrıldıktan {{hours}} saat sonra hatırlatıcı gönder",
     "hoursAfterClosingApp": "Uygulamayı kapattıktan sonraki saatler:",
     "hourSelectionDescription": "Uygulamayı kapattıktan sonra okuma hatırlatıcılarını ne zaman alacağınızı seçin",
     "hourSingular": "saat",
     "hourPlural": "saat",
-    "sendTest": "Test Gönder",
+    "sendTest": "Test Hatırlatıcı Zamanla",
+    "reminderSetupHintDisabled": "Zamanlamayı ayarlamak ve test planlamak için günlük okuma hatırlatıcılarını açın.",
+    "reminderSetupHintSystem": "Hatırlatıcı zamanlaması ve test planlaması için sistem bildirimlerini etkinleştirin.",
     "sendTestDev": "Test Gönder (1 dk)",
     "loadingNotificationSettings": "Bildirim ayarları yükleniyor...",
     "devTestScheduled": "Geliştirici Testi Zamanlandı",
@@ -725,25 +731,25 @@
     }
   },
   "profile": {
-    "title": "👤 Profil",
+    "title": "Profil",
     "subtitle": "Tercihlerinizi yönetin",
     "edit": "Profili Düzenle",
     "save": "Değişiklikleri Kaydet",
     "cancel": "İptal",
     "saving": "Kaydediliyor...",
     "sections": {
-      "personal": "👤 Kişisel Bilgiler",
-      "goals": "🎯 Okuma Hedefleri",
-      "preferences": "📚 Okuma Tercihleri",
-      "preferredGenres": "🎭 Tercih Edilen Türler",
-      "statistics": "📊 İstatistikler",
-      "account": "ℹ️ Hesap Bilgileri"
+      "personal": "Kişisel Bilgiler",
+      "goals": "Okuma Hedefleri",
+      "preferences": "Okuma Tercihleri",
+      "preferredGenres": "Tercih Edilen Türler",
+      "statistics": "İlerleme Özeti",
+      "account": "Hesap Bilgileri"
     },
     "fields": {
       "username": "Kullanıcı Adı",
       "yearlyGoal": "Yıllık Kitap Hedefi",
-      "currentDailyGoal": "Mevcut Günlük Okuma (dakika)",
-      "targetDailyGoal": "Hedef Günlük Okuma (dakika)",
+      "currentDailyGoal": "Mevcut Günlük Okuma Hedefi (dakika)",
+      "targetDailyGoal": "Hedef Günlük Okuma Hedefi (dakika)",
       "favoriteGenres": "Favori Türler"
     },
     "labels": {
@@ -751,8 +757,8 @@
       "weeklyGoal": "Haftalık Hedef"
     },
     "growth": {
-      "title": "Haftalık Dakika Artışı",
-      "subtitle": "Sabit adımlı haftalık hedefleri ve tutarlılık kontrollerini görün"
+      "title": "Okuma Artış Yolculuğu",
+      "subtitle": "Haftalık hedefleri ve tutarlılık kontrollerini görüntüleyin"
     },
     "units": {
       "minutes": "dakika",
@@ -774,7 +780,7 @@
       "totalIncrease": "Toplam Artış",
       "currentRate": "Mevcut Oran",
       "startingRate": "Başlangıç Oranı",
-      "goalTargetDate": "Hedef Tarih",
+      "goalTargetDate": "Okuma Hedef Son Tarihi",
       "noGenres": "Tür seçilmedi",
       "days": "{{count}} gün",
       "hours": "{{count}}s {{minutes}}d",
@@ -816,7 +822,7 @@
       "enabled": "Açık: Günlük hedefiniz, hedefinizi 7 günün en az {{requiredDays}} gününde tuttuğunuz haftalardan sonra +{{increment}} dk/gün artabilir.",
       "enabledNoIncrement": "Açık: Mevcut günlük hedefiniz zaten hedef değerde, bu yüzden ek haftalık artış gerekmiyor.",
       "disabled": "Kapalı: Ayarlar'da otomatik artırmayı açana kadar haftalık hedef {{currentGoal}} dk/gün olarak kalır.",
-      "details": "Mevcut {{currentGoal}} dk/gün • Hedef {{targetGoal}} dk/gün • Kalan {{weeksRemaining}} hafta"
+      "details": "Mevcut hedef {{currentGoal}} dk/gün • Hedef günlük hedef {{targetGoal}} dk/gün • Kalan {{weeksRemaining}} hafta"
     },
     "controls": {
       "range": "Aralık",
@@ -827,7 +833,9 @@
     },
     "chart": {
       "target": "Gerekli",
-      "actual": "Kaydedilen"
+      "actual": "Kaydedilen",
+      "noData": "Bu aralık için henüz haftalık veri yok.",
+      "lowActivityHint": "Hedefler ayarlı, ancak bu aralıkta henüz okuma kaydı yok."
     },
     "summary": {
       "title": "Özet",
@@ -845,7 +853,7 @@
     "edit": {
       "title": "Artış Hedeflerini Düzenle",
       "subtitle": "Buradaki değişiklikler Profil hedefleriyle senkronize olur ve sabit haftalık adımlar yeniden hesaplanır.",
-      "targetDate": "Hedef tarih (opsiyonel)",
+      "targetDate": "Okuma hedef son tarihi (opsiyonel)",
       "save": "Artış Hedeflerini Kaydet"
     }
   },

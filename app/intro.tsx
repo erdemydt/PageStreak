@@ -2,22 +2,22 @@ import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Animated,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Animated,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import GoalIncreaseCriteriaCard from "../components/reading/GoalIncreaseCriteriaCard";
 import { execute } from "../db/db";
-import NotificationService from "../services/notificationService";
+import notificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import { evaluateWeeklyConsistency } from "../utils/goalIncrease";
 
@@ -261,7 +261,7 @@ export default function IntroScreen() {
         ],
       );
 
-      await NotificationService.getNotificationPreferences();
+      await notificationService.getNotificationPreferences();
 
       Keyboard.dismiss();
       router.replace("/(tabs)/(home)");

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     ScrollView,
@@ -9,7 +10,9 @@ import {
 } from "react-native";
 import { useWeeklyStats } from "../../hooks/useWeeklyStats";
 import { COLORS } from "../../themes/colors";
+import { SPACING } from "../../themes/spacing";
 const barMaxHeight = 120;
+const CHART_BAR_BASE_OFFSET = 24;
 
 interface WeeklyStatsViewProps {
   weekStart: Date;
@@ -24,6 +27,7 @@ export default function WeeklyStatsView({
 }: WeeklyStatsViewProps) {
   const { stats, loading, dailyGoal } = useWeeklyStats({ weekStart });
   const { t } = useTranslation();
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -58,6 +62,9 @@ export default function WeeklyStatsView({
     ...stats.dailyBreakdown.map((day) => day.minutes),
     dailyGoal,
   );
+  const chartCeiling = Math.max(10, Math.ceil(maxMinutes / 10) * 10);
+  const yAxisTicks = [chartCeiling, Math.round(chartCeiling / 2), 0];
+  const hasWeeklyReading = stats.totalMinutes > 0;
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -80,7 +87,7 @@ export default function WeeklyStatsView({
               {formatDate(stats.weekStart)} - {formatDate(stats.weekEnd)}
             </Text>
             <Text style={styles.weekTotal}>
-              📊 {t("components.weeklyStats.weeklyAnalytics")}
+              {t("components.weeklyStats.weeklyAnalytics")}
             </Text>
           </TouchableOpacity>
 
@@ -154,48 +161,90 @@ export default function WeeklyStatsView({
         </View>
 
         <View style={styles.chartContainer}>
-          <View style={styles.chartArea}>
-            {stats.dailyBreakdown.map((day) => {
-              const barHeight =
-                maxMinutes > 0 ? (day.minutes / maxMinutes) * barMaxHeight : 0;
-              const goalHeight =
-                maxMinutes > 0 ? (dailyGoal / maxMinutes) * barMaxHeight : 0;
+          {!hasWeeklyReading ? (
+            <Text style={styles.chartHintText}>
+              {t("components.weeklyStats.noReadingData")}
+            </Text>
+          ) : null}
 
-              return (
-                <View key={day.date} style={styles.barContainer}>
-                  <View style={styles.barColumn}>
-                    <Text style={styles.barValue}>
-                      {day.minutes > 0
-                        ? ` ${day.minutes} ${t("components.readingLogs.minutesSuffix")}`
-                        : ""}
-                    </Text>
-                    <View
-                      style={[styles.bar, { height: Math.max(barHeight, 4) }]}
-                    >
-                      <View
-                        style={[
-                          styles.barFill,
-                          {
-                            backgroundColor: day.goalMet
-                              ? COLORS.success
-                              : COLORS.primary,
-                            height: "100%",
-                          },
-                        ]}
-                      />
+          <View style={styles.chartFrame}>
+            <View style={styles.yAxisColumn}>
+              {yAxisTicks.map((tick) => (
+                <Text key={`daily-tick-${tick}`} style={styles.yAxisText}>
+                  {tick}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.chartAreaContainer}>
+              <View style={styles.gridOverlay} pointerEvents="none">
+                {yAxisTicks.map((tick) => (
+                  <View
+                    key={`daily-grid-${tick}`}
+                    style={[
+                      styles.gridLine,
+                      {
+                        bottom:
+                          CHART_BAR_BASE_OFFSET +
+                          (tick / chartCeiling) * barMaxHeight,
+                      },
+                    ]}
+                  />
+                ))}
+                <View
+                  style={[
+                    styles.goalLineGlobal,
+                    {
+                      bottom:
+                        CHART_BAR_BASE_OFFSET +
+                        (dailyGoal / chartCeiling) * barMaxHeight,
+                    },
+                  ]}
+                />
+              </View>
+
+              <View style={styles.chartArea}>
+                {stats.dailyBreakdown.map((day) => {
+                  const barHeight =
+                    chartCeiling > 0
+                      ? (day.minutes / chartCeiling) * barMaxHeight
+                      : 0;
+
+                  return (
+                    <View key={day.date} style={styles.barContainer}>
+                      <View style={styles.barColumn}>
+                        <Text style={styles.barValue}>
+                          {day.minutes > 0
+                            ? `${day.minutes}${t("components.readingLogs.minutesSuffix")}`
+                            : ""}
+                        </Text>
+                        <View
+                          style={[styles.bar, { height: Math.max(barHeight, 4) }]}
+                        >
+                          <View
+                            style={[
+                              styles.barFill,
+                              {
+                                backgroundColor: day.goalMet
+                                  ? COLORS.success
+                                  : COLORS.primary,
+                                height: "100%",
+                              },
+                            ]}
+                          />
+                        </View>
+                      </View>
+                      <Text style={styles.barLabel}>{day.dayName}</Text>
+                      <View style={styles.barFooter}>
+                        <Text style={styles.sessionsCount}>
+                          {day.sessions > 0 ? `${day.sessions} 📝` : ""}
+                        </Text>
+                      </View>
                     </View>
-                    {/* Goal line */}
-                    <View style={[styles.goalLine, { bottom: goalHeight }]} />
-                  </View>
-                  <Text style={styles.barLabel}>{day.dayName}</Text>
-                  <View style={styles.barFooter}>
-                    <Text style={styles.sessionsCount}>
-                      {day.sessions > 0 ? `${day.sessions} 📝` : ""}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
+                  );
+                })}
+              </View>
+            </View>
           </View>
 
           <View style={styles.chartLegend}>
@@ -299,8 +348,33 @@ export default function WeeklyStatsView({
         </View>
       </View>
 
-      {/* Top Book This Week */}
-      {stats.topBook && (
+      <View style={styles.detailsToggleSection}>
+        <TouchableOpacity
+          style={styles.detailsToggleButton}
+          onPress={() => setShowMoreDetails((prev) => !prev)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.detailsToggleContent}>
+            <View style={styles.detailsToggleTextWrap}>
+              <Text style={styles.detailsToggleTitle}>
+                {showMoreDetails
+                  ? t("components.weeklyStats.hideDetails")
+                  : t("components.weeklyStats.showDetails")}
+              </Text>
+              <Text style={styles.detailsToggleSubtitle}>
+                {t("components.weeklyStats.detailsHint")}
+              </Text>
+            </View>
+            <Ionicons
+              name={showMoreDetails ? "chevron-up" : "chevron-down"}
+              size={18}
+              color={COLORS.neutral[600]}
+            />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {showMoreDetails && stats.topBook && (
         <View style={styles.topBookSection}>
           <View style={styles.sectionHeader}>
             <Ionicons name="trophy" size={20} color={COLORS.warning} />
@@ -331,117 +405,121 @@ export default function WeeklyStatsView({
         </View>
       )}
 
-      {/* Reading Time Distribution */}
-      <View style={styles.distributionSection}>
-        <View style={styles.sectionHeader}>
-          <Ionicons
-            name="pie-chart"
-            size={20}
-            color={COLORS.state.readingHeat4}
-          />
-          <Text style={styles.sectionTitle}>
-            {t("components.weeklyStats.readingTimeDistribution")}
-          </Text>
-        </View>
-
-        <View style={styles.distributionChart}>
-          {stats.readingTimeDistribution.map((item, index) => {
-            if (item.minutes === 0) return null;
-
-            return (
-              <View key={index} style={styles.distributionItem}>
-                <View style={styles.distributionInfo}>
-                  <Text style={styles.distributionLabel}>{item.timeRange}</Text>
-                  <Text style={styles.distributionValue}>
-                    {formatMinutes(item.minutes)} ({Math.round(item.percentage)}
-                    %)
-                  </Text>
-                </View>
-                <View style={styles.distributionBar}>
-                  <View
-                    style={[
-                      styles.distributionFill,
-                      {
-                        width: `${item.percentage}%`,
-                        backgroundColor: [
-                          COLORS.primary,
-                          COLORS.success,
-                          COLORS.warning,
-                          COLORS.danger,
-                        ][index % 4],
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Insights */}
-      <View style={styles.insightsSection}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="bulb" size={20} color={COLORS.state.accentCyan} />
-          <Text style={styles.sectionTitle}>
-            {t("components.weeklyStats.insights")}
-          </Text>
-        </View>
-
-        <View style={styles.insightsContainer}>
-          {stats.goalProgress >= 100 && (
-            <View style={styles.insightCard}>
+      {showMoreDetails && (
+        <>
+          {/* Reading Time Distribution */}
+          <View style={styles.distributionSection}>
+            <View style={styles.sectionHeader}>
               <Ionicons
-                name="checkmark-circle"
-                size={20}
-                color={COLORS.success}
-              />
-              <Text style={styles.insightText}>
-                {t("components.weeklyStats.weeklyGoalAchieved")}
-              </Text>
-            </View>
-          )}
-
-          {stats.streakInfo.currentStreak >= 7 && (
-            <View style={styles.insightCard}>
-              <Ionicons name="flame" size={20} color={COLORS.warning} />
-              <Text style={styles.insightText}>
-                {t("components.weeklyStats.greatStreak", {
-                  streak: stats.streakInfo.currentStreak,
-                })}
-              </Text>
-            </View>
-          )}
-
-          {stats.readingDays >= 6 && (
-            <View style={styles.insightCard}>
-              <Ionicons
-                name="star"
+                name="pie-chart"
                 size={20}
                 color={COLORS.state.readingHeat4}
               />
-              <Text style={styles.insightText}>
-                {t("components.weeklyStats.consistentReader")}
+              <Text style={styles.sectionTitle}>
+                {t("components.weeklyStats.readingTimeDistribution")}
               </Text>
             </View>
-          )}
 
-          {stats.booksRead.length >= 3 && (
-            <View style={styles.insightCard}>
-              <Ionicons
-                name="library"
-                size={20}
-                color={COLORS.state.accentRose}
-              />
-              <Text style={styles.insightText}>
-                {t("components.weeklyStats.diverseReader", {
-                  count: stats.booksRead.length,
-                })}
+            <View style={styles.distributionChart}>
+              {stats.readingTimeDistribution.map((item, index) => {
+                if (item.minutes === 0) return null;
+
+                return (
+                  <View key={index} style={styles.distributionItem}>
+                    <View style={styles.distributionInfo}>
+                      <Text style={styles.distributionLabel}>{item.timeRange}</Text>
+                      <Text style={styles.distributionValue}>
+                        {formatMinutes(item.minutes)} ({Math.round(item.percentage)}
+                        %)
+                      </Text>
+                    </View>
+                    <View style={styles.distributionBar}>
+                      <View
+                        style={[
+                          styles.distributionFill,
+                          {
+                            width: `${item.percentage}%`,
+                            backgroundColor: [
+                              COLORS.primary,
+                              COLORS.success,
+                              COLORS.warning,
+                              COLORS.danger,
+                            ][index % 4],
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Insights */}
+          <View style={styles.insightsSection}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="bulb" size={20} color={COLORS.state.accentCyan} />
+              <Text style={styles.sectionTitle}>
+                {t("components.weeklyStats.insights")}
               </Text>
             </View>
-          )}
-        </View>
-      </View>
+
+            <View style={styles.insightsContainer}>
+              {stats.goalProgress >= 100 && (
+                <View style={styles.insightCard}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color={COLORS.success}
+                  />
+                  <Text style={styles.insightText}>
+                    {t("components.weeklyStats.weeklyGoalAchieved")}
+                  </Text>
+                </View>
+              )}
+
+              {stats.streakInfo.currentStreak >= 7 && (
+                <View style={styles.insightCard}>
+                  <Ionicons name="flame" size={20} color={COLORS.warning} />
+                  <Text style={styles.insightText}>
+                    {t("components.weeklyStats.greatStreak", {
+                      streak: stats.streakInfo.currentStreak,
+                    })}
+                  </Text>
+                </View>
+              )}
+
+              {stats.readingDays >= 6 && (
+                <View style={styles.insightCard}>
+                  <Ionicons
+                    name="star"
+                    size={20}
+                    color={COLORS.state.readingHeat4}
+                  />
+                  <Text style={styles.insightText}>
+                    {t("components.weeklyStats.consistentReader")}
+                  </Text>
+                </View>
+              )}
+
+              {stats.booksRead.length >= 3 && (
+                <View style={styles.insightCard}>
+                  <Ionicons
+                    name="library"
+                    size={20}
+                    color={COLORS.state.accentRose}
+                  />
+                  <Text style={styles.insightText}>
+                    {t("components.weeklyStats.diverseReader", {
+                      count: stats.booksRead.length,
+                    })}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </>
+      )}
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
@@ -464,8 +542,8 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.white,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[4],
     borderBottomWidth: 1,
     borderBottomColor: COLORS.neutral[200],
   },
@@ -500,8 +578,8 @@ const styles = StyleSheet.create({
   },
   summaryCards: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[4],
     gap: 12,
   },
   summaryCard: {
@@ -538,10 +616,10 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   chartSection: {
-    margin: 20,
+    margin: SPACING[4],
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    padding: 20,
+    padding: SPACING[4],
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -551,16 +629,62 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.text.secondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
     marginLeft: 8,
   },
   chartContainer: {
-    alignItems: "center",
+    width: "100%",
+  },
+  chartHintText: {
+    fontSize: 12,
+    color: COLORS.text.secondary,
+    marginBottom: 10,
+  },
+  chartFrame: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    width: "100%",
+  },
+  yAxisColumn: {
+    width: 32,
+    height: barMaxHeight + CHART_BAR_BASE_OFFSET,
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    paddingRight: 6,
+  },
+  yAxisText: {
+    fontSize: 10,
+    color: COLORS.neutral[500],
+    fontWeight: "500",
+  },
+  chartAreaContainer: {
+    flex: 1,
+    position: "relative",
+  },
+  gridOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  gridLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: COLORS.neutral[200],
+  },
+  goalLineGlobal: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: COLORS.warning,
+    borderRadius: 1,
   },
   chartArea: {
     flexDirection: "row",
@@ -586,6 +710,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 4,
     height: 12,
+    textAlign: "center",
   },
   bar: {
     width: "80%",
@@ -598,14 +723,6 @@ const styles = StyleSheet.create({
   barFill: {
     borderRadius: 4,
     minHeight: 4,
-  },
-  goalLine: {
-    position: "absolute",
-    left: "-10%",
-    right: "-10%",
-    height: 2,
-    backgroundColor: COLORS.warning,
-    borderRadius: 1,
   },
   barLabel: {
     fontSize: 12,
@@ -626,7 +743,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
-    marginTop: 20,
+    marginTop: 16,
     gap: 16,
   },
   legendItem: {
@@ -651,16 +768,47 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   statsSection: {
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginHorizontal: SPACING[4],
+    marginBottom: SPACING[4],
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    padding: 20,
+    padding: SPACING[4],
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+  },
+  detailsToggleSection: {
+    marginHorizontal: SPACING[4],
+    marginBottom: SPACING[3],
+  },
+  detailsToggleButton: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.neutral[200],
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  detailsToggleContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  detailsToggleTextWrap: {
+    flex: 1,
+  },
+  detailsToggleTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.neutral[800],
+  },
+  detailsToggleSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    color: COLORS.neutral[500],
   },
   statsGrid: {
     flexDirection: "row",
@@ -706,11 +854,11 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   topBookSection: {
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginHorizontal: SPACING[4],
+    marginBottom: SPACING[4],
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    padding: 20,
+    padding: SPACING[4],
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -758,11 +906,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   distributionSection: {
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginHorizontal: SPACING[4],
+    marginBottom: SPACING[4],
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    padding: 20,
+    padding: SPACING[4],
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -804,11 +952,11 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   insightsSection: {
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginHorizontal: SPACING[4],
+    marginBottom: SPACING[4],
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    padding: 20,
+    padding: SPACING[4],
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,

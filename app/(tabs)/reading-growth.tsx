@@ -61,6 +61,7 @@ const MS_PER_WEEK = 1000 * 60 * 60 * 24 * 7;
 const DAYS_IN_WEEK = 7;
 const RANGE_OPTIONS = [4, 12, 24] as const;
 const REQUIRED_GOAL_MET_DAYS = evaluateWeeklyConsistency(0).requiredGoalMetDays;
+const GROWTH_CHART_HEIGHT = 132;
 
 const toDateKey = (date: Date) => {
   const y = date.getFullYear();
@@ -455,15 +456,57 @@ export default function ReadingGrowthScreen() {
     setOffsetWeeks((previous) => Math.min(previous, maxOffsetWeeks));
   };
 
-  const xAxisLabelStep = useMemo(() => {
-    if (weeklyData.length >= 18) {
-      return 4;
+  const yAxisMax = useMemo(
+    () => Math.max(30, Math.ceil(maxChartValue / 10) * 10),
+    [maxChartValue],
+  );
+
+  const yAxisTicks = useMemo(
+    () => [yAxisMax, Math.round(yAxisMax / 2), 0],
+    [yAxisMax],
+  );
+
+  const weekColumnWidth = useMemo(() => {
+    if (rangeWeeks <= 4) {
+      return 62;
     }
-    if (weeklyData.length >= 10) {
-      return 2;
+
+    if (rangeWeeks <= 12) {
+      return 42;
     }
-    return 1;
-  }, [weeklyData.length]);
+
+    return 36;
+  }, [rangeWeeks]);
+
+  const hasLoggedMinutes = useMemo(
+    () => weeklyData.some((point) => point.actualMinutes > 0),
+    [weeklyData],
+  );
+
+  const shouldShowXAxisLabel = useCallback(
+    (index: number) => {
+      if (index === 0 || index === weeklyData.length - 1) {
+        return true;
+      }
+
+      if (rangeWeeks <= 4) {
+        return true;
+      }
+
+      const currentPoint = weeklyData[index];
+      const previousPoint = weeklyData[index - 1];
+
+      if (
+        previousPoint &&
+        currentPoint.weekStart.getMonth() !== previousPoint.weekStart.getMonth()
+      ) {
+        return true;
+      }
+
+      return rangeWeeks <= 12 ? index % 2 === 0 : index % 3 === 0;
+    },
+    [rangeWeeks, weeklyData],
+  );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -604,73 +647,118 @@ export default function ReadingGrowthScreen() {
 
         {loading ? (
           <Text style={styles.emptyText}>{t("growthJourney.loading")}</Text>
+        ) : weeklyData.length === 0 ? (
+          <Text style={styles.emptyText}>{t("growthJourney.chart.noData")}</Text>
         ) : (
-          <View style={styles.chartRow}>
-            {weeklyData.map((point, index) => {
-              const targetHeight = Math.max(
-                2,
-                (point.targetMinutes / maxChartValue) * 120,
-              );
-              const actualHeight = Math.max(
-                2,
-                (point.actualMinutes / maxChartValue) * 120,
-              );
+          <View style={styles.chartFrame}>
+            <View style={styles.yAxisColumn}>
+              {yAxisTicks.map((tick) => (
+                <Text key={`growth-tick-${tick}`} style={styles.yAxisText}>
+                  {tick}
+                </Text>
+              ))}
+            </View>
 
-              const isSelected = selectedWeekKey === point.key;
-
-              return (
-                <TouchableOpacity
-                  key={point.key}
-                  style={styles.weekColumn}
-                  onPress={() => setSelectedWeekKey(point.key)}
-                >
+            <View style={styles.chartContentArea}>
+              <View style={styles.chartGridOverlay} pointerEvents="none">
+                {yAxisTicks.map((tick) => (
                   <View
+                    key={`growth-grid-${tick}`}
                     style={[
-                      styles.barsWrap,
-                      isSelected && styles.barsWrapSelected,
+                      styles.chartGridLine,
+                      { bottom: (tick / yAxisMax) * GROWTH_CHART_HEIGHT },
                     ]}
-                  >
-                    <View
-                      style={[
-                        styles.bar,
-                        {
-                          height: targetHeight,
-                          backgroundColor: COLORS.warning,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.bar,
-                        {
-                          height: point.applicable ? actualHeight : 2,
-                          backgroundColor: point.applicable
-                            ? COLORS.primary
-                            : COLORS.neutral[300],
-                        },
-                      ]}
-                    />
+                  />
+                ))}
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chartScrollContent}
+              >
+                <View>
+                  <View style={styles.chartRow}>
+                    {weeklyData.map((point) => {
+                      const targetHeight = Math.max(
+                        2,
+                        (point.targetMinutes / yAxisMax) * GROWTH_CHART_HEIGHT,
+                      );
+                      const actualHeight = Math.max(
+                        2,
+                        (point.actualMinutes / yAxisMax) * GROWTH_CHART_HEIGHT,
+                      );
+
+                      const isSelected = selectedWeekKey === point.key;
+
+                      return (
+                        <TouchableOpacity
+                          key={point.key}
+                          style={[
+                            styles.weekColumn,
+                            { width: weekColumnWidth },
+                            isSelected && styles.weekColumnSelected,
+                          ]}
+                          onPress={() => setSelectedWeekKey(point.key)}
+                          activeOpacity={0.8}
+                        >
+                          <View
+                            style={[
+                              styles.barsWrap,
+                              isSelected && styles.barsWrapSelected,
+                            ]}
+                          >
+                            <View
+                              style={[
+                                styles.bar,
+                                {
+                                  height: targetHeight,
+                                  backgroundColor: COLORS.warning,
+                                },
+                              ]}
+                            />
+                            <View
+                              style={[
+                                styles.bar,
+                                {
+                                  height: point.applicable ? actualHeight : 2,
+                                  backgroundColor: point.applicable
+                                    ? COLORS.primary
+                                    : COLORS.neutral[300],
+                                },
+                              ]}
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
-                </TouchableOpacity>
-              );
-            })}
+
+                  <View style={styles.xAxisRow}>
+                    {weeklyData.map((point, index) => (
+                      <View
+                        key={`${point.key}-label`}
+                        style={[styles.xAxisLabelSlot, { width: weekColumnWidth }]}
+                      >
+                        <Text style={styles.xAxisLabelText}>
+                          {shouldShowXAxisLabel(index)
+                            ? formatWeekLabel(point.weekStart)
+                            : ""}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </ScrollView>
+
+              {!hasLoggedMinutes ? (
+                <Text style={styles.lowActivityText}>
+                  {t("growthJourney.chart.lowActivityHint")}
+                </Text>
+              ) : null}
+            </View>
           </View>
         )}
-        {!loading ? (
-          <View style={styles.xAxisRow}>
-            {weeklyData.map((point, index) => {
-              const showLabel =
-                index % xAxisLabelStep === 0 || index === weeklyData.length - 1;
-              return (
-                <View key={`${point.key}-label`} style={styles.xAxisLabelSlot}>
-                  <Text style={styles.xAxisLabelText}>
-                    {showLabel ? formatWeekLabel(point.weekStart) : ""}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        ) : null}
       </View>
 
       <View style={styles.card}>
@@ -924,7 +1012,7 @@ const styles = StyleSheet.create({
   legendRow: {
     flexDirection: "row",
     gap: 16,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   legendItem: {
     flexDirection: "row",
@@ -941,42 +1029,80 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     fontWeight: "600",
   },
-  chartRow: {
+  chartFrame: {
     flexDirection: "row",
+    alignItems: "flex-end",
+    width: "100%",
+  },
+  yAxisColumn: {
+    width: 28,
+    height: GROWTH_CHART_HEIGHT,
     justifyContent: "space-between",
     alignItems: "flex-end",
-    minHeight: 160,
-    gap: 4,
+    paddingRight: 6,
+  },
+  yAxisText: {
+    fontSize: 10,
+    color: COLORS.text.tertiary,
+    fontWeight: "500",
+  },
+  chartContentArea: {
+    flex: 1,
+  },
+  chartGridOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: GROWTH_CHART_HEIGHT,
+    zIndex: 0,
+  },
+  chartGridLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: COLORS.neutral[200],
+  },
+  chartScrollContent: {
+    paddingRight: 8,
+  },
+  chartRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    minHeight: GROWTH_CHART_HEIGHT,
   },
   weekColumn: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "flex-end",
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  weekColumnSelected: {
+    backgroundColor: COLORS.neutral[50],
   },
   barsWrap: {
-    width: "100%",
-    height: 126,
+    width: 24,
+    height: GROWTH_CHART_HEIGHT,
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "center",
-    gap: 2,
-    borderRadius: 6,
+    gap: 4,
+    borderRadius: 8,
   },
   barsWrapSelected: {
     backgroundColor: COLORS.neutral[100],
   },
   bar: {
-    width: 6,
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
+    width: 8,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
   },
   xAxisRow: {
     flexDirection: "row",
-    gap: 4,
     marginTop: 8,
   },
   xAxisLabelSlot: {
-    flex: 1,
     alignItems: "center",
     minHeight: 14,
   },
@@ -987,6 +1113,11 @@ const styles = StyleSheet.create({
   emptyText: {
     color: COLORS.text.secondary,
     fontSize: 13,
+  },
+  lowActivityText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: COLORS.text.secondary,
   },
   summaryGrid: {
     flexDirection: "row",

@@ -3,14 +3,14 @@ import { useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import '../i18n';
-import NotificationService from '../services/notificationService';
+import notificationService from '../services/notificationService';
 
 export default function RootLayout() {
   useEffect(() => {
     // Initialize notification service and track app opened
     const initializeNotifications = async () => {
       try {
-        await NotificationService.onAppStateChange('active');
+        await notificationService.onAppStateChange('active');
         
         // Don't request permissions here - let the first-time setup handle it
         // This prevents duplicate permission requests
@@ -24,7 +24,7 @@ export default function RootLayout() {
 
     // Set up app state change listener
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      NotificationService.onAppStateChange(nextAppState);
+      notificationService.onAppStateChange(nextAppState);
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);

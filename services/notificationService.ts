@@ -9,6 +9,10 @@ import {
     repairNotificationDatabase,
 } from "../db/db";
 import { dateToLocalDateString, getTodayDateString } from "../utils/dateUtils";
+import {
+    scheduleNotificationBasedOnLastOpen as scheduleByLastOpen,
+    scheduleDailyReminderNotification as scheduleDailyReminder,
+} from "./notificationScheduling";
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -338,69 +342,17 @@ export class NotificationService {
    * Schedule a daily reminder notification using configured reminder hours.
    */
   async scheduleDailyReminderNotification(): Promise<void> {
-    try {
-      // Check if user is logged in first
-      const isLoggedIn = await this.isUserLoggedIn();
-      if (!isLoggedIn) {
-        console.log("👤 No user logged in, skipping notification scheduling");
-        return;
-      }
-
-      const areEnabled = await this.areNotificationsEnabled();
-      if (!areEnabled) {
-        console.log("📵 Notifications disabled, skipping schedule");
-        return;
-      }
-
-      const hasPermission = await this.requestPermissions();
-      if (!hasPermission) {
-        console.log("📵 No notification permission, skipping schedule");
-        return;
-      }
-
-      const prefs = await this.getNotificationPreferences();
-      if (!prefs) {
-        console.log("📵 No notification preferences found");
-        return;
-      }
-
-      // Cancel any existing notification
-      await this.cancelScheduledNotification();
-
-      const triggerSeconds = prefs.daily_reminder_hours_after_last_open * 3600;
-      const triggerTime = new Date();
-      triggerTime.setHours(
-        triggerTime.getHours() + prefs.daily_reminder_hours_after_last_open,
-      );
-
-      // Schedule the notification
-      const enhancedMessage = await this.generateNotificationMessage(
-        prefs.daily_reminder_body,
-      );
-
-      this.notificationIdentifier =
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: prefs.daily_reminder_title,
-            body: enhancedMessage,
-            sound: "default",
-            data: {
-              type: "daily_reminder",
-              scheduledAt: new Date().toISOString(),
-            },
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-            seconds: triggerSeconds,
-          },
-        });
-
-      console.log(
-        `✅ Scheduled daily reminder notification for ${triggerTime.toLocaleString()}`,
-      );
-    } catch (error) {
-      console.error("❌ Error scheduling daily reminder notification:", error);
-    }
+    await scheduleDailyReminder({
+      isUserLoggedIn: this.isUserLoggedIn.bind(this),
+      areNotificationsEnabled: this.areNotificationsEnabled.bind(this),
+      requestPermissions: this.requestPermissions.bind(this),
+      getNotificationPreferences: this.getNotificationPreferences.bind(this),
+      cancelScheduledNotification: this.cancelScheduledNotification.bind(this),
+      generateNotificationMessage: this.generateNotificationMessage.bind(this),
+      setNotificationIdentifier: (identifier) => {
+        this.notificationIdentifier = identifier;
+      },
+    });
   }
 
   /**
@@ -408,110 +360,20 @@ export class NotificationService {
    * This is the main notification function that schedules based on actual app usage
    */
   async scheduleNotificationBasedOnLastOpen(): Promise<void> {
-    try {
-      // Check if user is logged in first
-      const isLoggedIn = await this.isUserLoggedIn();
-      if (!isLoggedIn) {
-        console.log(
-          "👤 No user logged in, skipping notification scheduling based on last open",
-        );
-        return;
-      }
-
-      const areEnabled = await this.areNotificationsEnabled();
-      if (!areEnabled) {
-        console.log(
-          "📵 Notifications disabled, skipping schedule based on last open",
-        );
-        return;
-      }
-
-      const hasPermission = await this.requestPermissions();
-      if (!hasPermission) {
-        console.log(
-          "📵 No notification permission, skipping schedule based on last open",
-        );
-        return;
-      }
-
-      const prefs = await this.getNotificationPreferences();
-      if (!prefs) {
-        console.log("📵 No notification preferences found");
-        return;
-      }
-
-      // Get the last time the app was opened
-      const lastOpenedTime = await this.getLastOpenedTime();
-      if (!lastOpenedTime) {
-        console.log("📝 No last opened time found, scheduling from now");
-        await this.scheduleDailyReminderNotification();
-        return;
-      }
-
-      // Calculate time elapsed since last open
-      const now = new Date();
-      const timeSinceLastOpen = now.getTime() - lastOpenedTime.getTime();
-      const hoursSinceLastOpen = timeSinceLastOpen / (1000 * 60 * 60);
-
-      // Cancel any existing notification
-      await this.cancelScheduledNotification();
-
-      let triggerSeconds: number;
-      let triggerTime = new Date();
-
-      // Calculate remaining time needed
-      const targetHours = prefs.daily_reminder_hours_after_last_open;
-
-      if (hoursSinceLastOpen >= targetHours) {
-        // Enough time has passed, send notification soon
-        triggerSeconds = 60; // 1 minute delay
-        triggerTime.setMinutes(triggerTime.getMinutes() + 1);
-        console.log(
-          `📱 ${hoursSinceLastOpen.toFixed(2)} hours have passed since last open (target: ${targetHours}h). Scheduling notification in 1 minute.`,
-        );
-      } else {
-        // Not enough time has passed, schedule for remaining time
-        const remainingHours = targetHours - hoursSinceLastOpen;
-        triggerSeconds = remainingHours * 3600;
-        triggerTime.setHours(triggerTime.getHours() + remainingHours);
-        console.log(
-          `📱 ${hoursSinceLastOpen.toFixed(2)} hours have passed since last open. Scheduling notification in ${remainingHours.toFixed(2)} more hours.`,
-        );
-      }
-
-      // Schedule the notification
-      const enhancedMessage = await this.generateNotificationMessage(
-        prefs.daily_reminder_body,
-      );
-
-      this.notificationIdentifier =
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: prefs.daily_reminder_title,
-            body: enhancedMessage,
-            sound: "default",
-            data: {
-              type: "daily_reminder_based_on_last_open",
-              scheduledAt: new Date().toISOString(),
-              lastOpenedAt: lastOpenedTime.toISOString(),
-              hoursSinceLastOpen: hoursSinceLastOpen,
-            },
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-            seconds: triggerSeconds,
-          },
-        });
-
-      console.log(
-        `✅ Scheduled notification based on last open time for ${triggerTime.toLocaleString()}`,
-      );
-    } catch (error) {
-      console.error(
-        "❌ Error scheduling notification based on last open:",
-        error,
-      );
-    }
+    await scheduleByLastOpen({
+      isUserLoggedIn: this.isUserLoggedIn.bind(this),
+      areNotificationsEnabled: this.areNotificationsEnabled.bind(this),
+      requestPermissions: this.requestPermissions.bind(this),
+      getNotificationPreferences: this.getNotificationPreferences.bind(this),
+      cancelScheduledNotification: this.cancelScheduledNotification.bind(this),
+      generateNotificationMessage: this.generateNotificationMessage.bind(this),
+      getLastOpenedTime: this.getLastOpenedTime.bind(this),
+      scheduleDailyReminderFallback:
+        this.scheduleDailyReminderNotification.bind(this),
+      setNotificationIdentifier: (identifier) => {
+        this.notificationIdentifier = identifier;
+      },
+    });
   }
 
   /**

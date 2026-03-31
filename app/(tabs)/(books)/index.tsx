@@ -2,26 +2,27 @@ import { Link, Stack, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Alert,
-  Animated,
-  FlatList,
-  Keyboard,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Alert,
+    Animated,
+    FlatList,
+    Keyboard,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import BookCard from "../../../components/BookCard";
 import BookStatusModal, {
-  BookStatus,
+    BookStatus,
 } from "../../../components/BookStatusModal";
-import { EnhancedBook, execute, queryAll } from "../../../db/db";
+import type { EnhancedBook } from "../../../db/db";
+import { execute } from "../../../db/db";
+import { useBooks } from "../../../hooks/useBooks";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
-import { getBookReadingTime } from "../../../utils/readingProgress";
 type BooksearchProps = {
   name: string;
   setName: (name: string) => void;
@@ -188,18 +189,10 @@ function ManualBookEntry(props: BooksearchProps) {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [author, setAuthor] = useState("");
   const [page, setPage] = useState("");
-  const [books, setBooks] = useState<
-    (EnhancedBook & { reading_time?: number })[]
-  >([]);
-  const [allBooksCount, setAllBooksCount] = useState(0);
-  const [statusCounts, setStatusCounts] = useState({
-    want_to_read: 0,
-    currently_reading: 0,
-    read: 0,
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAddingManually, setIsAddingManually] = useState(false);
@@ -211,86 +204,29 @@ export default function HomeScreen() {
   const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
   const [manualBookStatus, setManualBookStatus] =
     useState<BookStatus>("currently_reading");
-  const [filterStatus, setFilterStatus] = useState<BookStatus | "all">("all");
+  const {
+    allBooksCount,
+    filterStatus,
+    setFilterStatus,
+    filteredBooks,
+    getStatusCount,
+    loadBooks,
+  } = useBooks({
+    onLoadingChange: setLoading,
+    onLoadError: setError,
+    loadErrorMessage: t("booksPage.failedToLoad"),
+  });
 
   useEffect(() => {
     // Database is already initialized by the main app entry point
     loadBooks();
-  }, []);
+  }, [loadBooks]);
 
   useFocusEffect(
     useCallback(() => {
       loadBooks();
-    }, []),
+    }, [loadBooks]),
   );
-  const { t } = useTranslation();
-  const loadBooks = async () => {
-    setLoading(true);
-    try {
-      // Get total counts first
-      const totalResult = await queryAll<{ total: number }>(
-        "SELECT COUNT(*) as total FROM enhanced_books",
-      );
-      const totalCount = totalResult[0]?.total || 0;
-      setAllBooksCount(totalCount);
-
-      // Get status counts
-      const statusCountsResult = await queryAll<{
-        reading_status: string;
-        count: number;
-      }>(`
-        SELECT reading_status, COUNT(*) as count 
-        FROM enhanced_books 
-        GROUP BY reading_status
-      `);
-
-      const counts = { want_to_read: 0, currently_reading: 0, read: 0 };
-      statusCountsResult.forEach((row) => {
-        if (row.reading_status in counts) {
-          counts[row.reading_status as keyof typeof counts] = row.count;
-        }
-      });
-      setStatusCounts(counts);
-
-      // Get books with default sorting (currently reading -> want to read -> read)
-      const res = await queryAll<EnhancedBook>(`
-        SELECT * FROM enhanced_books 
-        ORDER BY 
-          CASE WHEN reading_status = 'currently_reading' THEN 1 
-               WHEN reading_status = 'want_to_read' THEN 2 
-               WHEN reading_status = 'read' THEN 3 
-               ELSE 4 END,
-          date_added DESC
-        LIMIT 10
-      `);
-
-      // Fetch reading time for each book (only for preview)
-      const booksWithReadingTime = await Promise.all(
-        res.map(async (book) => {
-          const readingTime = await getBookReadingTime(book.id);
-          return { ...book, reading_time: readingTime };
-        }),
-      );
-
-      setBooks(booksWithReadingTime);
-    } catch (e) {
-      setError(t("booksPage.failedToLoad"));
-      console.error("Load books error:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getFilteredBooks = () => {
-    if (filterStatus === "all") {
-      return books;
-    }
-    return books.filter((book) => book.reading_status === filterStatus);
-  };
-
-  const getStatusCount = (status: BookStatus) => {
-    return statusCounts[status] || 0;
-  };
 
   const saveManualBook = async () => {
     if (!name.trim() || !author.trim() || !page.trim() || isNaN(Number(page)))
@@ -522,8 +458,6 @@ export default function HomeScreen() {
       onStatusChange={() => openStatusModal(item)}
     />
   );
-
-  const filteredBooks = getFilteredBooks();
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();

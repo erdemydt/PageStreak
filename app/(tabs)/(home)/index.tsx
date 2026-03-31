@@ -15,15 +15,11 @@ import {
 import BookCard from "../../../components/BookCard";
 import DailyProgressCard from "../../../components/DailyProgressCard";
 import ReadingTimeLogger from "../../../components/ReadingTimeLogger";
-import { EnhancedBook, queryAll, queryFirst } from "../../../db/db";
+import type { EnhancedBook } from "../../../db/db";
+import { useReadingStats } from "../../../hooks/useReadingStats";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
-import type { UserPreferences } from "../../../types/database";
-import {
-    getTodayReadingMinutes,
-    initializeReadingSessions,
-} from "../../../utils/readingProgress";
 
 const GOAL_INCREASE_BANNER_EVENT_KEY = "@pagestreak/goal-increase-banner-event";
 
@@ -35,75 +31,37 @@ type GoalIncreaseBannerEvent = {
 
 export default function HomeScreen() {
   const { t } = useTranslation();
-  const [books, setBooks] = useState<EnhancedBook[]>([]);
-  const [userPreferences, setUserPreferences] =
-    useState<UserPreferences | null>(null);
+  const {
+    books,
+    userPreferences,
+    todayMinutes,
+    refreshTrigger,
+    booksRead,
+    currentlyReading,
+    wantToRead,
+    yearlyGoal,
+    progressPercentage,
+    currentBook,
+    loadData,
+    initializeStats,
+    handleReadingLoggerSuccess,
+  } = useReadingStats();
   const [goalIncreaseBanner, setGoalIncreaseBanner] =
     useState<GoalIncreaseBannerEvent | null>(null);
   const [showReadingLogger, setShowReadingLogger] = useState(false);
-  const [todayMinutes, setTodayMinutes] = useState(0);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Load data on mount and when screen comes into focus
   useEffect(() => {
-    initializeApp();
-  }, []);
+    initializeStats();
+  }, [initializeStats]);
 
   // Refresh data when screen comes into focus (e.g., when returning from books tab)
   useFocusEffect(
     useCallback(() => {
       loadData();
       loadGoalIncreaseBanner();
-    }, []),
+    }, [loadData]),
   );
-
-  const initializeApp = async () => {
-    await initializeReadingSessions();
-    loadData();
-  };
-
-  const loadData = async () => {
-    try {
-      // Load user preferences
-      const user = await queryFirst<UserPreferences>(
-        "SELECT * FROM user_preferences WHERE id = 1",
-      );
-      setUserPreferences(user);
-
-      // Load today's reading progress
-      await loadTodayProgress();
-
-      // Load books - try enhanced books first, fallback to regular books
-      try {
-        const enhancedBooks = await queryAll<EnhancedBook>(
-          "SELECT * FROM enhanced_books ORDER BY date_added DESC",
-        );
-        setBooks(enhancedBooks);
-      } catch (e) {
-        // Fallback to regular books table
-        try {
-          const regularBooks = await queryAll<{
-            id: number;
-            name: string;
-            author: string;
-            page: number;
-          }>("SELECT * FROM books ORDER BY id DESC");
-          const mappedBooks: EnhancedBook[] = regularBooks.map((book) => ({
-            ...book,
-            reading_status: "read" as const,
-            date_added: new Date().toISOString(),
-            current_page: book.page,
-          }));
-          setBooks(mappedBooks);
-        } catch (bookError) {
-          console.log("No books table found");
-          setBooks([]);
-        }
-      }
-    } catch (e) {
-      console.error("Failed to load data:", e);
-    }
-  };
 
   const loadGoalIncreaseBanner = async () => {
     try {
@@ -154,45 +112,10 @@ export default function HomeScreen() {
     }
   };
 
-  const loadTodayProgress = async () => {
-    try {
-      const minutes = await getTodayReadingMinutes();
-      setTodayMinutes(minutes);
-    } catch (e) {
-      console.error("Error loading today progress:", e);
-      setTodayMinutes(0);
-    }
-  };
-
-  // Calculate reading progress - only count 'read' books
-  const booksRead = books.filter(
-    (book) => book.reading_status === "read",
-  ).length;
-  const currentlyReading = books.filter(
-    (book) => book.reading_status === "currently_reading",
-  ).length;
-  const wantToRead = books.filter(
-    (book) => book.reading_status === "want_to_read",
-  ).length;
-  const yearlyGoal = userPreferences?.yearly_book_goal || 0;
-  const progressPercentage =
-    yearlyGoal > 0 ? Math.min((booksRead / yearlyGoal) * 100, 100) : 0;
-  const currentBook =
-    books.find((book) => book.reading_status === "currently_reading") ||
-    books[0] ||
-    null;
-
   const renderBook = ({ item }: { item: EnhancedBook }) => (
     <BookCard book={item} compact={true} refreshTrigger={refreshTrigger} />
   );
 
-  const handleReadingLoggerSuccess = () => {
-    loadTodayProgress();
-    // Refresh books data to trigger BookCard re-renders with updated progress
-    loadData();
-    // Increment refresh trigger to force BookCard re-renders
-    setRefreshTrigger((prev) => prev + 1);
-  };
   const topPart = () => (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.header}>

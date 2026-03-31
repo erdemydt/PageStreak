@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
     Alert,
-    Modal,
     ScrollView,
     StyleSheet,
     Text,
@@ -20,6 +19,7 @@ import {
     validateBackupFile,
 } from "../services/dataBackupService";
 import { COLORS } from "../themes/colors";
+import ModalShell from "./ui/ModalShell";
 
 interface DataImportModalProps {
   visible: boolean;
@@ -622,12 +622,7 @@ export default function DataImportModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
+    <ModalShell visible={visible} onClose={handleClose}>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
@@ -645,7 +640,7 @@ export default function DataImportModal({
           {renderCurrentStep()}
         </ScrollView>
       </View>
-    </Modal>
+    </ModalShell>
   );
 }
 

@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Alert,
     Dimensions,
     findNodeHandle,
-    Modal,
     StyleSheet,
     Text,
     TextInput,
@@ -13,13 +12,14 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { EnhancedBook, execute, queryAll } from "../db/db";
-import NotificationService from "../services/notificationService";
+import notificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import { getTodayDateString } from "../utils/dateUtils";
 import {
     getEnhancedBookProgress,
     syncBookCurrentPageFromSessions,
 } from "../utils/readingProgress";
+import ModalShell from "./ui/ModalShell";
 
 interface ReadingTimeLoggerProps {
   visible: boolean;
@@ -52,13 +52,7 @@ export default function ReadingTimeLogger({
     }
   }, [visible]);
 
-  useEffect(() => {
-    if (selectedBook) {
-      calculateRemainingPages();
-    }
-  }, [selectedBook]);
-
-  const calculateRemainingPages = async () => {
+  const calculateRemainingPages = useCallback(async () => {
     if (!selectedBook) {
       setRemainingPages(0);
       return;
@@ -76,7 +70,13 @@ export default function ReadingTimeLogger({
       console.error("Error calculating remaining pages:", error);
       setRemainingPages(selectedBook.page - (selectedBook.current_page || 0));
     }
-  };
+  }, [selectedBook]);
+
+  useEffect(() => {
+    if (selectedBook) {
+      calculateRemainingPages();
+    }
+  }, [calculateRemainingPages, selectedBook]);
 
   const loadCurrentlyReadingBooks = async () => {
     try {
@@ -172,7 +172,7 @@ export default function ReadingTimeLogger({
       }
 
       // Check if daily goal is met and update notification schedule
-      await NotificationService.checkAndScheduleNotification();
+      await notificationService.checkAndScheduleNotification();
 
       // Reset form
       setMinutes("");
@@ -230,12 +230,7 @@ export default function ReadingTimeLogger({
     }
   };
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
+    <ModalShell visible={visible} onClose={handleClose}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -559,7 +554,7 @@ export default function ReadingTimeLogger({
           </View>
         </KeyboardAwareScrollView>
       </View>
-    </Modal>
+    </ModalShell>
   );
 }
 

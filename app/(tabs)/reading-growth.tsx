@@ -219,9 +219,7 @@ export default function ReadingGrowthScreen() {
         );
       }
 
-      const autoIncreaseEnabled =
-        userPrefs?.auto_increase_enabled === 1 ||
-        userPrefs?.auto_increase_enabled === true;
+      const autoIncreaseEnabled = userPrefs?.auto_increase_enabled === 1;
 
       const currentRate = Math.max(
         1,

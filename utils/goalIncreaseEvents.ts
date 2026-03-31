@@ -9,7 +9,7 @@ export const GOAL_INCREASE_SNOOZE_UNTIL_KEY =
 
 export type GoalIncreaseBannerEvent = {
   oldGoal: number;
-  newGoal: number;
+  newGoal: number ;
   timestamp: string;
 };
 

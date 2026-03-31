@@ -6,6 +6,7 @@ import {
     Keyboard,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     View,
 } from "react-native";
@@ -14,7 +15,7 @@ import DataImportModal from "../../components/DataImportModal";
 import LanguageSelector from "../../components/LanguageSelector";
 import NotificationSettings from "../../components/NotificationSettings";
 import SettingsRow from "../../components/SettingsRow";
-import { queryFirst } from "../../db/db";
+import { execute, queryFirst } from "../../db/db";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import { TYPE } from "../../themes/typography";
@@ -28,6 +29,8 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [autoIncreaseEnabled, setAutoIncreaseEnabled] = useState(true);
+  const [updatingAutoIncrease, setUpdatingAutoIncrease] = useState(false);
 
   useEffect(() => {
     loadUserPreferences();
@@ -40,9 +43,84 @@ export default function SettingsScreen() {
       );
       if (user) {
         setUserPreferences(user);
+        setAutoIncreaseEnabled(user.auto_increase_enabled !== 0);
+      } else {
+        setUserPreferences(null);
+        setAutoIncreaseEnabled(true);
       }
     } catch (e) {
       console.error("Failed to load user preferences:", e);
+    }
+  };
+
+  const handleAutoIncreaseToggle = async (enabled: boolean) => {
+    if (updatingAutoIncrease) {
+      return;
+    }
+
+    const previousValue = autoIncreaseEnabled;
+
+    setAutoIncreaseEnabled(enabled);
+    setUpdatingAutoIncrease(true);
+    setUserPreferences((previous) =>
+      previous
+        ? {
+            ...previous,
+            auto_increase_enabled: enabled ? 1 : 0,
+          }
+        : previous,
+    );
+
+    try {
+      const existingUser = await queryFirst<{ id: number }>(
+        "SELECT id FROM user_preferences WHERE id = 1",
+      );
+
+      if (existingUser) {
+        await execute(
+          `UPDATE user_preferences
+           SET auto_increase_enabled = ?,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = 1`,
+          [enabled ? 1 : 0],
+        );
+      } else {
+        await execute(
+          `INSERT INTO user_preferences (
+            id,
+            username,
+            yearly_book_goal,
+            auto_increase_enabled,
+            created_at,
+            updated_at
+          ) VALUES (1, 'Reader', 12, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          [enabled ? 1 : 0],
+        );
+
+        setUserPreferences({
+          id: 1,
+          username: "Reader",
+          yearly_book_goal: 12,
+          auto_increase_enabled: enabled ? 1 : 0,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update auto increase setting:", error);
+      setAutoIncreaseEnabled(previousValue);
+      setUserPreferences((previous) =>
+        previous
+          ? {
+              ...previous,
+              auto_increase_enabled: previousValue ? 1 : 0,
+            }
+          : previous,
+      );
+      Alert.alert(
+        t("settings.error"),
+        t("settings.failedToUpdateAutoIncrease"),
+      );
+    } finally {
+      setUpdatingAutoIncrease(false);
     }
   };
 
@@ -135,6 +213,39 @@ export default function SettingsScreen() {
                     goal: userPreferences?.yearly_book_goal || 0,
                   })}
                   onPress={() => router.push("/(tabs)/profile")}
+                />
+              </View>
+            </View>
+
+            {/* Goal Automation Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                {t("settings.goalAutomation")}
+              </Text>
+              <View style={styles.sectionCard}>
+                <SettingsRow
+                  icon="trending-up-outline"
+                  title={t("settings.autoIncreaseDailyGoal")}
+                  subtitle={t("settings.autoIncreaseDailyGoalDescription")}
+                  onPress={() => handleAutoIncreaseToggle(!autoIncreaseEnabled)}
+                  disabled={updatingAutoIncrease}
+                  trailing={
+                    <Switch
+                      value={autoIncreaseEnabled}
+                      onValueChange={handleAutoIncreaseToggle}
+                      disabled={updatingAutoIncrease}
+                      trackColor={{
+                        false: COLORS.neutral[200],
+                        true: COLORS.state.primarySoft,
+                      }}
+                      thumbColor={
+                        autoIncreaseEnabled
+                          ? COLORS.primary
+                          : COLORS.neutral[400]
+                      }
+                    />
+                  }
+                  isLast
                 />
               </View>
             </View>

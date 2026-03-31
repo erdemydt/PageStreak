@@ -1,20 +1,29 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import {
     checkNotificationDatabaseIntegrity,
-    execute,
     initializeDatabase,
     queryFirst,
     repairNotificationDatabase,
 } from "../db/db";
+import { useGoalIncrease } from "../hooks/useGoalIncrease";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import type { UserPreferences } from "../types/database";
 
+const GOAL_INCREASE_BANNER_EVENT_KEY = "@pagestreak/goal-increase-banner-event";
+
+type GoalIncreaseBannerEvent = {
+  oldGoal: number;
+  newGoal: number;
+  timestamp: string;
+};
+
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
-  const [hasUser, setHasUser] = useState(false);
+  const { evaluateAndApplyGoalIncrease } = useGoalIncrease();
 
   useEffect(() => {
     initializeAppDatabase();
@@ -67,86 +76,67 @@ export default function Index() {
         );
       }
 
+      const goalIncreaseResult = await evaluateAndApplyGoalIncrease();
+      if (goalIncreaseResult.increased) {
+        const oldGoal = goalIncreaseResult.oldGoal;
+        const newGoal = goalIncreaseResult.newGoal;
+
+        if (
+          typeof oldGoal === "number" &&
+          typeof newGoal === "number" &&
+          newGoal > oldGoal
+        ) {
+          const goalIncreaseEvent: GoalIncreaseBannerEvent = {
+            oldGoal,
+            newGoal,
+            timestamp: goalIncreaseResult.checkedAt,
+          };
+
+          try {
+            await AsyncStorage.setItem(
+              GOAL_INCREASE_BANNER_EVENT_KEY,
+              JSON.stringify(goalIncreaseEvent),
+            );
+          } catch (storageError) {
+            console.error(
+              "⚠️ Failed to persist goal increase event:",
+              storageError,
+            );
+          }
+        } else {
+          console.warn(
+            "⚠️ Skipping goal increase event persistence due to invalid payload",
+            {
+              oldGoal,
+              newGoal,
+              reason: goalIncreaseResult.reason,
+            },
+          );
+        }
+
+        console.log(
+          `✅ Goal increased: ${goalIncreaseResult.oldGoal} -> ${goalIncreaseResult.newGoal} min/day`,
+        );
+      } else {
+        console.log("ℹ️ Goal increase skipped:", {
+          reason: goalIncreaseResult.reason,
+          oldGoal: goalIncreaseResult.oldGoal,
+          newGoal: goalIncreaseResult.newGoal,
+          goalMetDays: goalIncreaseResult.goalMetDays,
+          requiredGoalMetDays: goalIncreaseResult.requiredGoalMetDays,
+          weeksRemaining: goalIncreaseResult.weeksRemaining,
+          increment: goalIncreaseResult.increment,
+          error: goalIncreaseResult.error,
+        });
+      }
+
       // Then check user setup and handle navigation
       await checkUserSetup();
-
-      // Initialize weekly progress logic after database is ready
-      await initiateWeeklyProgressLogic();
     } catch (error) {
       console.error("❌ Failed to initialize app database:", error);
       // If database initialization fails, still try to show intro
-      setHasUser(false);
       router.replace("/intro");
       setIsLoading(false);
-    }
-  };
-
-  const initiateWeeklyProgressLogic = async () => {
-    try {
-      const info = await getUserGoalInformation();
-      if (!info) return;
-
-      const dateToCheck = info?.current_reading_rate_last_updated
-        ? new Date(info.current_reading_rate_last_updated)
-        : new Date();
-      const weeksPassed = getWeeksPassed(dateToCheck);
-
-      if (
-        weeksPassed > 0 &&
-        info.end_reading_rate_goal_date &&
-        new Date(info.end_reading_rate_goal_date) > new Date()
-      ) {
-        const lastProgress = await getLastWeeklyProgress();
-
-        if (lastProgress) {
-          // Update reading rate using percentage increase
-          let newReadingRate =
-            info.current_reading_rate_minutes_per_day *
-            (1 + info.weekly_reading_rate_increase_minutes_percentage / 100);
-          newReadingRate = Math.min(
-            newReadingRate,
-            info.end_reading_rate_goal_minutes_per_day,
-          );
-          newReadingRate = Math.max(
-            newReadingRate,
-            info.current_reading_rate_minutes_per_day + 1,
-          ); // Ensure it doesn't drop below initial + 1
-          const newReadingRateInteger = Math.round(newReadingRate);
-
-          await execute(
-            "UPDATE user_preferences SET current_reading_rate_minutes_per_day = ?, current_reading_rate_last_updated = ? WHERE id = 1",
-            [newReadingRateInteger, new Date().toISOString()],
-          );
-          console.log("✅ Updated reading rate based on percentage increase");
-
-          // Update weekly progress with new achieved reading minutes
-          const newAchivedMinutes = newReadingRate;
-          await execute(
-            "UPDATE weekly_progress SET weeks_passed = ?, achived_reading_minutes = ? WHERE id = ?",
-            [weeksPassed, newAchivedMinutes, lastProgress.id],
-          );
-          console.log("✅ Weekly progress updated");
-        } else {
-          // No previous record, insert a full new one using info
-          const initialReadingRate = info.initial_reading_rate_minutes_per_day;
-          const achivedReadingMinutes = initialReadingRate;
-
-          await execute(
-            `
-            INSERT INTO weekly_progress (weeks_passed, target_reading_minutes, achived_reading_minutes)
-            VALUES (?, ?, ?)
-          `,
-            [
-              0,
-              info.end_reading_rate_goal_minutes_per_day,
-              Math.round(achivedReadingMinutes),
-            ],
-          );
-          console.log("✅ Weekly progress initialized");
-        }
-      }
-    } catch (error) {
-      console.error("❌ Failed to initialize weekly progress logic:", error);
     }
   };
 
@@ -155,7 +145,6 @@ export default function Index() {
       const user = await queryFirst<UserPreferences>(
         "SELECT * FROM user_preferences WHERE id = 1",
       );
-      setHasUser(!!user);
 
       // Automatically navigate based on user status
       if (user) {
@@ -166,59 +155,12 @@ export default function Index() {
     } catch (error) {
       console.error("❌ Error checking user setup:", error);
       // If table doesn't exist or error, show intro
-      setHasUser(false);
       router.replace("/intro");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getWeeksPassed = (startDate: Date) => {
-    const now = new Date();
-    const diffInMs = now.getTime() - startDate.getTime();
-    return Math.floor(diffInMs / (1000 * 60 * 60 * 24 * 7));
-  };
-
-  const getLastWeeklyProgress = async () => {
-    try {
-      const progress = await queryFirst(
-        "SELECT * FROM weekly_progress ORDER BY weeks_passed DESC LIMIT 1",
-      );
-      return progress || null;
-    } catch (error) {
-      console.error("❌ Error fetching last weekly progress:", error);
-      return null;
-    }
-  };
-
-  const getUserGoalInformation = async () => {
-    try {
-      const user = await queryFirst<UserPreferences>(
-        "SELECT * FROM user_preferences WHERE id = 1",
-      );
-      if (!user) return null;
-
-      return {
-        weekly_reading_goal: user.weekly_reading_goal || 210,
-        initial_reading_rate_minutes_per_day:
-          user.initial_reading_rate_minutes_per_day || 30,
-        end_reading_rate_goal_minutes_per_day:
-          user.end_reading_rate_goal_minutes_per_day || 60,
-        end_reading_rate_goal_date: user.end_reading_rate_goal_date || null,
-        current_reading_rate_minutes_per_day:
-          user.current_reading_rate_minutes_per_day || 30,
-        current_reading_rate_last_updated:
-          user.current_reading_rate_last_updated || null,
-        weekly_reading_rate_increase_minutes:
-          user.weekly_reading_rate_increase_minutes || 1,
-        weekly_reading_rate_increase_minutes_percentage:
-          user.weekly_reading_rate_increase_minutes_percentage || 3.33,
-      };
-    } catch (error) {
-      console.error("❌ Error fetching user goal information:", error);
-      return null;
-    }
-  };
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>

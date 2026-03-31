@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,11 +25,21 @@ import {
     initializeReadingSessions,
 } from "../../../utils/readingProgress";
 
+const GOAL_INCREASE_BANNER_EVENT_KEY = "@pagestreak/goal-increase-banner-event";
+
+type GoalIncreaseBannerEvent = {
+  oldGoal: number;
+  newGoal: number;
+  timestamp: string;
+};
+
 export default function HomeScreen() {
   const { t } = useTranslation();
   const [books, setBooks] = useState<EnhancedBook[]>([]);
   const [userPreferences, setUserPreferences] =
     useState<UserPreferences | null>(null);
+  const [goalIncreaseBanner, setGoalIncreaseBanner] =
+    useState<GoalIncreaseBannerEvent | null>(null);
   const [showReadingLogger, setShowReadingLogger] = useState(false);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -42,6 +53,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
+      loadGoalIncreaseBanner();
     }, []),
   );
 
@@ -90,6 +102,55 @@ export default function HomeScreen() {
       }
     } catch (e) {
       console.error("Failed to load data:", e);
+    }
+  };
+
+  const loadGoalIncreaseBanner = async () => {
+    try {
+      const storedEvent = await AsyncStorage.getItem(
+        GOAL_INCREASE_BANNER_EVENT_KEY,
+      );
+
+      if (!storedEvent) {
+        setGoalIncreaseBanner(null);
+        return;
+      }
+
+      const parsedEvent = JSON.parse(
+        storedEvent,
+      ) as Partial<GoalIncreaseBannerEvent>;
+      const oldGoal = parsedEvent.oldGoal;
+      const newGoal = parsedEvent.newGoal;
+      const timestamp = parsedEvent.timestamp;
+      const isValidEvent =
+        typeof oldGoal === "number" &&
+        typeof newGoal === "number" &&
+        typeof timestamp === "string";
+
+      if (!isValidEvent) {
+        await AsyncStorage.removeItem(GOAL_INCREASE_BANNER_EVENT_KEY);
+        setGoalIncreaseBanner(null);
+        return;
+      }
+
+      setGoalIncreaseBanner({
+        oldGoal,
+        newGoal,
+        timestamp,
+      });
+    } catch (error) {
+      console.error("Failed to load goal increase banner event:", error);
+      setGoalIncreaseBanner(null);
+    }
+  };
+
+  const dismissGoalIncreaseBanner = async () => {
+    setGoalIncreaseBanner(null);
+
+    try {
+      await AsyncStorage.removeItem(GOAL_INCREASE_BANNER_EVENT_KEY);
+    } catch (error) {
+      console.error("Failed to clear goal increase banner event:", error);
     }
   };
 
@@ -142,6 +203,30 @@ export default function HomeScreen() {
           </Text>
         )}
       </View>
+
+      {goalIncreaseBanner && (
+        <View style={styles.goalUpdateBanner}>
+          <View style={styles.goalUpdateBannerContent}>
+            <Text style={styles.goalUpdateBannerTitle}>
+              {t("home.goalUpdateBanner.title")}
+            </Text>
+            <Text style={styles.goalUpdateBannerBody}>
+              {t("home.goalUpdateBanner.body", {
+                oldGoal: goalIncreaseBanner.oldGoal,
+                newGoal: goalIncreaseBanner.newGoal,
+              })}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.goalUpdateBannerDismissButton}
+            onPress={dismissGoalIncreaseBanner}
+          >
+            <Text style={styles.goalUpdateBannerDismissText}>
+              {t("home.goalUpdateBanner.dismiss")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Continue Reading Hero */}
       <View style={styles.heroCard}>
@@ -339,6 +424,43 @@ const styles = StyleSheet.create({
   subtitle: {
     ...TYPE.body,
     marginTop: 2,
+  },
+  goalUpdateBanner: {
+    marginHorizontal: SPACING[4],
+    marginBottom: SPACING[3],
+    backgroundColor: COLORS.state.primarySoftAlt,
+    borderWidth: 1,
+    borderColor: COLORS.state.successBorder,
+    borderRadius: 12,
+    padding: SPACING[3],
+    gap: SPACING[2],
+  },
+  goalUpdateBannerContent: {
+    gap: 4,
+  },
+  goalUpdateBannerTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.accent.strong,
+  },
+  goalUpdateBannerBody: {
+    fontSize: 13,
+    color: COLORS.text.secondary,
+    fontWeight: "500",
+  },
+  goalUpdateBannerDismissButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.surface.raised,
+    borderWidth: 1,
+    borderColor: COLORS.neutral[200],
+  },
+  goalUpdateBannerDismissText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.accent.strong,
   },
   heroCard: {
     backgroundColor: COLORS.surface.raised,

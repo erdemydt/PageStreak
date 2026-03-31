@@ -1,99 +1,92 @@
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Animated,
-    Dimensions,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Animated,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { execute } from "../db/db";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 
-const { width: screenWidth } = Dimensions.get("window");
+type Step = 1 | 2 | 3 | 4;
 
-type Step = 1 | 2 | 3 | 4 | 5;
+const MAX_YEARLY_GOAL = 1000;
+const MAX_DAILY_MINUTES = 480;
+const MS_IN_WEEK = 1000 * 60 * 60 * 24 * 7;
+
+const getEndOfCurrentYearIso = () => {
+  const now = new Date();
+  return new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999).toISOString();
+};
+
+const getWeeksRemaining = (targetDateIso: string) => {
+  const now = new Date();
+  const targetDate = new Date(targetDateIso);
+  const diffMs = targetDate.getTime() - now.getTime();
+  return Math.max(1, Math.ceil(diffMs / MS_IN_WEEK));
+};
 
 export default function IntroScreen() {
   const { t } = useTranslation();
+
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [username, setUsername] = useState("");
   const [yearlyGoal, setYearlyGoal] = useState("");
-  const [preferredGenres, setPreferredGenres] = useState<string[]>([]);
   const [dailyReadingGoal, setDailyReadingGoal] = useState("");
-  const [targetDailyGoal, setTargetDailyGoal] = useState("");
-  const [goalDate, setGoalDate] = useState<Date>(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [autoIncreaseEnabled, setAutoIncreaseEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const slideAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(1)).current;
 
-  const genres = [
-    t("intro.genres.options.fiction"),
-    t("intro.genres.options.nonFiction"),
-    t("intro.genres.options.mystery"),
-    t("intro.genres.options.romance"),
-    t("intro.genres.options.sciFi"),
-    t("intro.genres.options.fantasy"),
-    t("intro.genres.options.biography"),
-    t("intro.genres.options.history"),
-    t("intro.genres.options.selfHelp"),
-    t("intro.genres.options.business"),
-    t("intro.genres.options.poetry"),
-    t("intro.genres.options.philosophy"),
-    t("intro.genres.options.thriller"),
-    t("intro.genres.options.horror"),
-    t("intro.genres.options.adventure"),
-    t("intro.genres.options.comedy"),
-    t("intro.genres.options.drama"),
-    t("intro.genres.options.educational"),
-  ];
+  const trimmedUsername = username.trim();
+  const yearlyGoalNum = Number(yearlyGoal);
+  const dailyGoalNum = Number(dailyReadingGoal);
 
-  useEffect(() => {}, []);
+  const isStep1Valid = trimmedUsername.length >= 2 && trimmedUsername.length <= 50;
+  const isStep2Valid =
+    Number.isInteger(yearlyGoalNum) && yearlyGoalNum > 0 && yearlyGoalNum <= MAX_YEARLY_GOAL;
+  const isStep3Valid =
+    Number.isInteger(dailyGoalNum) && dailyGoalNum > 0 && dailyGoalNum <= MAX_DAILY_MINUTES;
 
   const animateStepTransition = (nextStep: Step) => {
-    // First, fade out the current step
     Animated.parallel([
       Animated.timing(fadeAnimation, {
         toValue: 0,
-        duration: 200,
+        duration: 180,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnimation, {
-        toValue: -50,
-        duration: 200,
+        toValue: -40,
+        duration: 180,
         useNativeDriver: true,
       }),
     ]).start(() => {
-      // Change the step after fade out is complete
       setCurrentStep(nextStep);
+      slideAnimation.setValue(40);
 
-      // Reset position for slide in
-      slideAnimation.setValue(50);
-
-      // Use requestAnimationFrame to ensure the state change has been applied
       requestAnimationFrame(() => {
-        // Animate in the new step
         Animated.parallel([
           Animated.timing(fadeAnimation, {
             toValue: 1,
-            duration: 200,
+            duration: 180,
             useNativeDriver: true,
           }),
           Animated.timing(slideAnimation, {
             toValue: 0,
-            duration: 200,
+            duration: 180,
             useNativeDriver: true,
           }),
         ]).start();
@@ -101,233 +94,184 @@ export default function IntroScreen() {
     });
   };
 
-  const toggleGenre = (genre: string) => {
-    setPreferredGenres((prev) =>
-      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre],
-    );
+  const validateStep1 = () => {
+    if (!trimmedUsername) {
+      setError(t("intro.validation.nameRequired"));
+      return false;
+    }
+
+    if (!isStep1Valid) {
+      setError(t("intro.validation.nameInvalid"));
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateStep2 = () => {
+    if (!yearlyGoal.trim()) {
+      setError(t("intro.validation.goalRequired"));
+      return false;
+    }
+
+    if (!Number.isFinite(yearlyGoalNum)) {
+      setError(t("intro.validation.goalInvalid"));
+      return false;
+    }
+
+    if (!Number.isInteger(yearlyGoalNum)) {
+      setError(t("intro.validation.goalMustBeInteger"));
+      return false;
+    }
+
+    if (!isStep2Valid) {
+      setError(t("intro.validation.goalInvalid"));
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateStep3 = () => {
+    if (!dailyReadingGoal.trim()) {
+      setError(t("intro.validation.dailyGoalRequired"));
+      return false;
+    }
+
+    if (!Number.isFinite(dailyGoalNum) || !Number.isInteger(dailyGoalNum)) {
+      setError(t("intro.validation.dailyGoalInvalid"));
+      return false;
+    }
+
+    if (dailyGoalNum <= 0 || dailyGoalNum > MAX_DAILY_MINUTES) {
+      setError(t("intro.validation.dailyGoalInvalid"));
+      return false;
+    }
+
+    return true;
   };
 
   const handleNext = () => {
     setError(null);
 
     if (currentStep === 1) {
-      if (!username.trim()) {
-        setError(t("intro.validation.nameRequired"));
-        return;
-      }
-      if (username.trim().length < 2) {
-        setError(t("intro.validation.nameInvalid"));
-        return;
-      }
-      if (username.trim().length > 50) {
-        setError(t("intro.validation.nameInvalid"));
+      if (!validateStep1()) {
         return;
       }
       animateStepTransition(2);
-    } else if (currentStep === 2) {
-      if (!yearlyGoal.trim()) {
-        setError(t("intro.validation.goalRequired"));
-        return;
-      }
-      if (isNaN(Number(yearlyGoal))) {
-        setError(t("intro.validation.goalInvalid"));
-        return;
-      }
-      const yearlyGoalNum = Number(yearlyGoal);
-      if (yearlyGoalNum <= 0) {
-        setError(t("intro.validation.goalInvalid"));
-        return;
-      }
-      if (yearlyGoalNum > 1000) {
-        setError(t("intro.validation.goalInvalid"));
-        return;
-      }
-      if (!Number.isInteger(yearlyGoalNum)) {
-        setError(t("intro.validation.goalMustBeInteger"));
+      return;
+    }
+
+    if (currentStep === 2) {
+      if (!validateStep2()) {
         return;
       }
       animateStepTransition(3);
-    } else if (currentStep === 3) {
-      // No validation needed for genres (optional step)
+      return;
+    }
+
+    if (currentStep === 3) {
+      if (!validateStep3()) {
+        return;
+      }
       animateStepTransition(4);
-    } else if (currentStep === 4) {
-      if (!dailyReadingGoal.trim()) {
-        setError(t("intro.validation.dailyGoalRequired"));
-        return;
-      }
-      if (isNaN(Number(dailyReadingGoal))) {
-        setError(t("intro.validation.dailyGoalInvalid"));
-        return;
-      }
-      const dailyGoalNum = Number(dailyReadingGoal);
-      if (dailyGoalNum <= 0) {
-        setError(t("intro.validation.dailyGoalInvalid"));
-        return;
-      }
-      if (dailyGoalNum > 1440) {
-        setError(t("intro.validation.dailyGoalTooHigh"));
-        return;
-      }
-      if (dailyGoalNum > 480) {
-        setError(t("intro.validation.dailyGoalUnrealistic"));
-        return;
-      }
-      animateStepTransition(5);
     }
   };
 
   const handleBack = () => {
     setError(null);
+
     if (currentStep === 2) {
       animateStepTransition(1);
-    } else if (currentStep === 3) {
+      return;
+    }
+
+    if (currentStep === 3) {
       animateStepTransition(2);
-    } else if (currentStep === 4) {
+      return;
+    }
+
+    if (currentStep === 4) {
       animateStepTransition(3);
-    } else if (currentStep === 5) {
-      animateStepTransition(4);
     }
   };
 
   const handleGetStarted = async () => {
-    setLoading(true);
     setError(null);
 
+    if (!validateStep1() || !validateStep2() || !validateStep3()) {
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      // Final validation before saving
-      if (!targetDailyGoal.trim()) {
-        setError("Please enter your target daily reading goal");
-        return;
-      }
-      if (isNaN(Number(targetDailyGoal))) {
-        setError("Please enter a valid number of minutes");
-        return;
-      }
-      const targetGoalNum = Number(targetDailyGoal);
-      if (targetGoalNum <= 0) {
-        setError("Target daily goal must be greater than 0 minutes");
-        return;
-      }
-      if (targetGoalNum > 1440) {
-        setError("Target daily goal cannot exceed 24 hours (1440 minutes)");
-        return;
-      }
-      if (targetGoalNum > 480) {
-        setError(
-          "Target goal seems unrealistic. Please enter a goal less than 8 hours.",
-        );
-        return;
-      }
-
-      const currentGoalNum = Number(dailyReadingGoal);
-      if (targetGoalNum < currentGoalNum) {
-        setError(
-          "Your target goal should be equal to or greater than your current reading time",
-        );
-        return;
-      }
-
-      // Check if the goal date is in the past
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const selectedDate = new Date(goalDate);
-      selectedDate.setHours(0, 0, 0, 0);
-
-      if (selectedDate < today) {
-        setError("Goal date cannot be in the past");
-        return;
-      }
-
-      // Check if the goal date is too far in the future (more than 5 years)
-      const fiveYearsFromNow = new Date();
-      fiveYearsFromNow.setFullYear(fiveYearsFromNow.getFullYear() + 5);
-
-      if (selectedDate > fiveYearsFromNow) {
-        setError("Goal date cannot be more than 5 years in the future");
-        return;
-      }
-
-      // Use user's input values
-      const initialReadingRateMinutesPerDay = currentGoalNum;
-      const endReadingRateGoalMinutesPerDay = targetGoalNum;
-      const weeklyReadingGoal = initialReadingRateMinutesPerDay * 7;
-      const dailyGoal = initialReadingRateMinutesPerDay;
-
-      // Calculate weekly increase needed based on the selected date
-      const timeDifferenceMs = goalDate.getTime() - new Date().getTime();
-      const weeks = Math.max(
-        1,
-        Math.ceil(timeDifferenceMs / (1000 * 60 * 60 * 24 * 7)),
-      );
-
-      const totalIncreaseNeeded =
-        endReadingRateGoalMinutesPerDay - initialReadingRateMinutesPerDay;
-      const weeklyReadingRateIncreaseMinutes =
-        totalIncreaseNeeded > 0 ? Math.ceil(totalIncreaseNeeded / weeks) : 0;
-      const weeklyReadingRateIncreasePercentage =
-        initialReadingRateMinutesPerDay > 0
-          ? (weeklyReadingRateIncreaseMinutes /
-              initialReadingRateMinutesPerDay) *
-            100
+      const normalizedDailyGoal = dailyGoalNum;
+      const normalizedYearlyGoal = yearlyGoalNum;
+      const targetDailyGoal = autoIncreaseEnabled
+        ? normalizedDailyGoal * 2
+        : normalizedDailyGoal;
+      const targetGoalDateIso = autoIncreaseEnabled
+        ? getEndOfCurrentYearIso()
+        : null;
+      const weeksRemaining = targetGoalDateIso
+        ? getWeeksRemaining(targetGoalDateIso)
+        : 1;
+      const weeklyIncreaseMinutes =
+        autoIncreaseEnabled && targetDailyGoal > normalizedDailyGoal
+          ? Math.ceil((targetDailyGoal - normalizedDailyGoal) / weeksRemaining)
+          : 0;
+      const weeklyIncreasePercentage =
+        normalizedDailyGoal > 0
+          ? (weeklyIncreaseMinutes / normalizedDailyGoal) * 100
           : 0;
 
-      // Use the selected goal date instead of end of year
-      const endGoalDate = goalDate.toISOString();
-
-      // Insert or replace the single user preferences record
       await execute(
         `INSERT OR REPLACE INTO user_preferences (
-          id, username, yearly_book_goal, preferred_genres, updated_at,
-          weekly_reading_goal, 
-          initial_reading_rate_minutes_per_day, end_reading_rate_goal_minutes_per_day,
-          end_reading_rate_goal_date, current_reading_rate_minutes_per_day,
-          current_reading_rate_last_updated, weekly_reading_rate_increase_minutes,
-          weekly_reading_rate_increase_minutes_percentage
-        ) VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
+          id,
+          username,
+          yearly_book_goal,
+          updated_at,
+          weekly_reading_goal,
+          initial_reading_rate_minutes_per_day,
+          end_reading_rate_goal_minutes_per_day,
+          end_reading_rate_goal_date,
+          current_reading_rate_minutes_per_day,
+          current_reading_rate_last_updated,
+          weekly_reading_rate_increase_minutes,
+          weekly_reading_rate_increase_minutes_percentage,
+          auto_increase_enabled
+        ) VALUES (1, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          username.trim(),
-          Number(yearlyGoal),
-          preferredGenres.join(","),
-          weeklyReadingGoal,
-          initialReadingRateMinutesPerDay,
-          endReadingRateGoalMinutesPerDay,
-          endGoalDate,
-          initialReadingRateMinutesPerDay, // current rate starts at initial rate
-          weeklyReadingRateIncreaseMinutes,
-          weeklyReadingRateIncreasePercentage,
+          trimmedUsername,
+          normalizedYearlyGoal,
+          normalizedDailyGoal * 7,
+          normalizedDailyGoal,
+          targetDailyGoal,
+          targetGoalDateIso,
+          normalizedDailyGoal,
+          new Date().toISOString(),
+          weeklyIncreaseMinutes,
+          weeklyIncreasePercentage,
+          autoIncreaseEnabled ? 1 : 0,
         ],
       );
 
-      // Initialize notification preferences for new user
-      const notificationPrefs =
-        await NotificationService.getNotificationPreferences();
-      if (!notificationPrefs) {
-        console.log("🔔 Initializing notification preferences for new user");
-      }
+      await NotificationService.getNotificationPreferences();
 
       Keyboard.dismiss();
-
-      // Navigate to the main app
       router.replace("/(tabs)/(home)");
-    } catch (e) {
-      console.error("Error saving preferences:", e);
-      if (e instanceof Error) {
-        setError(`Failed to save preferences: ${e.message}`);
-      } else {
-        setError("Failed to save your preferences. Please try again.");
-      }
+    } catch (saveError) {
+      console.error("Error saving onboarding preferences:", saveError);
+      setError(t("intro.validation.saveFailed"));
     } finally {
       setLoading(false);
     }
   };
 
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
-  };
-
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
-      {[1, 2, 3, 4, 5].map((step) => (
+      {[1, 2, 3, 4].map((step) => (
         <View key={step} style={styles.progressBarContainer}>
           <View
             style={[
@@ -336,7 +280,7 @@ export default function IntroScreen() {
               currentStep === step && styles.progressDotCurrent,
             ]}
           />
-          {step < 5 && (
+          {step < 4 && (
             <View
               style={[
                 styles.progressLine,
@@ -364,10 +308,8 @@ export default function IntroScreen() {
           placeholderTextColor={COLORS.neutral[400]}
           value={username}
           onChangeText={(text) => {
-            // Remove any leading/trailing spaces and limit length
-            const cleanText = text.slice(0, 50);
-            setUsername(cleanText);
-            if (error && text.trim().length >= 2) {
+            setUsername(text.slice(0, 50));
+            if (error && text.trim().length >= 2 && text.trim().length <= 50) {
               setError(null);
             }
           }}
@@ -387,7 +329,7 @@ export default function IntroScreen() {
       <View style={styles.stepHeader}>
         <Text style={styles.stepEmoji}>🎯</Text>
         <Text style={styles.stepTitle}>
-          {t("intro.goal.title", { username })}
+          {t("intro.goal.title", { username: trimmedUsername || "..." })}
         </Text>
         <Text style={styles.stepSubtitle}>{t("intro.goal.subtitle")}</Text>
       </View>
@@ -399,16 +341,15 @@ export default function IntroScreen() {
           placeholderTextColor={COLORS.neutral[400]}
           value={yearlyGoal}
           onChangeText={(text) => {
-            // Only allow numbers
             const numericText = text.replace(/[^0-9]/g, "");
             if (numericText.length <= 4) {
-              // Max 9999 books
               setYearlyGoal(numericText);
               if (
                 error &&
                 numericText &&
+                Number.isInteger(Number(numericText)) &&
                 Number(numericText) > 0 &&
-                Number(numericText) <= 1000
+                Number(numericText) <= MAX_YEARLY_GOAL
               ) {
                 setError(null);
               }
@@ -431,50 +372,9 @@ export default function IntroScreen() {
   const renderStep3 = () => (
     <>
       <View style={styles.stepHeader}>
-        <Text style={styles.stepEmoji}>📚</Text>
-        <Text style={styles.stepTitle}>{t("intro.genres.title")}</Text>
-        <Text style={styles.stepSubtitle}>{t("intro.genres.subtitle")}</Text>
-      </View>
-
-      <ScrollView
-        style={styles.genresContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.genresGrid}>
-          {genres.map((genre) => (
-            <TouchableOpacity
-              key={genre}
-              style={[
-                styles.genreChip,
-                preferredGenres.includes(genre) && styles.genreChipSelected,
-              ]}
-              onPress={() => toggleGenre(genre)}
-              disabled={loading}
-            >
-              <Text
-                style={[
-                  styles.genreChipText,
-                  preferredGenres.includes(genre) &&
-                    styles.genreChipTextSelected,
-                ]}
-              >
-                {genre}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </>
-  );
-
-  const renderStep4 = () => (
-    <>
-      <View style={styles.stepHeader}>
         <Text style={styles.stepEmoji}>⏰</Text>
         <Text style={styles.stepTitle}>{t("intro.currentReading.title")}</Text>
-        <Text style={styles.stepSubtitle}>
-          {t("intro.currentReading.subtitle")}
-        </Text>
+        <Text style={styles.stepSubtitle}>{t("intro.currentReading.subtitle")}</Text>
       </View>
 
       <View style={styles.goalContainer}>
@@ -484,16 +384,15 @@ export default function IntroScreen() {
           placeholderTextColor={COLORS.neutral[400]}
           value={dailyReadingGoal}
           onChangeText={(text) => {
-            // Only allow numbers
             const numericText = text.replace(/[^0-9]/g, "");
             if (numericText.length <= 4) {
-              // Max 9999 minutes
               setDailyReadingGoal(numericText);
               if (
                 error &&
                 numericText &&
+                Number.isInteger(Number(numericText)) &&
                 Number(numericText) > 0 &&
-                Number(numericText) <= 480
+                Number(numericText) <= MAX_DAILY_MINUTES
               ) {
                 setError(null);
               }
@@ -510,381 +409,201 @@ export default function IntroScreen() {
       </View>
 
       <Text style={styles.goalHint}>💡 {t("intro.currentReading.hint")}</Text>
+
+      <View style={styles.autoIncreaseCard}>
+        <View style={styles.autoIncreaseTextContainer}>
+          <Text style={styles.autoIncreaseTitle}>
+            {t("intro.currentReading.autoIncreaseTitle")}
+          </Text>
+          <Text style={styles.autoIncreaseDescription}>
+            {t("intro.currentReading.autoIncreaseDescription")}
+          </Text>
+          {dailyReadingGoal ? (
+            <Text style={styles.autoIncreasePreview}>
+              {t("intro.currentReading.autoIncreasePreview", {
+                target: Number(dailyReadingGoal) * 2,
+              })}
+            </Text>
+          ) : null}
+        </View>
+
+        <Switch
+          value={autoIncreaseEnabled}
+          onValueChange={setAutoIncreaseEnabled}
+          disabled={loading}
+          trackColor={{
+            false: COLORS.neutral[200],
+            true: COLORS.state.primarySoft,
+          }}
+          thumbColor={
+            autoIncreaseEnabled ? COLORS.accent.primary : COLORS.neutral[400]
+          }
+        />
+      </View>
     </>
   );
 
-  const renderStep5 = () => (
-    <View
-      style={{
-        flex: 1,
-        gap: 0,
-        width: "100%",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <View style={styles.stepHeader}>
-        <Text style={styles.stepEmoji}>🚀</Text>
-        <Text style={styles.stepTitle}>{t("intro.targetGoal.title")}</Text>
-        <Text style={styles.stepSubtitle}>
-          {t("intro.targetGoal.subtitle")}
-        </Text>
-      </View>
+  const renderStep4 = () => {
+    const summaryTarget = dailyGoalNum > 0 ? dailyGoalNum * 2 : 0;
 
-      <View style={styles.goalContainer}>
-        <TextInput
-          style={styles.goalInput}
-          placeholder={t("intro.targetGoal.placeholder")}
-          placeholderTextColor={COLORS.neutral[400]}
-          value={targetDailyGoal}
-          onChangeText={(text) => {
-            // Only allow numbers
-            const numericText = text.replace(/[^0-9]/g, "");
-            if (numericText.length <= 4) {
-              // Max 9999 minutes
-              setTargetDailyGoal(numericText);
-              if (
-                error &&
-                numericText &&
-                Number(numericText) > 0 &&
-                Number(numericText) <= 480 &&
-                Number(numericText) >= Number(dailyReadingGoal)
-              ) {
-                setError(null);
-              }
-            }
-          }}
-          editable={!loading}
-          keyboardType="numeric"
-          returnKeyType="done"
-          autoFocus
-          maxLength={4}
-        />
-        <Text style={styles.goalLabel}>{t("intro.targetGoal.label")}</Text>
-      </View>
+    return (
+      <>
+        <View style={styles.stepHeader}>
+          <Text style={styles.stepEmoji}>🚀</Text>
+          <Text style={styles.stepTitle}>{t("intro.summary.title")}</Text>
+          <Text style={styles.stepSubtitle}>{t("intro.summary.subtitle")}</Text>
+        </View>
 
-      <View style={styles.stepHeader}>
-        <Text style={styles.stepEmoji}></Text>
-        <Text style={styles.stepTitle}>{t("intro.targetGoal.dateLabel")}</Text>
-      </View>
-
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        {Platform.OS === "ios" ? (
-          // iOS: Show inline date picker that's always visible
-          <View style={styles.iosDatePickerContainer}>
-            <Text style={styles.dateSelectionTitle}>
-              {t("intro.targetGoal.selectDate")}
-            </Text>
-            <DateTimePicker
-              value={goalDate}
-              mode="date"
-              display="compact"
-              minimumDate={new Date()}
-              maximumDate={
-                new Date(new Date().setFullYear(new Date().getFullYear() + 5))
-              }
-              onChange={(event, date) => {
-                if (date && event.type !== "dismissed") {
-                  setGoalDate(date);
-                  // Clear error if date is valid
-                  if (
-                    error &&
-                    date >= new Date(new Date().setHours(0, 0, 0, 0))
-                  ) {
-                    setError(null);
-                  }
-                }
-              }}
-              style={styles.iosDatePicker}
-            />
-            <Text style={styles.selectedDateText}>
-              {t("intro.targetGoal.selectedDate")}:{" "}
-              {goalDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>{t("intro.summary.username")}</Text>
+            <Text style={styles.summaryValue}>{trimmedUsername}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>{t("intro.summary.yearlyGoal")}</Text>
+            <Text style={styles.summaryValue}>
+              {yearlyGoalNum} {t("intro.goal.label")}
             </Text>
           </View>
-        ) : (
-          // Android: Show button that opens modal date picker
-          <View style={styles.androidDatePickerContainer}>
-            <Text style={styles.dateSelectionTitle}>
-              {t("intro.targetGoal.selectDate")}
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>{t("intro.summary.dailyGoal")}</Text>
+            <Text style={styles.summaryValue}>
+              {dailyGoalNum} {t("intro.currentReading.label")}
             </Text>
-            <TouchableOpacity
-              style={[
-                styles.datePickerButton,
-                !goalDate && styles.datePickerButtonUnselected,
-              ]}
-              onPress={() => setShowDatePicker(true)}
-              disabled={loading}
-            >
-              <Text
-                style={[
-                  styles.datePickerButtonText,
-                  !goalDate && styles.datePickerButtonTextUnselected,
-                ]}
-              >
-                📅{" "}
-                {goalDate
-                  ? goalDate.toLocaleDateString("en-US", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
-                  : t("intro.targetGoal.tapToSelectDate")}
-              </Text>
-            </TouchableOpacity>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={goalDate || new Date()}
-                mode="date"
-                display="default"
-                minimumDate={new Date()}
-                maximumDate={
-                  new Date(new Date().setFullYear(new Date().getFullYear() + 5))
-                }
-                onChange={(event, date) => {
-                  // Always hide picker on Android
-                  setShowDatePicker(false);
-
-                  // Only update date if user didn't cancel
-                  if (date && event.type !== "dismissed") {
-                    setGoalDate(date);
-                    // Clear error if date is valid
-                    if (
-                      error &&
-                      date >= new Date(new Date().setHours(0, 0, 0, 0))
-                    ) {
-                      setError(null);
-                    }
-                  }
-                }}
-              />
-            )}
           </View>
-        )}
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>{t("intro.summary.autoIncrease")}</Text>
+            <Text style={styles.summaryValue}>
+              {autoIncreaseEnabled
+                ? t("intro.summary.autoIncreaseOn")
+                : t("intro.summary.autoIncreaseOff")}
+            </Text>
+          </View>
 
-        <Text style={styles.weeklyIncreaseText}>
-          {t("intro.targetGoal.currentWeeklyIncrease", {
-            percentage: calculateNeededWeeklyPercentageIncrease(),
-            classification: classifyPercentageIncrease(
-              Number(calculateNeededWeeklyPercentageIncrease()),
-            ),
-          })}
-        </Text>
-      </View>
-
-      <Text style={styles.goalHint}>🎯 {t("intro.targetGoal.hint")}</Text>
-    </View>
-  );
-
-  const renderButtons = () => (
-    <View style={styles.buttonContainer}>
-      {currentStep > 1 && (
-        <TouchableOpacity
-          style={[styles.backButton]}
-          onPress={handleBack}
-          disabled={loading}
-        >
-          <Text style={styles.backButtonText}>{t("intro.buttons.back")}</Text>
-        </TouchableOpacity>
-      )}
-
-      <TouchableOpacity
-        style={[
-          styles.nextButton,
-          currentStep === 1 &&
-            (!username.trim() ||
-              username.trim().length < 2 ||
-              username.trim().length > 50) &&
-            styles.nextButtonDisabled,
-          currentStep === 2 &&
-            (!yearlyGoal.trim() ||
-              isNaN(Number(yearlyGoal)) ||
-              Number(yearlyGoal) <= 0 ||
-              Number(yearlyGoal) > 1000 ||
-              !Number.isInteger(Number(yearlyGoal))) &&
-            styles.nextButtonDisabled,
-          currentStep === 4 &&
-            (!dailyReadingGoal.trim() ||
-              isNaN(Number(dailyReadingGoal)) ||
-              Number(dailyReadingGoal) <= 0 ||
-              Number(dailyReadingGoal) > 480) &&
-            styles.nextButtonDisabled,
-          currentStep === 5 &&
-            (!targetDailyGoal.trim() ||
-              isNaN(Number(targetDailyGoal)) ||
-              Number(targetDailyGoal) <= 0 ||
-              Number(targetDailyGoal) > 480 ||
-              Number(targetDailyGoal) < Number(dailyReadingGoal) ||
-              new Date(goalDate) < new Date(new Date().setHours(0, 0, 0, 0))) &&
-            styles.nextButtonDisabled,
-          loading && styles.nextButtonDisabled,
-        ]}
-        onPress={currentStep === 5 ? handleGetStarted : handleNext}
-        disabled={
-          loading ||
-          (currentStep === 1 &&
-            (!username.trim() ||
-              username.trim().length < 2 ||
-              username.trim().length > 50)) ||
-          (currentStep === 2 &&
-            (!yearlyGoal.trim() ||
-              isNaN(Number(yearlyGoal)) ||
-              Number(yearlyGoal) <= 0 ||
-              Number(yearlyGoal) > 1000 ||
-              !Number.isInteger(Number(yearlyGoal)))) ||
-          (currentStep === 4 &&
-            (!dailyReadingGoal.trim() ||
-              isNaN(Number(dailyReadingGoal)) ||
-              Number(dailyReadingGoal) <= 0 ||
-              Number(dailyReadingGoal) > 480)) ||
-          (currentStep === 5 &&
-            (!targetDailyGoal.trim() ||
-              isNaN(Number(targetDailyGoal)) ||
-              Number(targetDailyGoal) <= 0 ||
-              Number(targetDailyGoal) > 480 ||
-              Number(targetDailyGoal) < Number(dailyReadingGoal) ||
-              new Date(goalDate) < new Date(new Date().setHours(0, 0, 0, 0))))
-        }
-      >
-        <Text style={styles.nextButtonText}>
-          {loading
-            ? t("intro.buttons.settingUp")
-            : currentStep === 5
-              ? t("intro.buttons.getStarted")
-              : t("intro.buttons.continue")}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-  const calculateNeededWeeklyPercentageIncrease = () => {
-    const initial = Number(dailyReadingGoal);
-    const target = Number(targetDailyGoal);
-    if (isNaN(initial) || isNaN(target) || initial <= 0 || target <= 0)
-      return "0.00";
-
-    // If target is same as initial, no increase needed
-    if (target === initial) return "0.00";
-
-    // Calculate weeks until goal date
-    const timeDifferenceMs = goalDate.getTime() - new Date().getTime();
-    const weeks = Math.max(
-      1,
-      Math.ceil(timeDifferenceMs / (1000 * 60 * 60 * 24 * 7)),
+          {autoIncreaseEnabled && (
+            <>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>{t("intro.summary.targetGoal")}</Text>
+                <Text style={styles.summaryValue}>
+                  {summaryTarget} {t("intro.currentReading.label")}
+                </Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>{t("intro.summary.targetDate")}</Text>
+                <Text style={styles.summaryValue}>{t("intro.summary.yearEnd")}</Text>
+              </View>
+            </>
+          )}
+        </View>
+      </>
     );
-
-    // If target is less than initial, return 0 (no increase needed)
-    if (target < initial) return "0.00";
-
-    // percentage^weeks = target/initial
-    // weeks * log(percentage) = log(target/initial)
-    // log(percentage) = log(target/initial) / weeks
-    // percentage = 10^(log(target/initial) / weeks)
-    // percentage increase = (percentage - 1) * 100
-    const percentage = Math.pow(10, Math.log10(target / initial) / weeks);
-    const weeklyIncrease = (percentage - 1) * 100;
-    let unformatted = Math.max(0, weeklyIncrease);
-    return unformatted.toFixed(2);
   };
 
-  const classifyPercentageIncrease = (percentage: number) => {
-    // Classify the percentage increase into categories
-    if (percentage <= 5) return t("intro.percentageClassification.minimal");
-    if (percentage <= 15) return t("intro.percentageClassification.easy");
-    if (percentage <= 40) return t("intro.percentageClassification.moderate");
-    if (percentage <= 80)
-      return t("intro.percentageClassification.challenging");
-    if (percentage <= 150)
-      return t("intro.percentageClassification.veryDifficult");
-    return t("intro.percentageClassification.nearlyImpossible");
+  const renderButtons = () => {
+    const isDisabled =
+      loading ||
+      (currentStep === 1 && !isStep1Valid) ||
+      (currentStep === 2 && !isStep2Valid) ||
+      (currentStep === 3 && !isStep3Valid);
+
+    return (
+      <View style={styles.buttonContainer}>
+        {currentStep > 1 && (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            disabled={loading}
+          >
+            <Text style={styles.backButtonText}>{t("intro.buttons.back")}</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={[styles.nextButton, isDisabled && styles.nextButtonDisabled]}
+          onPress={currentStep === 4 ? handleGetStarted : handleNext}
+          disabled={isDisabled}
+        >
+          <Text style={styles.nextButtonText}>
+            {loading
+              ? t("intro.buttons.settingUp")
+              : currentStep === 4
+                ? t("intro.buttons.getStarted")
+                : t("intro.buttons.continue")}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
-    <>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.headerContainer}>
-            <Image
-              source={require("../assets/images/Logo.png")}
-              style={styles.welcomeLogo}
-              resizeMode="contain"
-            />
-            <Text style={styles.welcomeTitle}>
-              {t("intro.appWelcome.title")}
-            </Text>
-            <Text style={styles.welcomeSubtitle}>
-              {t("intro.appWelcome.subtitle")}
-            </Text>
-          </View>
+        <View style={styles.headerContainer}>
+          <Image
+            source={require("../assets/images/Logo.png")}
+            style={styles.welcomeLogo}
+            resizeMode="contain"
+          />
+          <Text style={styles.welcomeTitle}>{t("intro.appWelcome.title")}</Text>
+          <Text style={styles.welcomeSubtitle}>{t("intro.appWelcome.subtitle")}</Text>
+        </View>
 
-          {renderProgressBar()}
+        {renderProgressBar()}
 
-          <View style={currentStep === 3 ? styles.cardStep3 : styles.card}>
-            <Animated.View
-              style={[
-                currentStep === 3
-                  ? styles.stepContainerStep3
-                  : styles.stepContainer,
-                {
-                  opacity: fadeAnimation,
-                  transform: [{ translateY: slideAnimation }],
-                },
-              ]}
-            >
-              {currentStep === 1 && renderStep1()}
-              {currentStep === 2 && renderStep2()}
-              {currentStep === 3 && renderStep3()}
-              {currentStep === 4 && renderStep4()}
-              {currentStep === 5 && renderStep5()}
-            </Animated.View>
+        <View style={styles.card}>
+          <Animated.View
+            style={[
+              styles.stepContainer,
+              {
+                opacity: fadeAnimation,
+                transform: [{ translateY: slideAnimation }],
+              },
+            ]}
+          >
+            {currentStep === 1 && renderStep1()}
+            {currentStep === 2 && renderStep2()}
+            {currentStep === 3 && renderStep3()}
+            {currentStep === 4 && renderStep4()}
+          </Animated.View>
 
-            {error && <Text style={styles.error}>{error}</Text>}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-            {renderButtons()}
-          </View>
+          {renderButtons()}
+        </View>
 
-          {currentStep === 5 && (
-            <View style={styles.featuresContainer}>
-              <Text style={styles.featuresTitle}>
-                {t("intro.features.title")}
-              </Text>
-              <View style={styles.featuresList}>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureEmoji}>📖</Text>
-                  <Text style={styles.featureText}>
-                    Track your reading progress
-                  </Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureEmoji}>🎯</Text>
-                  <Text style={styles.featureText}>
-                    Achieve your yearly goal
-                  </Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureEmoji}>📊</Text>
-                  <Text style={styles.featureText}>
-                    View detailed statistics
-                  </Text>
-                </View>
+        {currentStep === 4 && (
+          <View style={styles.featuresContainer}>
+            <Text style={styles.featuresTitle}>{t("intro.features.title")}</Text>
+            <View style={styles.featuresList}>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureEmoji}>📖</Text>
+                <Text style={styles.featureText}>
+                  {t("intro.features.trackProgress")}
+                </Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureEmoji}>🎯</Text>
+                <Text style={styles.featureText}>
+                  {t("intro.features.achieveGoal")}
+                </Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureEmoji}>📊</Text>
+                <Text style={styles.featureText}>
+                  {t("intro.features.viewStatistics")}
+                </Text>
               </View>
             </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </>
+          </View>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -908,10 +627,6 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     marginBottom: 20,
-  },
-  welcomeEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
   },
   welcomeTitle: {
     fontSize: 32,
@@ -966,7 +681,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: COLORS.white,
-    padding: 15,
+    padding: 20,
     borderRadius: 24,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 8 },
@@ -974,7 +689,7 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 8,
     marginBottom: 24,
-    minHeight: 300,
+    minHeight: 320,
   },
   stepContainer: {
     flex: 1,
@@ -983,7 +698,7 @@ const styles = StyleSheet.create({
   },
   stepHeader: {
     alignItems: "center",
-    marginBottom: 5,
+    marginBottom: 12,
   },
   stepEmoji: {
     fontSize: 48,
@@ -1024,10 +739,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 2,
+    marginBottom: 4,
   },
   goalInput: {
-    width: "auto",
+    width: 120,
     height: 56,
     borderColor: COLORS.neutral[200],
     borderWidth: 2,
@@ -1050,108 +765,68 @@ const styles = StyleSheet.create({
     color: COLORS.neutral[500],
     textAlign: "center",
     fontStyle: "italic",
-    marginTop: 2,
+    marginTop: 4,
     paddingHorizontal: 10,
   },
-  step3Container: {
-    flex: 1,
+  autoIncreaseCard: {
+    marginTop: 20,
     width: "100%",
-    maxHeight: "100%", // Ensure it doesn't overflow the card
-  },
-  step3Header: {
-    alignItems: "center",
-    marginBottom: 15,
-    paddingBottom: 10,
-  },
-  step3Emoji: {
-    fontSize: 40,
-    marginBottom: 10,
-  },
-  step3Title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#1E293B",
-    textAlign: "center",
-    marginBottom: 6,
-  },
-  step3Subtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 20,
-    paddingHorizontal: 20,
-  },
-  step5Container: {
-    width: "100%",
-    alignItems: "center",
-    paddingVertical: 5,
-  },
-  dateSection: {
-    width: "100%",
-    alignItems: "center",
-    marginVertical: 8,
-  },
-  dateSectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1E293B",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  step5Header: {
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  step5Emoji: {
-    fontSize: 36,
-    marginBottom: 8,
-  },
-  step5Title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1E293B",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  step5Subtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 20,
-    paddingHorizontal: 15,
-    marginBottom: 5,
-  },
-  genresContainer: {
-    maxHeight: 200,
-    width: "100%",
-  },
-  genresGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: COLORS.surface.page,
+    borderWidth: 1,
+    borderColor: COLORS.neutral[200],
+    borderRadius: 14,
+    padding: 14,
     gap: 12,
   },
-  genreChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: COLORS.neutral[100],
-    borderWidth: 1.5,
+  autoIncreaseTextContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  autoIncreaseTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.neutral[800],
+  },
+  autoIncreaseDescription: {
+    fontSize: 13,
+    color: COLORS.neutral[500],
+    lineHeight: 18,
+  },
+  autoIncreasePreview: {
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: "600",
+  },
+  summaryCard: {
+    width: "100%",
+    borderRadius: 14,
+    borderWidth: 1,
     borderColor: COLORS.neutral[200],
-    margin: 4,
+    backgroundColor: COLORS.surface.page,
+    padding: 14,
+    gap: 10,
   },
-  genreChipSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
   },
-  genreChipText: {
+  summaryLabel: {
     fontSize: 14,
     color: COLORS.neutral[500],
-    fontWeight: "500",
-  },
-  genreChipTextSelected: {
-    color: COLORS.white,
     fontWeight: "600",
+    flex: 1,
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: COLORS.neutral[800],
+    fontWeight: "700",
+    flex: 1,
+    textAlign: "right",
   },
   error: {
     color: COLORS.danger,
@@ -1164,7 +839,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 14,
     gap: 16,
   },
   backButton: {
@@ -1236,76 +911,6 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 14,
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-  },
-  datePickerButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    alignItems: "center",
-    marginBottom: 16,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-    minHeight: 60,
-    justifyContent: "center",
-  },
-  datePickerButtonText: {
-    fontSize: 16,
-    color: COLORS.neutral[800],
-    fontWeight: "600",
-    textAlign: "center",
-    lineHeight: 24,
-  },
-  iosDatePickerContainer: {
-    width: "100%",
-    alignItems: "center",
-    marginVertical: 20,
-  },
-  androidDatePickerContainer: {
-    width: "100%",
-    alignItems: "center",
-    marginVertical: 20,
-  },
-  dateSelectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.neutral[800],
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  iosDatePicker: {
-    width: "100%",
-    marginVertical: 10,
-  },
-  selectedDateText: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
-    textAlign: "center",
-    marginTop: 10,
-    fontWeight: "500",
-  },
-  datePickerButtonUnselected: {
-    backgroundColor: COLORS.neutral[50],
-    borderColor: COLORS.neutral[300],
-    borderStyle: "dashed",
-    shadowOpacity: 0.05,
-  },
-  datePickerButtonTextUnselected: {
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-    fontStyle: "italic",
-  },
-  weeklyIncreaseText: {
-    textAlign: "center",
-    marginTop: 10,
-    fontSize: 16,
     color: COLORS.neutral[500],
     fontWeight: "500",
   },

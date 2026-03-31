@@ -1,5 +1,5 @@
-import { execute, queryAll, resetInitializationFlag } from '../db/db';
-import NotificationService from '../services/notificationService';
+import { execute, queryAll, resetInitializationFlag } from "../db/db";
+import NotificationService from "../services/notificationService";
 
 /**
  * Migration utility to upgrade from basic books schema to enhanced books schema
@@ -8,7 +8,7 @@ import NotificationService from '../services/notificationService';
  */
 export const runMigration = async () => {
   try {
-    console.log('🔄 Starting database migration...');
+    console.log("🔄 Starting database migration...");
 
     // Step 1: Create the new enhanced_books table
     await execute(`
@@ -39,37 +39,48 @@ export const runMigration = async () => {
 
     // Step 2: Check if old books table exists and migrate data
     try {
-      const oldBooks = await queryAll<{id: number, name: string, author: string, page: number}>('SELECT * FROM books');
-      
+      const oldBooks = await queryAll<{
+        id: number;
+        name: string;
+        author: string;
+        page: number;
+      }>("SELECT * FROM books");
+
       if (oldBooks.length > 0) {
         console.log(`📚 Found ${oldBooks.length} books to migrate`);
-        
+
         for (const book of oldBooks) {
           // Check if book already exists in enhanced_books
-          const existing = await queryAll('SELECT id FROM enhanced_books WHERE name = ? AND author = ?', [book.name, book.author]);
-          
+          const existing = await queryAll(
+            "SELECT id FROM enhanced_books WHERE name = ? AND author = ?",
+            [book.name, book.author],
+          );
+
           if (existing.length === 0) {
-            await execute(`
+            await execute(
+              `
               INSERT INTO enhanced_books (
                 name, author, page, reading_status, date_added, current_page, date_finished
               ) VALUES (?, ?, ?, 'read', datetime('now'), ?, datetime('now'))
-            `, [book.name, book.author, book.page, book.page]);
-            
+            `,
+              [book.name, book.author, book.page, book.page],
+            );
+
             console.log(`✅ Migrated: ${book.name} by ${book.author}`);
           }
         }
-        
+
         // Step 3: Optionally backup and drop old table
         // Note: Uncomment the lines below if you want to remove the old table after migration
         // await execute('CREATE TABLE books_backup AS SELECT * FROM books');
         // await execute('DROP TABLE books');
-        
-        console.log('🎉 Migration completed successfully!');
+
+        console.log("🎉 Migration completed successfully!");
       } else {
-        console.log('📚 No books found in old table, migration not needed');
+        console.log("📚 No books found in old table, migration not needed");
       }
     } catch (error) {
-      console.log('📚 Old books table not found, starting fresh');
+      console.log("📚 Old books table not found, starting fresh");
     }
 
     // Step 4: Create user_preferences table if it doesn't exist
@@ -80,25 +91,27 @@ export const runMigration = async () => {
         yearly_book_goal INTEGER DEFAULT 12,
         preferred_genres TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        auto_increase_enabled INTEGER DEFAULT 1
       )
     `);
 
     // Insert default user preferences if none exist
-    const existingUser = await queryAll('SELECT id FROM user_preferences WHERE id = 1');
+    const existingUser = await queryAll(
+      "SELECT id FROM user_preferences WHERE id = 1",
+    );
     if (existingUser.length === 0) {
       await execute(`
         INSERT INTO user_preferences (id, username, yearly_book_goal)
         VALUES (1, 'Reader', 12)
       `);
-      console.log('👤 Created default user preferences');
+      console.log("👤 Created default user preferences");
     }
 
-    console.log('✨ Database setup completed!');
+    console.log("✨ Database setup completed!");
     return true;
-
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    console.error("❌ Migration failed:", error);
     throw error;
   }
 };
@@ -108,27 +121,27 @@ export const runMigration = async () => {
  * WARNING: This will delete all data!
  */
 export const resetDatabase = async () => {
-  console.log('⚠️  RESETTING DATABASE - ALL DATA WILL BE LOST!');
-  
+  console.log("⚠️  RESETTING DATABASE - ALL DATA WILL BE LOST!");
+
   try {
-    await execute('DROP TABLE IF EXISTS enhanced_books');
-    await execute('DROP TABLE IF EXISTS books');
-    await execute('DROP TABLE IF EXISTS user_preferences');
-    await execute('DROP TABLE IF EXISTS reading_sessions');
-    await execute('DROP TABLE IF EXISTS weekly_progress');
-    await execute('DROP TABLE IF EXISTS notification_preferences');
-    await execute('DROP TABLE IF EXISTS app_usage_tracking');
-    await execute('DROP TABLE IF EXISTS database_version');
-    
-    console.log('🗑️  All tables dropped');
-    
+    await execute("DROP TABLE IF EXISTS enhanced_books");
+    await execute("DROP TABLE IF EXISTS books");
+    await execute("DROP TABLE IF EXISTS user_preferences");
+    await execute("DROP TABLE IF EXISTS reading_sessions");
+    await execute("DROP TABLE IF EXISTS weekly_progress");
+    await execute("DROP TABLE IF EXISTS notification_preferences");
+    await execute("DROP TABLE IF EXISTS app_usage_tracking");
+    await execute("DROP TABLE IF EXISTS database_version");
+
+    console.log("🗑️  All tables dropped");
+
     // Recreate tables
     await runMigration();
-    
-    console.log('🎉 Database reset completed!');
+
+    console.log("🎉 Database reset completed!");
     return true;
   } catch (error) {
-    console.error('❌ Reset failed:', error);
+    console.error("❌ Reset failed:", error);
     throw error;
   }
 };
@@ -138,29 +151,29 @@ export const resetDatabase = async () => {
  * WARNING: This will delete all data!
  */
 export const logoutUser = async () => {
-  console.log('👋 Logging out user - ALL DATA WILL BE LOST!');
-  
+  console.log("👋 Logging out user - ALL DATA WILL BE LOST!");
+
   try {
     // Cancel any scheduled notifications before clearing data
     try {
       await NotificationService.cleanup();
-      console.log('📵 Cancelled scheduled notifications');
+      console.log("📵 Cancelled scheduled notifications");
     } catch (notifError) {
-      console.warn('⚠️  Could not cancel notifications:', notifError);
+      console.warn("⚠️  Could not cancel notifications:", notifError);
     }
 
     // Drop all user data tables
-    await execute('DROP TABLE IF EXISTS enhanced_books');
-    await execute('DROP TABLE IF EXISTS books');
-    await execute('DROP TABLE IF EXISTS user_preferences');
-    await execute('DROP TABLE IF EXISTS reading_sessions');
-    await execute('DROP TABLE IF EXISTS weekly_progress');
-    await execute('DROP TABLE IF EXISTS notification_preferences');
-    await execute('DROP TABLE IF EXISTS app_usage_tracking');
-    await execute('DROP TABLE IF EXISTS database_version');
-    
-    console.log('🗑️  All user data cleared');
-    
+    await execute("DROP TABLE IF EXISTS enhanced_books");
+    await execute("DROP TABLE IF EXISTS books");
+    await execute("DROP TABLE IF EXISTS user_preferences");
+    await execute("DROP TABLE IF EXISTS reading_sessions");
+    await execute("DROP TABLE IF EXISTS weekly_progress");
+    await execute("DROP TABLE IF EXISTS notification_preferences");
+    await execute("DROP TABLE IF EXISTS app_usage_tracking");
+    await execute("DROP TABLE IF EXISTS database_version");
+
+    console.log("🗑️  All user data cleared");
+
     // Only recreate empty table structures without default data
     await execute(`
       CREATE TABLE IF NOT EXISTS enhanced_books (
@@ -203,7 +216,8 @@ export const logoutUser = async () => {
         current_reading_rate_minutes_per_day INTEGER,
         current_reading_rate_last_updated TEXT,
         weekly_reading_rate_increase_minutes INTEGER,
-        weekly_reading_rate_increase_minutes_percentage REAL
+        weekly_reading_rate_increase_minutes_percentage REAL,
+        auto_increase_enabled INTEGER DEFAULT 1
       )
     `);
 
@@ -264,11 +278,11 @@ export const logoutUser = async () => {
 
     // Reset database initialization flag so it can be re-initialized
     resetInitializationFlag();
-    
-    console.log('🎉 User logout completed!');
+
+    console.log("🎉 User logout completed!");
     return true;
   } catch (error) {
-    console.error('❌ Logout failed:', error);
+    console.error("❌ Logout failed:", error);
     throw error;
   }
 };
@@ -278,24 +292,26 @@ export const logoutUser = async () => {
  */
 export const getMigrationStatus = async () => {
   try {
-    const enhancedBooks = await queryAll('SELECT COUNT(*) as count FROM enhanced_books');
+    const enhancedBooks = await queryAll(
+      "SELECT COUNT(*) as count FROM enhanced_books",
+    );
     const enhancedCount = enhancedBooks[0]?.count || 0;
-    
+
     let oldCount = 0;
     try {
-      const oldBooks = await queryAll('SELECT COUNT(*) as count FROM books');
+      const oldBooks = await queryAll("SELECT COUNT(*) as count FROM books");
       oldCount = oldBooks[0]?.count || 0;
     } catch (e) {
       // Old table doesn't exist
     }
-    
+
     return {
       enhanced_books_count: enhancedCount,
       old_books_count: oldCount,
       migration_needed: oldCount > 0 && enhancedCount === 0,
     };
   } catch (error) {
-    console.error('Failed to get migration status:', error);
+    console.error("Failed to get migration status:", error);
     return null;
   }
 };

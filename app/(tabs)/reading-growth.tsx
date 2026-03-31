@@ -15,17 +15,22 @@ import { queryAll, queryFirst } from "../../db/db";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import {
+    computeFixedIncrement,
+    computeWeeksRemaining,
+    evaluateWeeklyConsistency,
+} from "../../utils/goalIncrease";
+import {
     updateGrowthGoals,
     validateGrowthGoals,
 } from "../../utils/goalSettings";
 
 type UserGoalPrefs = {
+  auto_increase_enabled?: number;
   created_at?: string;
   current_reading_rate_minutes_per_day?: number;
   end_reading_rate_goal_minutes_per_day?: number;
   end_reading_rate_goal_date?: string;
   initial_reading_rate_minutes_per_day?: number;
-  weekly_reading_rate_increase_minutes?: number;
 };
 
 type ReadingSessionRow = {
@@ -39,10 +44,23 @@ type WeeklyPoint = {
   targetMinutes: number;
   actualMinutes: number;
   applicable: boolean;
+  goalMetDays: number;
+  consistencyEligible: boolean;
+};
+
+type GrowthStatus = {
+  autoIncreaseEnabled: boolean;
+  currentDailyGoal: number;
+  targetDailyGoal: number;
+  fixedIncrementMinutes: number;
+  weeksRemaining: number;
+  requiredGoalMetDays: number;
 };
 
 const MS_PER_WEEK = 1000 * 60 * 60 * 24 * 7;
+const DAYS_IN_WEEK = 7;
 const RANGE_OPTIONS = [4, 12, 24] as const;
+const REQUIRED_GOAL_MET_DAYS = evaluateWeeklyConsistency(0).requiredGoalMetDays;
 
 const toDateKey = (date: Date) => {
   const y = date.getFullYear();
@@ -89,6 +107,7 @@ const getTimelineStartDate = (
 export default function ReadingGrowthScreen() {
   const { t } = useTranslation();
   const [weeklyData, setWeeklyData] = useState<WeeklyPoint[]>([]);
+  const [growthStatus, setGrowthStatus] = useState<GrowthStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [offsetWeeks, setOffsetWeeks] = useState(0);
@@ -141,12 +160,12 @@ export default function ReadingGrowthScreen() {
 
       const userPrefs = await queryFirst<UserGoalPrefs>(
         `SELECT
+          auto_increase_enabled,
           created_at,
           current_reading_rate_minutes_per_day,
           end_reading_rate_goal_minutes_per_day,
           end_reading_rate_goal_date,
-          initial_reading_rate_minutes_per_day,
-          weekly_reading_rate_increase_minutes
+          initial_reading_rate_minutes_per_day
          FROM user_preferences
          WHERE id = 1`,
       );
@@ -181,27 +200,64 @@ export default function ReadingGrowthScreen() {
         [startDateKey, endDateKey],
       );
 
-      const actualByWeek = new Map<string, number>();
+      const minutesByDate = new Map<string, number>();
       for (const row of rows) {
-        const sessionDate = new Date(`${row.date}T00:00:00`);
+        minutesByDate.set(
+          row.date,
+          (minutesByDate.get(row.date) || 0) + row.minutes_read,
+        );
+      }
+
+      const actualByWeek = new Map<string, number>();
+      for (const [date, minutesRead] of minutesByDate) {
+        const sessionDate = new Date(`${date}T00:00:00`);
         const sessionWeek = getWeekStart(sessionDate);
         const weekKey = toDateKey(sessionWeek);
         actualByWeek.set(
           weekKey,
-          (actualByWeek.get(weekKey) || 0) + row.minutes_read,
+          (actualByWeek.get(weekKey) || 0) + minutesRead,
         );
       }
 
-      const currentRate = userPrefs?.current_reading_rate_minutes_per_day || 30;
-      const targetRate =
-        userPrefs?.end_reading_rate_goal_minutes_per_day || currentRate;
-      const initialRate =
-        userPrefs?.initial_reading_rate_minutes_per_day || currentRate;
-      const weeklyIncrease =
-        userPrefs?.weekly_reading_rate_increase_minutes || 0;
+      const autoIncreaseEnabled =
+        userPrefs?.auto_increase_enabled === 1 ||
+        userPrefs?.auto_increase_enabled === true;
 
-      const minRate = Math.min(initialRate, currentRate, targetRate);
-      const maxRate = Math.max(initialRate, currentRate, targetRate);
+      const currentRate = Math.max(
+        1,
+        Math.round(userPrefs?.current_reading_rate_minutes_per_day ?? 30),
+      );
+      const initialRate = Math.max(
+        1,
+        Math.round(
+          userPrefs?.initial_reading_rate_minutes_per_day ?? currentRate,
+        ),
+      );
+      const targetRate = Math.max(
+        currentRate,
+        Math.round(
+          userPrefs?.end_reading_rate_goal_minutes_per_day ?? currentRate,
+        ),
+      );
+      const weeksRemaining = computeWeeksRemaining(
+        userPrefs?.end_reading_rate_goal_date ?? null,
+        new Date(),
+      );
+      const fixedIncrement = autoIncreaseEnabled
+        ? computeFixedIncrement(currentRate, targetRate, weeksRemaining)
+        : 0;
+
+      setGrowthStatus({
+        autoIncreaseEnabled,
+        currentDailyGoal: currentRate,
+        targetDailyGoal: targetRate,
+        fixedIncrementMinutes: fixedIncrement,
+        weeksRemaining,
+        requiredGoalMetDays: REQUIRED_GOAL_MET_DAYS,
+      });
+
+      const minHistoricalRate = Math.min(initialRate, currentRate);
+      const maxReachableRate = Math.max(currentRate, targetRate);
 
       const renderedWeeks: Date[] = [];
       for (
@@ -214,18 +270,37 @@ export default function ReadingGrowthScreen() {
 
       const points = renderedWeeks.map((weekStart) => {
         const weekKey = toDateKey(weekStart);
-        const weeksFromTimelineStart = Math.max(
+        const weeksBehindCurrent = Math.max(
           0,
-          diffWeeks(weekStart, derivedTimelineStart),
+          diffWeeks(currentWeekStart, weekStart),
         );
 
-        let estimatedDailyRate = currentRate;
-        if (weeklyIncrease > 0) {
-          estimatedDailyRate =
-            initialRate + weeksFromTimelineStart * weeklyIncrease;
+        const projectedDailyRate =
+          autoIncreaseEnabled && fixedIncrement > 0
+            ? currentRate - weeksBehindCurrent * fixedIncrement
+            : currentRate;
+
+        const targetDailyRate = autoIncreaseEnabled
+          ? clamp(
+              Math.round(projectedDailyRate),
+              minHistoricalRate,
+              maxReachableRate,
+            )
+          : currentRate;
+
+        let goalMetDays = 0;
+        for (let dayOffset = 0; dayOffset < DAYS_IN_WEEK; dayOffset++) {
+          const weekDay = new Date(weekStart);
+          weekDay.setDate(weekDay.getDate() + dayOffset);
+          const weekDayKey = toDateKey(weekDay);
+          const dayMinutes = minutesByDate.get(weekDayKey) || 0;
+
+          if (dayMinutes >= targetDailyRate) {
+            goalMetDays += 1;
+          }
         }
 
-        const targetDailyRate = clamp(estimatedDailyRate, minRate, maxRate);
+        const consistencyDecision = evaluateWeeklyConsistency(goalMetDays);
 
         return {
           key: weekKey,
@@ -233,6 +308,8 @@ export default function ReadingGrowthScreen() {
           targetMinutes: targetDailyRate * 7,
           actualMinutes: actualByWeek.get(weekKey) || 0,
           applicable: true,
+          goalMetDays,
+          consistencyEligible: consistencyDecision.isEligible,
         } as WeeklyPoint;
       });
 
@@ -259,13 +336,7 @@ export default function ReadingGrowthScreen() {
     } finally {
       setLoading(false);
     }
-  }, [
-    currentWeekStart,
-    t,
-    weekWindow.endWeekStart,
-    weekWindow.startWeekStart,
-    weekWindow.weeks,
-  ]);
+  }, [currentWeekStart, t, weekWindow.endWeekStart, weekWindow.startWeekStart]);
 
   useEffect(() => {
     loadGrowthData();
@@ -401,6 +472,39 @@ export default function ReadingGrowthScreen() {
       <View style={styles.headerCard}>
         <Text style={styles.title}>{t("growthJourney.title")}</Text>
         <Text style={styles.subtitle}>{t("growthJourney.subtitle")}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>
+          {t("growthJourney.status.title")}
+        </Text>
+
+        {growthStatus ? (
+          <>
+            <Text style={styles.statusText}>
+              {growthStatus.autoIncreaseEnabled
+                ? growthStatus.fixedIncrementMinutes > 0
+                  ? t("growthJourney.status.enabled", {
+                      increment: growthStatus.fixedIncrementMinutes,
+                      requiredDays: growthStatus.requiredGoalMetDays,
+                    })
+                  : t("growthJourney.status.enabledNoIncrement")
+                : t("growthJourney.status.disabled", {
+                    currentGoal: growthStatus.currentDailyGoal,
+                  })}
+            </Text>
+
+            <Text style={styles.statusMetaText}>
+              {t("growthJourney.status.details", {
+                currentGoal: growthStatus.currentDailyGoal,
+                targetGoal: growthStatus.targetDailyGoal,
+                weeksRemaining: growthStatus.weeksRemaining,
+              })}
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.statusText}>{t("growthJourney.loading")}</Text>
+        )}
       </View>
 
       <View style={styles.card}>
@@ -627,6 +731,28 @@ export default function ReadingGrowthScreen() {
               {Math.round(selectedWeek.actualMinutes)}{" "}
               {t("profile.units.minutes")}
             </Text>
+            <Text style={styles.selectedWeekLine}>
+              {t("growthJourney.summary.goalMetDays", {
+                goalMetDays: selectedWeek.goalMetDays,
+                days:
+                  growthStatus?.requiredGoalMetDays ?? REQUIRED_GOAL_MET_DAYS,
+              })}
+            </Text>
+            <Text style={styles.selectedWeekLine}>
+              {selectedWeek.consistencyEligible
+                ? t("growthJourney.summary.consistencyEligible", {
+                    goalMetDays: selectedWeek.goalMetDays,
+                    days:
+                      growthStatus?.requiredGoalMetDays ??
+                      REQUIRED_GOAL_MET_DAYS,
+                  })
+                : t("growthJourney.summary.consistencyNotMet", {
+                    goalMetDays: selectedWeek.goalMetDays,
+                    days:
+                      growthStatus?.requiredGoalMetDays ??
+                      REQUIRED_GOAL_MET_DAYS,
+                  })}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -707,6 +833,16 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 4,
     fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  statusText: {
+    fontSize: 13,
+    color: COLORS.text.primary,
+    lineHeight: 20,
+  },
+  statusMetaText: {
+    marginTop: 8,
+    fontSize: 12,
     color: COLORS.text.secondary,
   },
   card: {

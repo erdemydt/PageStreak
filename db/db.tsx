@@ -1,7 +1,11 @@
-import { openDatabaseSync, SQLiteDatabase, SQLiteExecuteAsyncResult } from 'expo-sqlite';
+import {
+    openDatabaseSync,
+    SQLiteDatabase,
+    SQLiteExecuteAsyncResult,
+} from "expo-sqlite";
 
 // Open or create a local SQLite database
-const db: SQLiteDatabase = openDatabaseSync('pagestreak.db');
+const db: SQLiteDatabase = openDatabaseSync("pagestreak.db");
 
 export type DB = SQLiteDatabase;
 export type DBResult<T = any> = SQLiteExecuteAsyncResult<T>;
@@ -10,7 +14,7 @@ export type DBResult<T = any> = SQLiteExecuteAsyncResult<T>;
 let isInitialized = false;
 
 // Current database schema version
-const CURRENT_DB_VERSION = 3;
+const CURRENT_DB_VERSION = 4;
 
 // Type for column definitions
 type ColumnDefinition = {
@@ -41,7 +45,7 @@ export type EnhancedBook = {
   date_started?: string;
   date_finished?: string;
   current_page?: number;
-  reading_status?: 'want_to_read' | 'currently_reading' | 'read';
+  reading_status?: "want_to_read" | "currently_reading" | "read";
   notes?: string;
 };
 
@@ -91,7 +95,10 @@ export type AppUsageTracking = {
  * @param sql SQL query string
  * @param params Query parameters (array or object)
  */
-export async function queryAll<T = any>(sql: string, params?: any): Promise<T[]> {
+export async function queryAll<T = any>(
+  sql: string,
+  params?: any,
+): Promise<T[]> {
   return db.getAllAsync<T>(sql, params ?? []);
 }
 
@@ -100,7 +107,10 @@ export async function queryAll<T = any>(sql: string, params?: any): Promise<T[]>
  * @param sql SQL query string
  * @param params Query parameters (array or object)
  */
-export async function queryFirst<T = any>(sql: string, params?: any): Promise<T | null> {
+export async function queryFirst<T = any>(
+  sql: string,
+  params?: any,
+): Promise<T | null> {
   return db.getFirstAsync<T>(sql, params ?? []);
 }
 
@@ -109,8 +119,11 @@ export async function queryFirst<T = any>(sql: string, params?: any): Promise<T 
  * @param sql SQL statement
  * @param params Query parameters (array or object)
  */
-import type { SQLiteRunResult } from 'expo-sqlite';
-export async function execute(sql: string, params?: any): Promise<SQLiteRunResult> {
+import type { SQLiteRunResult } from "expo-sqlite";
+export async function execute(
+  sql: string,
+  params?: any,
+): Promise<SQLiteRunResult> {
   return db.runAsync(sql, params ?? []);
 }
 
@@ -120,19 +133,19 @@ export async function execute(sql: string, params?: any): Promise<SQLiteRunResul
  */
 export async function initializeDatabase(): Promise<void> {
   if (isInitialized) {
-    console.log('📦 Database already initialized, skipping...');
+    console.log("📦 Database already initialized, skipping...");
     return;
   }
 
   try {
-    console.log('🔄 Initializing database tables...');
+    console.log("🔄 Initializing database tables...");
 
     // 0. Create database version tracking table and check version
     await createOrUpdateDatabaseVersionTable();
     const needsUpdate = await checkDatabaseVersion();
 
     if (!needsUpdate && isInitialized) {
-      console.log('📦 Database is up to date, skipping initialization...');
+      console.log("📦 Database is up to date, skipping initialization...");
       return;
     }
 
@@ -161,10 +174,9 @@ export async function initializeDatabase(): Promise<void> {
     await updateDatabaseVersion();
 
     isInitialized = true;
-    console.log('✅ Database initialization completed successfully');
-
+    console.log("✅ Database initialization completed successfully");
   } catch (error) {
-    console.error('❌ Database initialization failed:', error);
+    console.error("❌ Database initialization failed:", error);
     throw error;
   }
 }
@@ -187,23 +199,26 @@ async function createOrUpdateDatabaseVersionTable(): Promise<void> {
  */
 async function checkDatabaseVersion(): Promise<boolean> {
   try {
-    const versionRecord = await queryFirst<{version: number}>('SELECT version FROM database_version WHERE id = 1');
-    
+    const versionRecord = await queryFirst<{ version: number }>(
+      "SELECT version FROM database_version WHERE id = 1",
+    );
+
     if (!versionRecord) {
-      console.log('📝 No version record found, treating as new installation');
+      console.log("📝 No version record found, treating as new installation");
       return true; // New installation, needs setup
     }
-    
+
     if (versionRecord.version < CURRENT_DB_VERSION) {
-      console.log(`🔄 Database version ${versionRecord.version} < ${CURRENT_DB_VERSION}, updating...`);
+      console.log(
+        `🔄 Database version ${versionRecord.version} < ${CURRENT_DB_VERSION}, updating...`,
+      );
       return true; // Needs update
     }
-    
+
     console.log(`✅ Database version ${versionRecord.version} is up to date`);
     return false; // No update needed
-    
   } catch (error) {
-    console.log('📝 Error checking version, treating as new installation');
+    console.log("📝 Error checking version, treating as new installation");
     return true; // Treat as new installation if we can't check version
   }
 }
@@ -212,18 +227,24 @@ async function checkDatabaseVersion(): Promise<boolean> {
  * Update database version after successful initialization
  */
 async function updateDatabaseVersion(): Promise<void> {
-  await execute(`
+  await execute(
+    `
     INSERT OR REPLACE INTO database_version (id, version, updated_at)
     VALUES (1, ?, CURRENT_TIMESTAMP)
-  `, [CURRENT_DB_VERSION]);
-  
+  `,
+    [CURRENT_DB_VERSION],
+  );
+
   console.log(`📝 Updated database version to ${CURRENT_DB_VERSION}`);
 }
 
 /**
  * Helper function to check if a column exists in a table
  */
-async function columnExists(tableName: string, columnName: string): Promise<boolean> {
+async function columnExists(
+  tableName: string,
+  columnName: string,
+): Promise<boolean> {
   try {
     const result = await queryAll(`PRAGMA table_info(${tableName})`);
     return result.some((column: any) => column.name === columnName);
@@ -240,7 +261,7 @@ async function tableExists(tableName: string): Promise<boolean> {
   try {
     const result = await queryFirst(
       `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
-      [tableName]
+      [tableName],
     );
     return !!result;
   } catch (error) {
@@ -264,30 +285,32 @@ async function createOrUpdateEnhancedBooksTable(): Promise<void> {
 
   // Define all required columns with their types and defaults
   const requiredColumns: ColumnDefinition[] = [
-    { name: 'isbn', type: 'TEXT' },
-    { name: 'cover_id', type: 'INTEGER' },
-    { name: 'cover_url', type: 'TEXT' },
-    { name: 'first_publish_year', type: 'INTEGER' },
-    { name: 'publisher', type: 'TEXT' },
-    { name: 'language', type: 'TEXT', default: "'eng'" },
-    { name: 'description', type: 'TEXT' },
-    { name: 'subjects', type: 'TEXT' },
-    { name: 'open_library_key', type: 'TEXT' },
-    { name: 'author_key', type: 'TEXT' },
-    { name: 'rating', type: 'REAL' },
-    { name: 'date_added', type: 'DATETIME', default: 'CURRENT_TIMESTAMP' },
-    { name: 'date_started', type: 'DATETIME' },
-    { name: 'date_finished', type: 'DATETIME' },
-    { name: 'current_page', type: 'INTEGER', default: '0' },
-    { name: 'reading_status', type: 'TEXT', default: "'want_to_read'" },
-    { name: 'notes', type: 'TEXT' }
+    { name: "isbn", type: "TEXT" },
+    { name: "cover_id", type: "INTEGER" },
+    { name: "cover_url", type: "TEXT" },
+    { name: "first_publish_year", type: "INTEGER" },
+    { name: "publisher", type: "TEXT" },
+    { name: "language", type: "TEXT", default: "'eng'" },
+    { name: "description", type: "TEXT" },
+    { name: "subjects", type: "TEXT" },
+    { name: "open_library_key", type: "TEXT" },
+    { name: "author_key", type: "TEXT" },
+    { name: "rating", type: "REAL" },
+    { name: "date_added", type: "DATETIME", default: "CURRENT_TIMESTAMP" },
+    { name: "date_started", type: "DATETIME" },
+    { name: "date_finished", type: "DATETIME" },
+    { name: "current_page", type: "INTEGER", default: "0" },
+    { name: "reading_status", type: "TEXT", default: "'want_to_read'" },
+    { name: "notes", type: "TEXT" },
   ];
 
   // Add missing columns
   for (const column of requiredColumns) {
-    if (!(await columnExists('enhanced_books', column.name))) {
-      const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
-      await execute(`ALTER TABLE enhanced_books ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
+    if (!(await columnExists("enhanced_books", column.name))) {
+      const defaultClause = column.default ? ` DEFAULT ${column.default}` : "";
+      await execute(
+        `ALTER TABLE enhanced_books ADD COLUMN ${column.name} ${column.type}${defaultClause}`,
+      );
       console.log(`✅ Added column: enhanced_books.${column.name}`);
     }
   }
@@ -308,24 +331,27 @@ async function createOrUpdateUserPreferencesTable(): Promise<void> {
 
   // Define all required columns
   const requiredColumns: ColumnDefinition[] = [
-    { name: 'preferred_genres', type: 'TEXT' },
-    { name: 'created_at', type: 'TEXT', default: 'CURRENT_TIMESTAMP' },
-    { name: 'updated_at', type: 'TEXT', default: 'CURRENT_TIMESTAMP' },
-    { name: 'weekly_reading_goal', type: 'INTEGER' },
-    { name: 'initial_reading_rate_minutes_per_day', type: 'INTEGER' },
-    { name: 'end_reading_rate_goal_minutes_per_day', type: 'INTEGER' },
-    { name: 'end_reading_rate_goal_date', type: 'TEXT' },
-    { name: 'current_reading_rate_minutes_per_day', type: 'INTEGER' },
-    { name: 'current_reading_rate_last_updated', type: 'TEXT' },
-    { name: 'weekly_reading_rate_increase_minutes', type: 'INTEGER' },
-    { name: 'weekly_reading_rate_increase_minutes_percentage', type: 'REAL' }
+    { name: "preferred_genres", type: "TEXT" },
+    { name: "created_at", type: "TEXT", default: "CURRENT_TIMESTAMP" },
+    { name: "updated_at", type: "TEXT", default: "CURRENT_TIMESTAMP" },
+    { name: "weekly_reading_goal", type: "INTEGER" },
+    { name: "initial_reading_rate_minutes_per_day", type: "INTEGER" },
+    { name: "end_reading_rate_goal_minutes_per_day", type: "INTEGER" },
+    { name: "end_reading_rate_goal_date", type: "TEXT" },
+    { name: "current_reading_rate_minutes_per_day", type: "INTEGER" },
+    { name: "current_reading_rate_last_updated", type: "TEXT" },
+    { name: "weekly_reading_rate_increase_minutes", type: "INTEGER" },
+    { name: "weekly_reading_rate_increase_minutes_percentage", type: "REAL" },
+    { name: "auto_increase_enabled", type: "INTEGER", default: "1" },
   ];
 
   // Add missing columns
   for (const column of requiredColumns) {
-    if (!(await columnExists('user_preferences', column.name))) {
-      const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
-      await execute(`ALTER TABLE user_preferences ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
+    if (!(await columnExists("user_preferences", column.name))) {
+      const defaultClause = column.default ? ` DEFAULT ${column.default}` : "";
+      await execute(
+        `ALTER TABLE user_preferences ADD COLUMN ${column.name} ${column.type}${defaultClause}`,
+      );
       console.log(`✅ Added column: user_preferences.${column.name}`);
     }
   }
@@ -348,20 +374,22 @@ async function createOrUpdateReadingSessionsTable(): Promise<void> {
 
   // Define all required columns
   const requiredColumns: ColumnDefinition[] = [
-    { name: 'notes', type: 'TEXT' },
-    { name: 'pages_read', type: 'INTEGER' } // New optional column for pages read in this session
+    { name: "notes", type: "TEXT" },
+    { name: "pages_read", type: "INTEGER" }, // New optional column for pages read in this session
   ];
 
   // Add missing columns
   for (const column of requiredColumns) {
-    if (!(await columnExists('reading_sessions', column.name))) {
-      const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
-      await execute(`ALTER TABLE reading_sessions ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
+    if (!(await columnExists("reading_sessions", column.name))) {
+      const defaultClause = column.default ? ` DEFAULT ${column.default}` : "";
+      await execute(
+        `ALTER TABLE reading_sessions ADD COLUMN ${column.name} ${column.type}${defaultClause}`,
+      );
       console.log(`✅ Added column: reading_sessions.${column.name}`);
     }
   }
 
-  // Note: Foreign key constraint for reading_sessions.book_id -> enhanced_books.id 
+  // Note: Foreign key constraint for reading_sessions.book_id -> enhanced_books.id
   // is enforced at the application level (SQLite limitations with existing tables)
 }
 
@@ -381,14 +409,16 @@ async function createOrUpdateWeeklyProgressTable(): Promise<void> {
 
   // Define all required columns
   const requiredColumns: ColumnDefinition[] = [
-    { name: 'date_created', type: 'DATETIME', default: 'CURRENT_TIMESTAMP' }
+    { name: "date_created", type: "DATETIME", default: "CURRENT_TIMESTAMP" },
   ];
 
   // Add missing columns
   for (const column of requiredColumns) {
-    if (!(await columnExists('weekly_progress', column.name))) {
-      const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
-      await execute(`ALTER TABLE weekly_progress ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
+    if (!(await columnExists("weekly_progress", column.name))) {
+      const defaultClause = column.default ? ` DEFAULT ${column.default}` : "";
+      await execute(
+        `ALTER TABLE weekly_progress ADD COLUMN ${column.name} ${column.type}${defaultClause}`,
+      );
       console.log(`✅ Added column: weekly_progress.${column.name}`);
     }
   }
@@ -414,37 +444,56 @@ async function createOrUpdateNotificationPreferencesTable(): Promise<void> {
 
   // Define all required columns with their types and defaults
   const requiredColumns: ColumnDefinition[] = [
-    { name: 'notifications_enabled', type: 'BOOLEAN', default: '1' },
-    { name: 'daily_reminder_enabled', type: 'BOOLEAN', default: '1' },
-    { name: 'daily_reminder_hours_after_last_open', type: 'INTEGER', default: '5' },
-    { name: 'daily_reminder_title', type: 'TEXT', default: "'Time to read! 📚'" },
-    { name: 'daily_reminder_body', type: 'TEXT', default: "'You haven''t reached your daily reading goal yet. Keep your streak going!'" },
-    { name: 'created_at', type: 'DATETIME', default: 'CURRENT_TIMESTAMP' },
-    { name: 'updated_at', type: 'DATETIME', default: 'CURRENT_TIMESTAMP' }
+    { name: "notifications_enabled", type: "BOOLEAN", default: "1" },
+    { name: "daily_reminder_enabled", type: "BOOLEAN", default: "1" },
+    {
+      name: "daily_reminder_hours_after_last_open",
+      type: "INTEGER",
+      default: "5",
+    },
+    {
+      name: "daily_reminder_title",
+      type: "TEXT",
+      default: "'Time to read! 📚'",
+    },
+    {
+      name: "daily_reminder_body",
+      type: "TEXT",
+      default:
+        "'You haven''t reached your daily reading goal yet. Keep your streak going!'",
+    },
+    { name: "created_at", type: "DATETIME", default: "CURRENT_TIMESTAMP" },
+    { name: "updated_at", type: "DATETIME", default: "CURRENT_TIMESTAMP" },
   ];
 
   // Add missing columns
   for (const column of requiredColumns) {
-    if (!(await columnExists('notification_preferences', column.name))) {
-      const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
-      await execute(`ALTER TABLE notification_preferences ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
+    if (!(await columnExists("notification_preferences", column.name))) {
+      const defaultClause = column.default ? ` DEFAULT ${column.default}` : "";
+      await execute(
+        `ALTER TABLE notification_preferences ADD COLUMN ${column.name} ${column.type}${defaultClause}`,
+      );
       console.log(`✅ Added column: notification_preferences.${column.name}`);
     }
   }
 
   // Ensure default preferences exist (will handle first-time permission request)
   try {
-    const existingPrefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
+    const existingPrefs = await queryFirst(
+      "SELECT id FROM notification_preferences WHERE id = 1",
+    );
     if (!existingPrefs) {
       // Don't create defaults here - let NotificationService handle first-time setup
       // This ensures permission request happens at the right time
-      console.log('🔔 No notification preferences found - will be created by NotificationService when needed');
+      console.log(
+        "🔔 No notification preferences found - will be created by NotificationService when needed",
+      );
     }
   } catch (error) {
-    console.error('⚠️  Failed to check notification preferences:', error);
+    console.error("⚠️  Failed to check notification preferences:", error);
   }
 
-  console.log('✅ Created/verified notification_preferences table');
+  console.log("✅ Created/verified notification_preferences table");
 }
 
 /**
@@ -464,17 +513,19 @@ async function createOrUpdateAppUsageTrackingTable(): Promise<void> {
 
   // Define all required columns with their types and defaults
   const requiredColumns: ColumnDefinition[] = [
-    { name: 'last_opened_at', type: 'DATETIME' },
-    { name: 'last_closed_at', type: 'DATETIME' },
-    { name: 'session_count_today', type: 'INTEGER', default: '1' },
-    { name: 'date', type: 'TEXT' }
+    { name: "last_opened_at", type: "DATETIME" },
+    { name: "last_closed_at", type: "DATETIME" },
+    { name: "session_count_today", type: "INTEGER", default: "1" },
+    { name: "date", type: "TEXT" },
   ];
 
   // Add missing columns
   for (const column of requiredColumns) {
-    if (!(await columnExists('app_usage_tracking', column.name))) {
-      const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
-      await execute(`ALTER TABLE app_usage_tracking ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
+    if (!(await columnExists("app_usage_tracking", column.name))) {
+      const defaultClause = column.default ? ` DEFAULT ${column.default}` : "";
+      await execute(
+        `ALTER TABLE app_usage_tracking ADD COLUMN ${column.name} ${column.type}${defaultClause}`,
+      );
       console.log(`✅ Added column: app_usage_tracking.${column.name}`);
     }
   }
@@ -484,7 +535,7 @@ async function createOrUpdateAppUsageTrackingTable(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_app_usage_date ON app_usage_tracking(date)
   `);
 
-  console.log('✅ Created/verified app_usage_tracking table');
+  console.log("✅ Created/verified app_usage_tracking table");
 }
 
 /**
@@ -493,31 +544,44 @@ async function createOrUpdateAppUsageTrackingTable(): Promise<void> {
 async function migrateOldBooksIfNeeded(): Promise<void> {
   try {
     // Check if old books table exists and has data
-    const oldBooks = await queryAll<{id: number, name: string, author: string, page: number}>('SELECT * FROM books');
-    
+    const oldBooks = await queryAll<{
+      id: number;
+      name: string;
+      author: string;
+      page: number;
+    }>("SELECT * FROM books");
+
     if (oldBooks.length > 0) {
-      console.log(`📚 Found ${oldBooks.length} books to migrate from old table`);
-      
+      console.log(
+        `📚 Found ${oldBooks.length} books to migrate from old table`,
+      );
+
       for (const book of oldBooks) {
         // Check if book already exists in enhanced_books
-        const existing = await queryAll('SELECT id FROM enhanced_books WHERE name = ? AND author = ?', [book.name, book.author]);
-        
+        const existing = await queryAll(
+          "SELECT id FROM enhanced_books WHERE name = ? AND author = ?",
+          [book.name, book.author],
+        );
+
         if (existing.length === 0) {
-          await execute(`
+          await execute(
+            `
             INSERT INTO enhanced_books (
               name, author, page, reading_status, date_added, current_page, date_finished
             ) VALUES (?, ?, ?, 'read', datetime('now'), ?, datetime('now'))
-          `, [book.name, book.author, book.page, book.page]);
-          
+          `,
+            [book.name, book.author, book.page, book.page],
+          );
+
           console.log(`✅ Migrated: ${book.name} by ${book.author}`);
         }
       }
-      
-      console.log('🎉 Book migration completed successfully!');
+
+      console.log("🎉 Book migration completed successfully!");
     }
   } catch (error) {
     // Old books table doesn't exist, which is fine for new installations
-    console.log('📚 No old books table found, starting fresh');
+    console.log("📚 No old books table found, starting fresh");
   }
 }
 
@@ -540,30 +604,32 @@ export async function checkNotificationDatabaseIntegrity(): Promise<{
   try {
     // Check if tables exist
     const notifTable = await queryFirst(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='notification_preferences'"
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='notification_preferences'",
     );
     const usageTable = await queryFirst(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='app_usage_tracking'"
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='app_usage_tracking'",
     );
 
     // Check if default preferences exist
     let hasDefaults = false;
     if (notifTable) {
-      const defaultPrefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
+      const defaultPrefs = await queryFirst(
+        "SELECT id FROM notification_preferences WHERE id = 1",
+      );
       hasDefaults = !!defaultPrefs;
     }
 
     return {
       notification_preferences_exists: !!notifTable,
       app_usage_tracking_exists: !!usageTable,
-      notification_preferences_has_defaults: hasDefaults
+      notification_preferences_has_defaults: hasDefaults,
     };
   } catch (error) {
     return {
       notification_preferences_exists: false,
       app_usage_tracking_exists: false,
       notification_preferences_has_defaults: false,
-      error: error?.toString()
+      error: error?.toString(),
     };
   }
 }
@@ -573,16 +639,16 @@ export async function checkNotificationDatabaseIntegrity(): Promise<{
  */
 export async function repairNotificationDatabase(): Promise<boolean> {
   try {
-    console.log('🔧 Repairing notification database...');
-    
+    console.log("🔧 Repairing notification database...");
+
     // Recreate notification tables
     await createOrUpdateNotificationPreferencesTable();
     await createOrUpdateAppUsageTrackingTable();
-    
-    console.log('✅ Notification database repaired');
+
+    console.log("✅ Notification database repaired");
     return true;
   } catch (error) {
-    console.error('❌ Failed to repair notification database:', error);
+    console.error("❌ Failed to repair notification database:", error);
     return false;
   }
 }

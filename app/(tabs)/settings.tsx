@@ -2,34 +2,24 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Alert,
-  Keyboard,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Alert,
+    Keyboard,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import DataExportModal from "../../components/DataExportModal";
 import DataImportModal from "../../components/DataImportModal";
 import LanguageSelector from "../../components/LanguageSelector";
 import NotificationSettings from "../../components/NotificationSettings";
-import NotificationTester from "../../components/NotificationTester";
 import SettingsRow from "../../components/SettingsRow";
 import { queryFirst } from "../../db/db";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import { TYPE } from "../../themes/typography";
-import { isDevModeEnabled } from "../../utils/devMode";
+import type { UserPreferences } from "../../types/database";
 import { logoutUser } from "../../utils/migration";
-
-type UserPreferences = {
-  id: number;
-  username: string;
-  yearly_book_goal: number;
-  preferred_genres?: string;
-  created_at?: string;
-  updated_at?: string;
-};
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -162,14 +152,6 @@ export default function SettingsScreen() {
               </Text>
               <NotificationSettings />
             </View>
-
-            {/* Development Notification Tester - Only show in development */}
-            {isDevModeEnabled() && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>🧪 Development Tools</Text>
-                <NotificationTester />
-              </View>
-            )}
 
             {/* Data Backup & Restore Section */}
             <View style={styles.section}>

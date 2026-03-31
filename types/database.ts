@@ -13,6 +13,7 @@ export type UserPreferences = {
   current_reading_rate_last_updated?: string;
   weekly_reading_rate_increase_minutes?: number;
   weekly_reading_rate_increase_minutes_percentage?: number;
+  auto_increase_enabled?: number;
 };
 
 // Reading Session type for tracking reading progress
@@ -31,7 +32,7 @@ export type BookProgress = {
   pagesRead: number;
   percentage: number;
   isComplete: boolean;
-  source: 'sessions' | 'current_page' | 'none';
+  source: "sessions" | "current_page" | "none";
 };
 
 export type Step = 1 | 2 | 3;

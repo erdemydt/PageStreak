@@ -8,13 +8,11 @@ import Card from "./Card";
 interface DailyProgressCardProps {
   todayMinutes: number;
   goalMinutes: number;
-  streakDays: number;
 }
 
 export default function DailyProgressCard({
   todayMinutes,
   goalMinutes,
-  streakDays,
 }: DailyProgressCardProps) {
   const { t } = useTranslation();
   const percentage =
@@ -30,22 +28,6 @@ export default function DailyProgressCard({
         : `${hours} ${t("settings.hours")}`;
     }
     return `${minutes} ${t("components.readingTimeLogger.minutesShort")}`;
-  };
-
-  const getMotivationMessage = () => {
-    if (isGoalReached) {
-      return t("components.dailyProgress.goalCrushed");
-    } else if (percentage >= 75) {
-      return t("components.dailyProgress.almostThere");
-    } else if (percentage >= 50) {
-      return t("components.dailyProgress.goodProgress");
-    } else if (percentage >= 25) {
-      return t("components.dailyProgress.greatStart");
-    } else if (todayMinutes > 0) {
-      return t("components.dailyProgress.everyMinute");
-    } else {
-      return t("components.dailyProgress.readyToStart");
-    }
   };
 
   return (
@@ -94,29 +76,6 @@ export default function DailyProgressCard({
             {t("components.dailyProgress.goal")}
           </Text>
         </View>
-
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{streakDays}</Text>
-          <Text style={styles.statLabel}>
-            {t("components.dailyProgress.dayStreak")}
-          </Text>
-        </View>
-      </View>
-
-      <View
-        style={[
-          styles.motivationContainer,
-          isGoalReached && styles.motivationContainerSuccess,
-        ]}
-      >
-        <Text
-          style={[
-            styles.motivationText,
-            isGoalReached && styles.motivationTextSuccess,
-          ]}
-        >
-          {getMotivationMessage()}
-        </Text>
       </View>
     </Card>
   );
@@ -158,7 +117,6 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: SPACING[3],
   },
   statItem: {
     alignItems: "flex-start",
@@ -174,25 +132,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.text.secondary,
     fontWeight: "500",
-  },
-  motivationContainer: {
-    backgroundColor: COLORS.surface.muted,
-    padding: SPACING[3],
-    borderRadius: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.accent.primary,
-  },
-  motivationContainerSuccess: {
-    backgroundColor: COLORS.state.successSoft,
-    borderLeftColor: COLORS.success,
-  },
-  motivationText: {
-    fontSize: 13,
-    color: COLORS.accent.strong,
-    fontWeight: "500",
-    textAlign: "left",
-  },
-  motivationTextSuccess: {
-    color: COLORS.success,
   },
 });

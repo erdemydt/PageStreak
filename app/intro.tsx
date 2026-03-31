@@ -464,7 +464,7 @@ export default function IntroScreen() {
           ))}
         </View>
       </ScrollView>
-    </View>
+    </>
   );
 
   const renderStep4 = () => (
@@ -834,7 +834,9 @@ export default function IntroScreen() {
           <View style={currentStep === 3 ? styles.cardStep3 : styles.card}>
             <Animated.View
               style={[
-                currentStep === 3 ? styles.stepContainerStep3 : styles.stepContainer,
+                currentStep === 3
+                  ? styles.stepContainerStep3
+                  : styles.stepContainer,
                 {
                   opacity: fadeAnimation,
                   transform: [{ translateY: slideAnimation }],
@@ -855,7 +857,9 @@ export default function IntroScreen() {
 
           {currentStep === 5 && (
             <View style={styles.featuresContainer}>
-              <Text style={styles.featuresTitle}>{t('intro.features.title')}</Text>
+              <Text style={styles.featuresTitle}>
+                {t("intro.features.title")}
+              </Text>
               <View style={styles.featuresList}>
                 <View style={styles.featureItem}>
                   <Text style={styles.featureEmoji}>📖</Text>
@@ -894,7 +898,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
     paddingVertical: 40,
-    minHeight: '100%',
+    minHeight: "100%",
   },
   headerContainer: {
     alignItems: "center",
@@ -1051,11 +1055,11 @@ const styles = StyleSheet.create({
   },
   step3Container: {
     flex: 1,
-    width: '100%',
-    maxHeight: '100%', // Ensure it doesn't overflow the card
+    width: "100%",
+    maxHeight: "100%", // Ensure it doesn't overflow the card
   },
   step3Header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 15,
     paddingBottom: 10,
   },
@@ -1065,37 +1069,37 @@ const styles = StyleSheet.create({
   },
   step3Title: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#1E293B",
+    textAlign: "center",
     marginBottom: 6,
   },
   step3Subtitle: {
     fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
+    color: "#64748B",
+    textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 20,
   },
   step5Container: {
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
     paddingVertical: 5,
   },
   dateSection: {
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
     marginVertical: 8,
   },
   dateSectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#1E293B",
+    textAlign: "center",
     marginBottom: 8,
   },
   step5Header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 10,
   },
   step5Emoji: {
@@ -1104,15 +1108,15 @@ const styles = StyleSheet.create({
   },
   step5Title: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#1E293B",
+    textAlign: "center",
     marginBottom: 4,
   },
   step5Subtitle: {
     fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
+    color: "#64748B",
+    textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 15,
     marginBottom: 5,

@@ -4,42 +4,29 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Alert,
-  Keyboard,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Keyboard,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { execute, queryFirst } from "../../db/db";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import { TYPE } from "../../themes/typography";
+import type { UserPreferences } from "../../types/database";
 import {
-  computeGrowthGoalFields,
-  validateGrowthGoals,
+    computeGrowthGoalFields,
+    validateGrowthGoals,
 } from "../../utils/goalSettings";
-
-type FullUserPreferences = {
-  id: number;
-  username: string;
-  yearly_book_goal: number;
-  preferred_genres?: string;
-  weekly_reading_goal?: number;
-  initial_reading_rate_minutes_per_day?: number;
-  end_reading_rate_goal_minutes_per_day?: number;
-  end_reading_rate_goal_date?: string;
-  current_reading_rate_minutes_per_day?: number;
-  created_at?: string;
-  updated_at?: string;
-};
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const [userPreferences, setUserPreferences] =
-    useState<FullUserPreferences | null>(null);
+    useState<UserPreferences | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
   // Editable fields
@@ -47,58 +34,12 @@ export default function ProfileScreen() {
   const [editedYearlyGoal, setEditedYearlyGoal] = useState("");
   const [editedDailyGoal, setEditedDailyGoal] = useState("");
   const [editedTargetGoal, setEditedTargetGoal] = useState("");
-  const [editedGenres, setEditedGenres] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
 
-  // Get translated genres
-  const getTranslatedGenres = () => [
-    t("intro.genres.options.fiction"),
-    t("intro.genres.options.nonFiction"),
-    t("intro.genres.options.mystery"),
-    t("intro.genres.options.romance"),
-    t("intro.genres.options.sciFi"),
-    t("intro.genres.options.fantasy"),
-    t("intro.genres.options.biography"),
-    t("intro.genres.options.history"),
-    t("intro.genres.options.selfHelp"),
-    t("intro.genres.options.business"),
-    t("intro.genres.options.poetry"),
-    t("intro.genres.options.philosophy"),
-    t("intro.genres.options.thriller"),
-    t("intro.genres.options.horror"),
-    t("intro.genres.options.adventure"),
-    t("intro.genres.options.comedy"),
-    t("intro.genres.options.drama"),
-    t("intro.genres.options.educational"),
-  ];
-  const genres = [
-    "Fiction",
-    "Non-Fiction",
-    "Mystery",
-    "Romance",
-    "Sci-Fi",
-    "Fantasy",
-    "Biography",
-    "History",
-    "Self-Help",
-    "Business",
-    "Poetry",
-    "Philosophy",
-    "Thriller",
-    "Horror",
-    "Adventure",
-    "Comedy",
-    "Drama",
-    "Educational",
-  ];
-  const getTranslationOfGenre = (genre: string) => {
-    const index = genres.indexOf(genre);
-    return index !== -1 ? getTranslatedGenres()[index] : genre;
-  };
   const loadUserPreferences = useCallback(async () => {
     try {
-      const user = await queryFirst<FullUserPreferences>(
+      const user = await queryFirst<UserPreferences>(
         "SELECT * FROM user_preferences WHERE id = 1",
       );
       if (user) {
@@ -120,7 +61,7 @@ export default function ProfileScreen() {
     }, [loadUserPreferences]),
   );
 
-  const populateEditFields = (user: FullUserPreferences) => {
+  const populateEditFields = (user: UserPreferences) => {
     setEditedUsername(user.username);
     setEditedYearlyGoal(user.yearly_book_goal.toString());
     setEditedDailyGoal(
@@ -128,17 +69,6 @@ export default function ProfileScreen() {
     );
     setEditedTargetGoal(
       user.end_reading_rate_goal_minutes_per_day?.toString() || "60",
-    );
-    setEditedGenres(
-      user.preferred_genres
-        ? user.preferred_genres.split(",").filter((g) => g.trim())
-        : [],
-    );
-  };
-
-  const toggleGenre = (genre: string) => {
-    setEditedGenres((prev) =>
-      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre],
     );
   };
 
@@ -192,8 +122,6 @@ export default function ProfileScreen() {
         `UPDATE user_preferences SET 
           username = ?, 
           yearly_book_goal = ?, 
-          preferred_genres = ?,
-          weekly_reading_goal = ?,
           initial_reading_rate_minutes_per_day = ?,
           end_reading_rate_goal_minutes_per_day = ?,
           end_reading_rate_goal_date = ?,
@@ -206,8 +134,6 @@ export default function ProfileScreen() {
         [
           editedUsername.trim(),
           yearlyGoal,
-          editedGenres.join(","),
-          computedGoals.weeklyReadingGoal,
           computedGoals.initialReadingRate,
           computedGoals.targetReadingRate,
           computedGoals.endGoalDate,
@@ -317,23 +243,6 @@ export default function ProfileScreen() {
               </Text>
               <Text style={styles.infoValue}>
                 {userPreferences?.end_reading_rate_goal_minutes_per_day || 0}{" "}
-                {t("profile.units.minutes")}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoIcon}>
-              <Ionicons name="calendar" size={20} color={COLORS.danger} />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>
-                {t("profile.labels.weeklyGoal")}
-              </Text>
-              <Text style={styles.infoValue}>
-                {userPreferences?.weekly_reading_goal || 0}{" "}
                 {t("profile.units.minutes")}
               </Text>
             </View>
@@ -455,33 +364,6 @@ export default function ProfileScreen() {
                 {formatDate(userPreferences?.end_reading_rate_goal_date)}
               </Text>
             </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Preferred Genres Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {t("profile.fields.favoriteGenres")}
-        </Text>
-        <View style={styles.card}>
-          <View style={styles.genresDisplay}>
-            {userPreferences?.preferred_genres ? (
-              userPreferences.preferred_genres
-                .split(",")
-                .filter((g) => g.trim())
-                .map((genre, index) => (
-                  <View key={index} style={styles.genreTag}>
-                    <Text style={styles.genreTagText}>
-                      {getTranslationOfGenre(genre.trim())}
-                    </Text>
-                  </View>
-                ))
-            ) : (
-              <Text style={styles.noGenresText}>
-                {t("profile.stats.noGenres")}
-              </Text>
-            )}
           </View>
         </View>
       </View>
@@ -616,38 +498,6 @@ export default function ProfileScreen() {
               keyboardType="numeric"
               editable={!loading}
             />
-          </View>
-        </View>
-      </View>
-
-      {/* Preferred Genres */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {t("profile.sections.preferredGenres")}
-        </Text>
-        <View style={styles.card}>
-          <View style={styles.genresGrid}>
-            {genres.map((genre) => (
-              <TouchableOpacity
-                key={genre}
-                style={[
-                  styles.genreChip,
-                  editedGenres.includes(genre) && styles.genreChipSelected,
-                ]}
-                onPress={() => toggleGenre(genre)}
-                disabled={loading}
-              >
-                <Text
-                  style={[
-                    styles.genreChipText,
-                    editedGenres.includes(genre) &&
-                      styles.genreChipTextSelected,
-                  ]}
-                >
-                  {getTranslatedGenres()[genres.indexOf(genre)]}
-                </Text>
-              </TouchableOpacity>
-            ))}
           </View>
         </View>
       </View>

@@ -26,7 +26,6 @@ import {
     dateToLocalDateString,
     getTodayDateString,
 } from "../../../utils/dateUtils";
-import { isDevModeEnabled } from "../../../utils/devMode";
 import {
     getEnhancedBookProgress,
     syncBookCurrentPageFromSessions,
@@ -384,97 +383,6 @@ function EditSessionModal({
   );
 }
 
-// Development utility function to generate random reading data
-const generateRandomReadingData = async (): Promise<void> => {
-  try {
-    // Check if we're in development mode
-    if (!isDevModeEnabled()) {
-      console.log(
-        "⚠️ Random data generation is only available in development mode",
-      );
-      return;
-    }
-
-    // Get currently reading books
-    const currentlyReadingBooks = await queryAll<EnhancedBook>(
-      `SELECT * FROM enhanced_books 
-       WHERE reading_status = 'currently_reading' 
-       ORDER BY date_started DESC, date_added DESC`,
-    );
-
-    if (currentlyReadingBooks.length === 0) {
-      Alert.alert(
-        "No Currently Reading Books",
-        'Please add some books with "currently reading" status first.',
-      );
-      return;
-    }
-
-    // Generate 20 random reading sessions
-    const sessions = [];
-    const today = new Date();
-
-    for (let i = 0; i < 20; i++) {
-      // Generate random date within the last 30 days
-      const daysBack = Math.floor(Math.random() * 30);
-      const sessionDate = new Date(today);
-      sessionDate.setDate(today.getDate() - daysBack);
-
-      // Generate random time between 1-5 PM (13:00-17:00)
-      const hour = 13 + Math.floor(Math.random() * 4); // 13, 14, 15, or 16
-      const minute = Math.floor(Math.random() * 60);
-      sessionDate.setHours(hour, minute, 0, 0);
-
-      // Random reading time between 1-20 minutes
-      const minutesRead = 1 + Math.floor(Math.random() * 20);
-
-      // Random book selection
-      const randomBook =
-        currentlyReadingBooks[
-          Math.floor(Math.random() * currentlyReadingBooks.length)
-        ];
-
-      // Format date as YYYY-MM-DD using local timezone
-      const dateString = dateToLocalDateString(sessionDate);
-
-      // Create session with timestamp including hour
-      const createdAt = sessionDate.toISOString();
-
-      sessions.push({
-        book_id: randomBook.id,
-        minutes_read: minutesRead,
-        date: dateString,
-        created_at: createdAt,
-        notes: null,
-      });
-    }
-
-    // Insert all sessions into the database
-    for (const session of sessions) {
-      await execute(
-        `INSERT INTO reading_sessions (book_id, minutes_read, date, created_at, notes) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [
-          session.book_id,
-          session.minutes_read,
-          session.date,
-          session.created_at,
-          session.notes,
-        ],
-      );
-    }
-
-    console.log(`✅ Generated ${sessions.length} random reading sessions`);
-    Alert.alert(
-      "Random Data Generated",
-      `Successfully added ${sessions.length} random reading sessions across different days and hours.`,
-    );
-  } catch (error) {
-    console.error("❌ Error generating random data:", error);
-    Alert.alert("Error", "Failed to generate random reading data");
-  }
-};
-
 export default function ReadingLogs() {
   const [weekData, setWeekData] = useState<WeekDay[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(new Date());
@@ -708,16 +616,6 @@ export default function ReadingLogs() {
     }
   };
 
-  const handleGenerateRandomData = async () => {
-    try {
-      await generateRandomReadingData();
-      // Refresh the data after generation
-      loadWeekData();
-    } catch (error) {
-      console.error("Error generating random data:", error);
-    }
-  };
-
   const formatDate = (date: Date) => {
     const month = getLocalizedMonth(date.getMonth());
     const day = date.getDate();
@@ -874,21 +772,6 @@ export default function ReadingLogs() {
         </View>
       </View>
 
-      {/* Development Only: Random Data Button */}
-      {isDevModeEnabled() && (
-        <View style={styles.devButtonContainer}>
-          <TouchableOpacity
-            style={styles.devButton}
-            onPress={handleGenerateRandomData}
-          >
-            <Ionicons name="flask" size={16} color={COLORS.white} />
-            <Text style={styles.devButtonText}>
-              Generate Random Data (20 sessions)
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* Week Grid */}
       <ScrollView
         style={styles.content}
@@ -949,7 +832,7 @@ export default function ReadingLogs() {
                       </Text>
                       {session.notes && (
                         <Text style={styles.sessionNotes} numberOfLines={2}>
-                          "{session.notes}"
+                          &quot;{session.notes}&quot;
                         </Text>
                       )}
                     </TouchableOpacity>

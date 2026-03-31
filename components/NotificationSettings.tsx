@@ -16,7 +16,6 @@ import {
 import { NotificationPreferences } from "../db/db";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
-import { isDevModeEnabled } from "../utils/devMode";
 
 export default function NotificationSettings() {
   const { t } = useTranslation();
@@ -205,24 +204,13 @@ export default function NotificationSettings() {
         }
       }
 
-      // Check if in development mode for different behavior
-      if (isDevModeEnabled()) {
-        // In development, schedule a 1-minute test
-        await NotificationService.scheduleTestNotification(1);
-        Alert.alert(
-          t("settings.devTestScheduled"),
-          t("settings.devTestScheduledMessage"),
-        );
-      } else {
-        // In production, use the normal scheduling
-        await NotificationService.scheduleDailyReminderNotification();
-        Alert.alert(
-          t("settings.testScheduled"),
-          t("settings.testScheduledMessage", {
-            hours: preferences?.daily_reminder_hours_after_last_open || 5,
-          }),
-        );
-      }
+      await NotificationService.scheduleDailyReminderNotification();
+      Alert.alert(
+        t("settings.testScheduled"),
+        t("settings.testScheduledMessage", {
+          hours: preferences?.daily_reminder_hours_after_last_open || 5,
+        }),
+      );
     } catch (error) {
       console.error("❌ Error sending test notification:", error);
       Alert.alert(
@@ -454,23 +442,16 @@ export default function NotificationSettings() {
               </View>
 
               {/* Test Notification Button */}
-              {isDevModeEnabled() && (
-                <TouchableOpacity
-                  style={styles.testButton}
-                  onPress={handleTestNotification}
-                  disabled={saving}
-                >
-                  <Ionicons name="send" size={18} color={COLORS.white} />
-                  <Text style={styles.testButtonText}>
-                    {isDevModeEnabled()
-                      ? t("settings.sendTestDev")
-                      : t("settings.sendTest")}
-                  </Text>
-                  {isDevModeEnabled() && (
-                    <Text style={styles.devBadge}>DEV</Text>
-                  )}
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={styles.testButton}
+                onPress={handleTestNotification}
+                disabled={saving}
+              >
+                <Ionicons name="send" size={18} color={COLORS.white} />
+                <Text style={styles.testButtonText}>
+                  {t("settings.sendTest")}
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -746,16 +727,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 8,
     marginRight: 8,
-  },
-  devBadge: {
-    backgroundColor: COLORS.state.dangerStrong,
-    color: COLORS.white,
-    fontSize: 10,
-    fontWeight: "bold",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: "hidden",
   },
   // Warning styles
   warningContainer: {

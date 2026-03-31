@@ -10,23 +10,7 @@ import {
 } from "../db/db";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
-
-type UserPreferences = {
-  id: number;
-  username: string;
-  yearly_book_goal: number;
-  preferred_genres?: string;
-  created_at?: string;
-  updated_at?: string;
-  weekly_reading_goal?: number;
-  initial_reading_rate_minutes_per_day?: number;
-  end_reading_rate_goal_minutes_per_day?: number;
-  end_reading_rate_goal_date?: Date;
-  current_reading_rate_minutes_per_day?: number;
-  current_reading_rate_last_updated?: Date;
-  weekly_reading_rate_increase_minutes?: number;
-  weekly_reading_rate_increase_minutes_percentage?: number;
-};
+import type { UserPreferences } from "../types/database";
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);

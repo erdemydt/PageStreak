@@ -2,13 +2,13 @@ import { Link, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  FlatList,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    FlatList,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import BookCard from "../../../components/BookCard";
@@ -18,39 +18,19 @@ import { EnhancedBook, queryAll, queryFirst } from "../../../db/db";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
+import type { UserPreferences } from "../../../types/database";
 import {
-  getReadingStreak,
-  getTodayReadingMinutes,
-  initializeReadingSessions,
+    getTodayReadingMinutes,
+    initializeReadingSessions,
 } from "../../../utils/readingProgress";
-
-type UserPreferences = {
-  id: number;
-  username: string;
-  yearly_book_goal: number;
-  preferred_genres?: string;
-  created_at?: string;
-  updated_at?: string;
-  current_reading_rate_minutes_per_day?: number;
-};
-
-type ReadingSession = {
-  id: number;
-  book_id: number;
-  minutes_read: number;
-  date: string;
-  created_at: string;
-};
 
 export default function HomeScreen() {
   const { t } = useTranslation();
   const [books, setBooks] = useState<EnhancedBook[]>([]);
   const [userPreferences, setUserPreferences] =
     useState<UserPreferences | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showReadingLogger, setShowReadingLogger] = useState(false);
   const [todayMinutes, setTodayMinutes] = useState(0);
-  const [readingStreak, setReadingStreak] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Load data on mount and when screen comes into focus
@@ -71,7 +51,6 @@ export default function HomeScreen() {
   };
 
   const loadData = async () => {
-    setLoading(true);
     try {
       // Load user preferences
       const user = await queryFirst<UserPreferences>(
@@ -81,9 +60,6 @@ export default function HomeScreen() {
 
       // Load today's reading progress
       await loadTodayProgress();
-
-      // Load reading streak
-      await loadReadingStreak();
 
       // Load books - try enhanced books first, fallback to regular books
       try {
@@ -114,8 +90,6 @@ export default function HomeScreen() {
       }
     } catch (e) {
       console.error("Failed to load data:", e);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -126,48 +100,6 @@ export default function HomeScreen() {
     } catch (e) {
       console.error("Error loading today progress:", e);
       setTodayMinutes(0);
-    }
-  };
-
-  const loadReadingStreak = async () => {
-    try {
-      // Get the user's daily goal with fallback for missing columns
-      let user;
-      let dailyGoal = 30; // Default fallback
-
-      try {
-        user = await queryFirst<UserPreferences>(
-          "SELECT current_reading_rate_minutes_per_day FROM user_preferences WHERE id = 1",
-        );
-        dailyGoal = user?.current_reading_rate_minutes_per_day || 30;
-      } catch (columnError) {
-        // If the column doesn't exist, fall back to basic user check
-        console.log(
-          "📝 current_reading_rate_minutes_per_day column not found, using default goal",
-        );
-        try {
-          const basicUser = await queryFirst<UserPreferences>(
-            "SELECT id FROM user_preferences WHERE id = 1",
-          );
-          if (!basicUser) {
-            // No user exists yet
-            setReadingStreak(0);
-            return;
-          }
-        } catch (error) {
-          console.log(
-            "📝 user_preferences table not found, using default streak",
-          );
-          setReadingStreak(0);
-          return;
-        }
-      }
-
-      const streak = await getReadingStreak(dailyGoal);
-      setReadingStreak(streak);
-    } catch (e) {
-      console.error("Error calculating reading streak:", e);
-      setReadingStreak(0);
     }
   };
 
@@ -195,7 +127,6 @@ export default function HomeScreen() {
 
   const handleReadingLoggerSuccess = () => {
     loadTodayProgress();
-    loadReadingStreak();
     // Refresh books data to trigger BookCard re-renders with updated progress
     loadData();
     // Increment refresh trigger to force BookCard re-renders
@@ -216,7 +147,6 @@ export default function HomeScreen() {
       <View style={styles.heroCard}>
         <View style={styles.heroTopRow}>
           <Text style={styles.heroEyebrow}>{t("home.reading")}</Text>
-          <Text style={styles.heroStreakText}>{readingStreak}d streak</Text>
         </View>
 
         {currentBook ? (
@@ -276,7 +206,6 @@ export default function HomeScreen() {
         goalMinutes={
           userPreferences?.current_reading_rate_minutes_per_day || 30
         }
-        streakDays={readingStreak}
       />
 
       <View style={styles.actionsRow}>
@@ -432,11 +361,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: "uppercase",
     color: COLORS.text.secondary,
-  },
-  heroStreakText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.accent.strong,
   },
   heroBookRow: {
     flexDirection: "row",

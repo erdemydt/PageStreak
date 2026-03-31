@@ -17,9 +17,9 @@ import {
     ImportOptions,
     pickBackupFile,
     validateBackupFile,
-} from "../services/dataBackupService";
-import { COLORS } from "../themes/colors";
-import ModalShell from "./ui/ModalShell";
+} from "../../services/dataBackupService";
+import { COLORS } from "../../themes/colors";
+import ModalShell from "../ui/ModalShell";
 
 interface DataImportModalProps {
   visible: boolean;

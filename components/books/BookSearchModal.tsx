@@ -12,8 +12,11 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { OpenLibraryService, SearchBookResult } from "../services/openLibrary";
-import { COLORS } from "../themes/colors";
+import {
+    OpenLibraryService,
+    SearchBookResult,
+} from "../../services/openLibrary";
+import { COLORS } from "../../themes/colors";
 
 interface BookSearchModalProps {
   visible: boolean;
@@ -116,7 +119,7 @@ export default function BookSearchModal({
           <Image
             source={{ uri: item.coverUrl }}
             style={styles.bookCover}
-            defaultSource={require("../assets/images/icon.png")}
+            defaultSource={require("../../assets/images/icon.png")}
           />
         ) : (
           <View style={styles.bookCoverPlaceholder}>

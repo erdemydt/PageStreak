@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { EnhancedBook } from "../db/db";
-import { COLORS } from "../themes/colors";
-import { SPACING } from "../themes/spacing";
-import { getStatusColor, getStatusText } from "../utils/bookStatus";
-import { getEnhancedBookProgress } from "../utils/readingProgress";
+import { EnhancedBook } from "../../db/db";
+import { COLORS } from "../../themes/colors";
+import { SPACING } from "../../themes/spacing";
+import { getStatusColor, getStatusText } from "../../utils/bookStatus";
+import { getEnhancedBookProgress } from "../../utils/readingProgress";
 
 interface BookCardProps {
   book: EnhancedBook;
@@ -219,7 +219,7 @@ export default function BookCard({
             <Image
               source={{ uri: book.cover_url }}
               style={styles.compactCover}
-              defaultSource={require("../assets/images/icon.png")}
+              defaultSource={require("../../assets/images/icon.png")}
             />
           ) : (
             <View style={styles.compactCoverPlaceholder}>
@@ -259,7 +259,7 @@ export default function BookCard({
             <Image
               source={{ uri: book.cover_url }}
               style={styles.smallerCover}
-              defaultSource={require("../assets/images/icon.png")}
+              defaultSource={require("../../assets/images/icon.png")}
             />
           ) : (
             <View style={styles.smallerCoverPlaceholder}>
@@ -328,7 +328,7 @@ export default function BookCard({
             <Image
               source={{ uri: book.cover_url }}
               style={styles.cover}
-              defaultSource={require("../assets/images/icon.png")}
+              defaultSource={require("../../assets/images/icon.png")}
             />
           ) : (
             <View style={styles.coverPlaceholder}>

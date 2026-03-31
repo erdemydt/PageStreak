@@ -7,8 +7,8 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { COLORS } from "../themes/colors";
-import { getStatusColor } from "../utils/bookStatus";
+import { COLORS } from "../../themes/colors";
+import { getStatusColor } from "../../utils/bookStatus";
 
 export type BookStatus = "want_to_read" | "currently_reading" | "read";
 

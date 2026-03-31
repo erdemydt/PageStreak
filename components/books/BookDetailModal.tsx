@@ -1,21 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Animated,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Animated,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { EnhancedBook, queryFirst } from "../db/db";
-import { COLORS } from "../themes/colors";
-import { SPACING } from "../themes/spacing";
-import { TYPE } from "../themes/typography";
-import { getStatusColor, getStatusText } from "../utils/bookStatus";
-import { getEnhancedBookProgress } from "../utils/readingProgress";
+import { EnhancedBook, queryFirst } from "../../db/db";
+import { COLORS } from "../../themes/colors";
+import { SPACING } from "../../themes/spacing";
+import { TYPE } from "../../themes/typography";
+import { getStatusColor, getStatusText } from "../../utils/bookStatus";
+import { getEnhancedBookProgress } from "../../utils/readingProgress";
 import BookStatusModal, { BookStatus } from "./BookStatusModal";
 interface BookDetailModalProps {
   visible: boolean;
@@ -205,7 +205,7 @@ export default function BookDetailModal({
                   <Image
                     source={{ uri: book.cover_url }}
                     style={styles.cover}
-                    defaultSource={require("../assets/images/icon.png")}
+                    defaultSource={require("../../assets/images/icon.png")}
                   />
                 ) : (
                   <View style={styles.coverPlaceholder}>

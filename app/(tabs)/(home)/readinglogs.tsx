@@ -11,7 +11,7 @@ import {
     View,
 } from "react-native";
 import EditSessionModal from "../../../components/reading/EditSessionModal";
-import WeeklyStatsView from "../../../components/WeeklyStatsView";
+import WeeklyStatsView from "../../../components/reading/WeeklyStatsView";
 import { useReadingSessions } from "../../../hooks/useReadingSessions";
 import { COLORS } from "../../../themes/colors";
 export default function ReadingLogs() {

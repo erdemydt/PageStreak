@@ -7,8 +7,8 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { useWeeklyStats } from "../hooks/useWeeklyStats";
-import { COLORS } from "../themes/colors";
+import { useWeeklyStats } from "../../hooks/useWeeklyStats";
+import { COLORS } from "../../themes/colors";
 const barMaxHeight = 120;
 
 interface WeeklyStatsViewProps {

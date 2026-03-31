@@ -3,26 +3,26 @@ import { Stack, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  FlatList,
-  Image,
-  Keyboard,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    FlatList,
+    Image,
+    Keyboard,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import BookStatusModal, {
-  BookStatus,
-} from "../../../components/BookStatusModal";
+    BookStatus,
+} from "../../../components/books/BookStatusModal";
 import { execute } from "../../../db/db";
 import {
-  OpenLibraryService,
-  SearchBookResult,
+    OpenLibraryService,
+    SearchBookResult,
 } from "../../../services/openLibrary";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";

@@ -2,27 +2,27 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import BookStatusModal, {
-  BookStatus,
-} from "../../../components/BookStatusModal";
+    BookStatus,
+} from "../../../components/books/BookStatusModal";
 import { EnhancedBook, execute, queryFirst } from "../../../db/db";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
 import { getStatusColor, getStatusText } from "../../../utils/bookStatus";
 import {
-  getBookReadingTime,
-  getEnhancedBookProgress,
+    getBookReadingTime,
+    getEnhancedBookProgress,
 } from "../../../utils/readingProgress";
 
 export default function BookDetailsScreen() {

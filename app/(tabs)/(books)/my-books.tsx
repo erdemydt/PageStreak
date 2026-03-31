@@ -3,26 +3,26 @@ import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Alert,
-  Animated,
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    FlatList,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import BookCard from "../../../components/BookCard";
+import BookCard from "../../../components/books/BookCard";
 import BookStatusModal, {
-  BookStatus,
-} from "../../../components/BookStatusModal";
+    BookStatus,
+} from "../../../components/books/BookStatusModal";
 import { EnhancedBook, execute, queryAll } from "../../../db/db";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
 import {
-  getBookReadingTime,
-  initializeReadingSessions,
+    getBookReadingTime,
+    initializeReadingSessions,
 } from "../../../utils/readingProgress";
 
 type SortOption =

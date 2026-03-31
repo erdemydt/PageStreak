@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useLanguage } from "../contexts/LanguageContext";
-import { COLORS } from "../themes/colors";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { COLORS } from "../../themes/colors";
 
 const languages = [
   { code: "en", name: "English", flag: "🇺🇸" },

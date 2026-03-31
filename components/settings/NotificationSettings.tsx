@@ -13,9 +13,9 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { NotificationPreferences } from "../db/db";
-import NotificationService from "../services/notificationService";
-import { COLORS } from "../themes/colors";
+import { NotificationPreferences } from "../../db/db";
+import NotificationService from "../../services/notificationService";
+import { COLORS } from "../../themes/colors";
 
 export default function NotificationSettings() {
   const { t } = useTranslation();

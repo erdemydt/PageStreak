@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
-import { COLORS } from "../themes/colors";
-import { SPACING } from "../themes/spacing";
-import { TYPE } from "../themes/typography";
-import Card from "./Card";
+import { COLORS } from "../../themes/colors";
+import { SPACING } from "../../themes/spacing";
+import { TYPE } from "../../themes/typography";
+import Card from "../ui/Card";
 
 interface DailyProgressCardProps {
   todayMinutes: number;

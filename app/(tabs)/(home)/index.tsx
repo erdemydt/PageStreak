@@ -12,9 +12,9 @@ import {
     View,
 } from "react-native";
 
-import BookCard from "../../../components/BookCard";
-import DailyProgressCard from "../../../components/DailyProgressCard";
-import ReadingTimeLogger from "../../../components/ReadingTimeLogger";
+import BookCard from "../../../components/books/BookCard";
+import DailyProgressCard from "../../../components/reading/DailyProgressCard";
+import ReadingTimeLogger from "../../../components/reading/ReadingTimeLogger";
 import type { EnhancedBook } from "../../../db/db";
 import { useReadingStats } from "../../../hooks/useReadingStats";
 import { COLORS } from "../../../themes/colors";

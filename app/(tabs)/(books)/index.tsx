@@ -13,10 +13,10 @@ import {
     TouchableWithoutFeedback,
     View,
 } from "react-native";
-import BookCard from "../../../components/BookCard";
+import BookCard from "../../../components/books/BookCard";
 import BookStatusModal, {
     BookStatus,
-} from "../../../components/BookStatusModal";
+} from "../../../components/books/BookStatusModal";
 import type { EnhancedBook } from "../../../db/db";
 import { execute } from "../../../db/db";
 import { useBooks } from "../../../hooks/useBooks";

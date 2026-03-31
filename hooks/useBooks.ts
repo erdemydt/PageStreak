@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import type { BookStatus } from "../components/BookStatusModal";
+import type { BookStatus } from "../components/books/BookStatusModal";
 import { EnhancedBook, queryAll } from "../db/db";
 import { getBookReadingTime } from "../utils/readingProgress";
 

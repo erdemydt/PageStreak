@@ -11,15 +11,15 @@ import {
     View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { EnhancedBook, execute, queryAll } from "../db/db";
-import notificationService from "../services/notificationService";
-import { COLORS } from "../themes/colors";
-import { getTodayDateString } from "../utils/dateUtils";
+import { EnhancedBook, execute, queryAll } from "../../db/db";
+import notificationService from "../../services/notificationService";
+import { COLORS } from "../../themes/colors";
+import { getTodayDateString } from "../../utils/dateUtils";
 import {
     getEnhancedBookProgress,
     syncBookCurrentPageFromSessions,
-} from "../utils/readingProgress";
-import ModalShell from "./ui/ModalShell";
+} from "../../utils/readingProgress";
+import ModalShell from "../ui/ModalShell";
 
 interface ReadingTimeLoggerProps {
   visible: boolean;

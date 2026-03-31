@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ReactNode } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { COLORS } from "../themes/colors";
-import { SPACING } from "../themes/spacing";
+import { COLORS } from "../../themes/colors";
+import { SPACING } from "../../themes/spacing";
 
 interface SettingsRowProps {
   icon: keyof typeof Ionicons.glyphMap;

@@ -14,9 +14,9 @@ import {
 import {
     BackupOptions,
     exportAndSaveBackup,
-} from "../services/dataBackupService";
-import { COLORS } from "../themes/colors";
-import ModalShell from "./ui/ModalShell";
+} from "../../services/dataBackupService";
+import { COLORS } from "../../themes/colors";
+import ModalShell from "../ui/ModalShell";
 
 interface DataExportModalProps {
   visible: boolean;

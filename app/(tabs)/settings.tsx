@@ -10,11 +10,11 @@ import {
     Text,
     View,
 } from "react-native";
-import DataExportModal from "../../components/DataExportModal";
-import DataImportModal from "../../components/DataImportModal";
-import LanguageSelector from "../../components/LanguageSelector";
-import NotificationSettings from "../../components/NotificationSettings";
-import SettingsRow from "../../components/SettingsRow";
+import DataExportModal from "../../components/settings/DataExportModal";
+import DataImportModal from "../../components/settings/DataImportModal";
+import LanguageSelector from "../../components/settings/LanguageSelector";
+import NotificationSettings from "../../components/settings/NotificationSettings";
+import SettingsRow from "../../components/settings/SettingsRow";
 import { execute, queryFirst } from "../../db/db";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";

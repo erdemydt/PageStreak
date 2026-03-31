@@ -19,6 +19,16 @@
       "title": "Nice consistency!",
       "body": "Your daily goal increased from {{oldGoal}} to {{newGoal}} min/day.",
       "dismiss": "Dismiss"
+    },
+    "goalIncreasePrompt": {
+      "title": "Great consistency this week!",
+      "body": "You met your target consistently, so we can increase your daily goal from {{oldGoal}} to {{newGoal}} min/day. Is that OK?",
+      "confirm": "Yes, increase it",
+      "notNow": "Not now",
+      "outdatedTitle": "Goal update unavailable",
+      "outdatedBody": "Your reading data changed, so we skipped this increase for now.",
+      "errorTitle": "Could not update goal",
+      "errorBody": "Something went wrong while applying your new goal. Please try again."
     }
   },
   "components": {

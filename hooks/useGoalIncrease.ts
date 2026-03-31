@@ -2,26 +2,29 @@ import { useCallback } from "react";
 import { execute, queryFirst } from "../db/db";
 import type { UserPreferences } from "../types/database";
 import {
-    computeFixedIncrement,
-    computeWeeksRemaining,
-    evaluateWeeklyConsistency,
-    shouldAttemptAutoIncrease,
+  computeFixedIncrement,
+  computeWeeksRemaining,
+  evaluateWeeklyConsistency,
+  shouldAttemptAutoIncrease,
 } from "../utils/goalIncrease";
+import type { GoalIncreaseProposalEvent } from "../utils/goalIncreaseEvents";
 
 type GoalMetDaysRow = {
   goal_met_days: number;
 };
 
 export type GoalIncreaseResultReason =
-  | "increased"
+  | "eligible"
   | "no_user_preferences"
   | "no_increment_needed"
   | "update_failed"
+  | "stale_or_ineligible"
+  | "proposal_outdated"
   | ReturnType<typeof shouldAttemptAutoIncrease>["reason"]
   | ReturnType<typeof evaluateWeeklyConsistency>["reason"];
 
-export type GoalIncreaseResult = {
-  increased: boolean;
+export type GoalIncreaseEvaluationResult = {
+  eligible: boolean;
   oldGoal: number | null;
   newGoal: number | null;
   reason: GoalIncreaseResultReason;
@@ -31,6 +34,15 @@ export type GoalIncreaseResult = {
   weeksRemaining?: number;
   increment?: number;
   weeksSinceLastUpdate?: number | null;
+  error?: string;
+};
+
+export type GoalIncreaseApplyResult = {
+  applied: boolean;
+  oldGoal: number | null;
+  newGoal: number | null;
+  reason: GoalIncreaseResultReason;
+  checkedAt: string;
   error?: string;
 };
 
@@ -51,8 +63,8 @@ const getGoalMetDaysInPastWeek = async (dailyGoal: number): Promise<number> => {
 };
 
 export const useGoalIncrease = () => {
-  const evaluateAndApplyGoalIncrease =
-    useCallback(async (): Promise<GoalIncreaseResult> => {
+  const evaluateGoalIncreaseOpportunity =
+    useCallback(async (): Promise<GoalIncreaseEvaluationResult> => {
       const checkedAt = new Date().toISOString();
 
       try {
@@ -70,7 +82,7 @@ export const useGoalIncrease = () => {
 
         if (!user) {
           return {
-            increased: false,
+            eligible: false,
             oldGoal: null,
             newGoal: null,
             reason: "no_user_preferences",
@@ -98,9 +110,9 @@ export const useGoalIncrease = () => {
 
         if (!attemptDecision.shouldAttempt) {
           return {
-            increased: false,
+            eligible: false,
             oldGoal: currentGoal,
-            newGoal: currentGoal,
+            newGoal: currentGoal+5,
             reason: attemptDecision.reason,
             checkedAt,
             weeksSinceLastUpdate: attemptDecision.weeksSinceLastUpdate,
@@ -112,7 +124,7 @@ export const useGoalIncrease = () => {
 
         if (!consistencyDecision.isEligible) {
           return {
-            increased: false,
+            eligible: false,
             oldGoal: currentGoal,
             newGoal: currentGoal,
             reason: consistencyDecision.reason,
@@ -134,7 +146,7 @@ export const useGoalIncrease = () => {
 
         if (increment <= 0) {
           return {
-            increased: false,
+            eligible: false,
             oldGoal: currentGoal,
             newGoal: currentGoal,
             reason: "no_increment_needed",
@@ -149,7 +161,7 @@ export const useGoalIncrease = () => {
         const updatedGoal = Math.min(targetGoal, currentGoal + increment);
         if (updatedGoal <= currentGoal) {
           return {
-            increased: false,
+            eligible: false,
             oldGoal: currentGoal,
             newGoal: currentGoal,
             reason: "no_increment_needed",
@@ -161,20 +173,11 @@ export const useGoalIncrease = () => {
           };
         }
 
-        await execute(
-          `UPDATE user_preferences
-           SET current_reading_rate_minutes_per_day = ?,
-               current_reading_rate_last_updated = ?,
-               updated_at = CURRENT_TIMESTAMP
-           WHERE id = 1`,
-          [updatedGoal, checkedAt],
-        );
-
         return {
-          increased: true,
+          eligible: true,
           oldGoal: currentGoal,
           newGoal: updatedGoal,
-          reason: "increased",
+          reason: "eligible",
           checkedAt,
           goalMetDays,
           requiredGoalMetDays: consistencyDecision.requiredGoalMetDays,
@@ -186,7 +189,7 @@ export const useGoalIncrease = () => {
         console.error("❌ Goal increase evaluation failed:", error);
 
         return {
-          increased: false,
+          eligible: false,
           oldGoal: null,
           newGoal: null,
           reason: "update_failed",
@@ -196,7 +199,74 @@ export const useGoalIncrease = () => {
       }
     }, []);
 
+  const applyGoalIncreaseProposal = useCallback(
+    async (
+      proposal: GoalIncreaseProposalEvent,
+    ): Promise<GoalIncreaseApplyResult> => {
+      const checkedAt = new Date().toISOString();
+
+      try {
+        const latestEvaluation = await evaluateGoalIncreaseOpportunity();
+
+        if (!latestEvaluation.eligible) {
+          return {
+            applied: false,
+            oldGoal: latestEvaluation.oldGoal,
+            newGoal: latestEvaluation.newGoal,
+            reason: "stale_or_ineligible",
+            checkedAt,
+          };
+        }
+
+        const expectedOldGoal = latestEvaluation.oldGoal;
+        const expectedNewGoal = latestEvaluation.newGoal;
+
+        if (
+          expectedOldGoal !== proposal.oldGoal ||
+          expectedNewGoal !== proposal.newGoal
+        ) {
+          return {
+            applied: false,
+            oldGoal: expectedOldGoal,
+            newGoal: expectedNewGoal,
+            reason: "proposal_outdated",
+            checkedAt,
+          };
+        }
+
+        await execute(
+          `UPDATE user_preferences
+           SET current_reading_rate_minutes_per_day = ?,
+               current_reading_rate_last_updated = ?,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = 1`,
+          [proposal.newGoal, checkedAt],
+        );
+
+        return {
+          applied: true,
+          oldGoal: proposal.oldGoal,
+          newGoal: proposal.newGoal,
+          reason: "eligible",
+          checkedAt,
+        };
+      } catch (error) {
+        console.error("❌ Goal increase apply failed:", error);
+        return {
+          applied: false,
+          oldGoal: proposal.oldGoal,
+          newGoal: proposal.newGoal,
+          reason: "update_failed",
+          checkedAt,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    },
+    [evaluateGoalIncreaseOpportunity],
+  );
+
   return {
-    evaluateAndApplyGoalIncrease,
+    evaluateGoalIncreaseOpportunity,
+    applyGoalIncreaseProposal,
   };
 };

@@ -19,6 +19,16 @@
       "title": "Harika tutarlılık!",
       "body": "Günlük hedefiniz {{oldGoal}} dakikadan {{newGoal}} dakikaya yükseltildi.",
       "dismiss": "Kapat"
+    },
+    "goalIncreasePrompt": {
+      "title": "Bu hafta harika bir tutarlılık!",
+      "body": "Hedefinizi istikrarlı şekilde karşıladınız. Günlük hedefinizi {{oldGoal}} dakikadan {{newGoal}} dakikaya yükseltebiliriz. Uygun mu?",
+      "confirm": "Evet, artır",
+      "notNow": "Şimdi değil",
+      "outdatedTitle": "Hedef güncellemesi yapılamadı",
+      "outdatedBody": "Okuma veriniz değiştiği için bu artışı şimdilik uygulamadık.",
+      "errorTitle": "Hedef güncellenemedi",
+      "errorBody": "Yeni hedef uygulanırken bir sorun oluştu. Lütfen tekrar deneyin."
     }
   },
   "components": {

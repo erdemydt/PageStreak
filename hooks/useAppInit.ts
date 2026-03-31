@@ -1,27 +1,24 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-    checkNotificationDatabaseIntegrity,
-    initializeDatabase,
-    queryFirst,
-    repairNotificationDatabase,
+  checkNotificationDatabaseIntegrity,
+  initializeDatabase,
+  queryFirst,
+  repairNotificationDatabase,
 } from "../db/db";
 import NotificationService from "../services/notificationService";
 import type { UserPreferences } from "../types/database";
+import {
+  isGoalIncreaseSnoozed,
+  loadGoalIncreaseProposalEvent,
+  loadGoalIncreaseSnoozeUntil,
+  saveGoalIncreaseProposalEvent,
+} from "../utils/goalIncreaseEvents";
 import { useGoalIncrease } from "./useGoalIncrease";
-
-const GOAL_INCREASE_BANNER_EVENT_KEY = "@pagestreak/goal-increase-banner-event";
-
-type GoalIncreaseBannerEvent = {
-  oldGoal: number;
-  newGoal: number;
-  timestamp: string;
-};
 
 export const useAppInit = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const { evaluateAndApplyGoalIncrease } = useGoalIncrease();
+  const { evaluateGoalIncreaseOpportunity } = useGoalIncrease();
 
   const checkUserSetup = useCallback(async () => {
     try {
@@ -83,8 +80,8 @@ export const useAppInit = () => {
         );
       }
 
-      const goalIncreaseResult = await evaluateAndApplyGoalIncrease();
-      if (goalIncreaseResult.increased) {
+      const goalIncreaseResult = await evaluateGoalIncreaseOpportunity();
+      if (goalIncreaseResult.eligible) {
         const oldGoal = goalIncreaseResult.oldGoal;
         const newGoal = goalIncreaseResult.newGoal;
 
@@ -93,26 +90,41 @@ export const useAppInit = () => {
           typeof newGoal === "number" &&
           newGoal > oldGoal
         ) {
-          const goalIncreaseEvent: GoalIncreaseBannerEvent = {
-            oldGoal,
-            newGoal,
-            timestamp: goalIncreaseResult.checkedAt,
-          };
-
           try {
-            await AsyncStorage.setItem(
-              GOAL_INCREASE_BANNER_EVENT_KEY,
-              JSON.stringify(goalIncreaseEvent),
-            );
+            const [existingProposal, snoozeUntilIso] = await Promise.all([
+              loadGoalIncreaseProposalEvent(),
+              loadGoalIncreaseSnoozeUntil(),
+            ]);
+
+            if (isGoalIncreaseSnoozed(snoozeUntilIso)) {
+              console.log("ℹ️ Goal increase prompt is snoozed", {
+                snoozeUntilIso,
+              });
+            } else if (
+              existingProposal &&
+              existingProposal.oldGoal === oldGoal &&
+              existingProposal.newGoal === newGoal
+            ) {
+              console.log("ℹ️ Goal increase proposal already pending");
+            } else {
+              await saveGoalIncreaseProposalEvent({
+                oldGoal,
+                newGoal,
+                checkedAt: goalIncreaseResult.checkedAt,
+              });
+              console.log(
+                `✅ Goal increase proposal created: ${oldGoal} -> ${newGoal} min/day`,
+              );
+            }
           } catch (storageError) {
             console.error(
-              "⚠️ Failed to persist goal increase event:",
+              "⚠️ Failed to persist goal increase proposal:",
               storageError,
             );
           }
         } else {
           console.warn(
-            "⚠️ Skipping goal increase event persistence due to invalid payload",
+            "⚠️ Skipping goal increase proposal due to invalid payload",
             {
               oldGoal,
               newGoal,
@@ -120,10 +132,6 @@ export const useAppInit = () => {
             },
           );
         }
-
-        console.log(
-          `✅ Goal increased: ${goalIncreaseResult.oldGoal} -> ${goalIncreaseResult.newGoal} min/day`,
-        );
       } else {
         console.log("ℹ️ Goal increase skipped:", {
           reason: goalIncreaseResult.reason,
@@ -143,7 +151,7 @@ export const useAppInit = () => {
       router.replace("/intro");
       setIsLoading(false);
     }
-  }, [checkUserSetup, evaluateAndApplyGoalIncrease]);
+  }, [checkUserSetup, evaluateGoalIncreaseOpportunity]);
 
   useEffect(() => {
     initializeAppDatabase();

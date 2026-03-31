@@ -1,36 +1,43 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    FlatList,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import BookCard from "../../../components/books/BookCard";
 import DailyProgressCard from "../../../components/reading/DailyProgressCard";
 import ReadingTimeLogger from "../../../components/reading/ReadingTimeLogger";
 import type { EnhancedBook } from "../../../db/db";
+import { useGoalIncrease } from "../../../hooks/useGoalIncrease";
 import { useReadingStats } from "../../../hooks/useReadingStats";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
+import {
+  clearGoalIncreaseBannerEvent,
+  clearGoalIncreaseProposalEvent,
+  clearGoalIncreaseSnoozeUntil,
+  loadGoalIncreaseBannerEvent,
+  loadGoalIncreaseProposalEvent,
+  saveGoalIncreaseBannerEvent,
+  saveGoalIncreaseSnoozeUntil,
+  type GoalIncreaseBannerEvent,
+  type GoalIncreaseProposalEvent,
+} from "../../../utils/goalIncreaseEvents";
 
-const GOAL_INCREASE_BANNER_EVENT_KEY = "@pagestreak/goal-increase-banner-event";
-
-type GoalIncreaseBannerEvent = {
-  oldGoal: number;
-  newGoal: number;
-  timestamp: string;
-};
+const GOAL_INCREASE_SNOOZE_DAYS = 7;
 
 export default function HomeScreen() {
   const { t } = useTranslation();
+  const { applyGoalIncreaseProposal } = useGoalIncrease();
   const {
     books,
     userPreferences,
@@ -48,7 +55,10 @@ export default function HomeScreen() {
   } = useReadingStats();
   const [goalIncreaseBanner, setGoalIncreaseBanner] =
     useState<GoalIncreaseBannerEvent | null>(null);
+  const [goalIncreaseProposal, setGoalIncreaseProposal] =
+    useState<GoalIncreaseProposalEvent | null>(null);
   const [showReadingLogger, setShowReadingLogger] = useState(false);
+  const lastPromptedProposalRef = useRef<string | null>(null);
 
   // Load data on mount and when screen comes into focus
   useEffect(() => {
@@ -60,45 +70,27 @@ export default function HomeScreen() {
     useCallback(() => {
       loadData();
       loadGoalIncreaseBanner();
+      loadGoalIncreaseProposal();
     }, [loadData]),
   );
 
   const loadGoalIncreaseBanner = async () => {
     try {
-      const storedEvent = await AsyncStorage.getItem(
-        GOAL_INCREASE_BANNER_EVENT_KEY,
-      );
-
-      if (!storedEvent) {
-        setGoalIncreaseBanner(null);
-        return;
-      }
-
-      const parsedEvent = JSON.parse(
-        storedEvent,
-      ) as Partial<GoalIncreaseBannerEvent>;
-      const oldGoal = parsedEvent.oldGoal;
-      const newGoal = parsedEvent.newGoal;
-      const timestamp = parsedEvent.timestamp;
-      const isValidEvent =
-        typeof oldGoal === "number" &&
-        typeof newGoal === "number" &&
-        typeof timestamp === "string";
-
-      if (!isValidEvent) {
-        await AsyncStorage.removeItem(GOAL_INCREASE_BANNER_EVENT_KEY);
-        setGoalIncreaseBanner(null);
-        return;
-      }
-
-      setGoalIncreaseBanner({
-        oldGoal,
-        newGoal,
-        timestamp,
-      });
+      const event = await loadGoalIncreaseBannerEvent();
+      setGoalIncreaseBanner(event);
     } catch (error) {
       console.error("Failed to load goal increase banner event:", error);
       setGoalIncreaseBanner(null);
+    }
+  };
+
+  const loadGoalIncreaseProposal = async () => {
+    try {
+      const proposal = await loadGoalIncreaseProposalEvent();
+      setGoalIncreaseProposal(proposal);
+    } catch (error) {
+      console.error("Failed to load goal increase proposal event:", error);
+      setGoalIncreaseProposal(null);
     }
   };
 
@@ -106,11 +98,109 @@ export default function HomeScreen() {
     setGoalIncreaseBanner(null);
 
     try {
-      await AsyncStorage.removeItem(GOAL_INCREASE_BANNER_EVENT_KEY);
+      await clearGoalIncreaseBannerEvent();
     } catch (error) {
       console.error("Failed to clear goal increase banner event:", error);
     }
   };
+
+  const handleDeclineGoalIncrease = useCallback(async () => {
+    setGoalIncreaseProposal(null);
+
+    try {
+      const snoozeUntil = new Date();
+      snoozeUntil.setDate(snoozeUntil.getDate() + GOAL_INCREASE_SNOOZE_DAYS);
+
+      await Promise.all([
+        clearGoalIncreaseProposalEvent(),
+        saveGoalIncreaseSnoozeUntil(snoozeUntil.toISOString()),
+      ]);
+    } catch (error) {
+      console.error("Failed to snooze goal increase proposal:", error);
+    }
+  }, []);
+
+  const handleConfirmGoalIncrease = useCallback(async () => {
+    if (!goalIncreaseProposal) {
+      return;
+    }
+
+    try {
+      const result = await applyGoalIncreaseProposal(goalIncreaseProposal);
+
+      if (result.applied && result.oldGoal && result.newGoal) {
+        await Promise.all([
+          clearGoalIncreaseProposalEvent(),
+          clearGoalIncreaseSnoozeUntil(),
+          saveGoalIncreaseBannerEvent({
+            oldGoal: result.oldGoal,
+            newGoal: result.newGoal,
+            timestamp: result.checkedAt,
+          }),
+        ]);
+
+        setGoalIncreaseProposal(null);
+        await Promise.all([loadGoalIncreaseBanner(), loadData()]);
+        return;
+      }
+
+      setGoalIncreaseProposal(null);
+      await clearGoalIncreaseProposalEvent();
+
+      Alert.alert(
+        t("home.goalIncreasePrompt.outdatedTitle"),
+        t("home.goalIncreasePrompt.outdatedBody"),
+      );
+    } catch (error) {
+      console.error("Failed to confirm goal increase proposal:", error);
+      Alert.alert(
+        t("home.goalIncreasePrompt.errorTitle"),
+        t("home.goalIncreasePrompt.errorBody"),
+      );
+    }
+  }, [applyGoalIncreaseProposal, goalIncreaseProposal, loadData, t]);
+
+  useEffect(() => {
+    if (!goalIncreaseProposal) {
+      return;
+    }
+
+    const proposalKey = `${goalIncreaseProposal.oldGoal}-${goalIncreaseProposal.newGoal}-${goalIncreaseProposal.checkedAt}`;
+    if (lastPromptedProposalRef.current === proposalKey) {
+      return;
+    }
+
+    lastPromptedProposalRef.current = proposalKey;
+
+    Alert.alert(
+      t("home.goalIncreasePrompt.title"),
+      t("home.goalIncreasePrompt.body", {
+        oldGoal: goalIncreaseProposal.oldGoal,
+        newGoal: goalIncreaseProposal.newGoal,
+      }),
+      [
+        {
+          text: t("home.goalIncreasePrompt.notNow"),
+          style: "cancel",
+          onPress: () => {
+            handleDeclineGoalIncrease();
+          },
+        },
+        {
+          text: t("home.goalIncreasePrompt.confirm"),
+          onPress: () => {
+            handleConfirmGoalIncrease();
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  }, [
+    goalIncreaseProposal,
+    handleConfirmGoalIncrease,
+    handleDeclineGoalIncrease,
+    t,
+  ]);
 
   const renderBook = ({ item }: { item: EnhancedBook }) => (
     <BookCard book={item} compact={true} refreshTrigger={refreshTrigger} />

@@ -337,6 +337,9 @@ export default function ReadingLogs() {
       <View style={styles.header}>
         <View style={styles.weekNavigation}>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.previousWeek")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             onPress={() => navigateWeek("prev")}
             style={styles.navButton}
           >
@@ -354,6 +357,9 @@ export default function ReadingLogs() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.nextWeek")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             onPress={() => navigateWeek("next")}
             style={styles.navButton}
           >

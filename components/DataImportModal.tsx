@@ -637,6 +637,9 @@ export default function DataImportModal({
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.close")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             onPress={handleClose}
             style={styles.closeButton}
             disabled={isProcessing}

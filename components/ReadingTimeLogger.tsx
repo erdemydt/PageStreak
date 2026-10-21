@@ -484,6 +484,9 @@ export default function ReadingTimeLogger({
               />
               {pages.trim() && (
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={t("a11y.clearPages")}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   style={styles.clearPagesButton}
                   onPress={() => setPages("")}
                 >
@@ -803,7 +806,7 @@ const styles = StyleSheet.create({
   },
   timeInput: {
     flex: 1,
-    height: 48,
+    minHeight: 48,
     fontSize: 16,
     color: COLORS.neutral[800],
   },
@@ -867,7 +870,7 @@ const styles = StyleSheet.create({
   },
   pagesInput: {
     flex: 1,
-    height: 48,
+    minHeight: 48,
     fontSize: 16,
     color: COLORS.neutral[800],
   },

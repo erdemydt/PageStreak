@@ -32,6 +32,9 @@ Kept for the owner's release notes; clear it when a release ships.
 - Turkish: remaining English text translated, consistently formal tone. Genres survive language switches.
 - Reminders: no permission prompt at first launch; onboarding asks with an explanation. One
   switch in Settings, plus a new "at a set time (if goal not met)" option.
+- "Finish by" estimate on the book page; reminders mention a streak at risk.
+- Accessibility: screen-reader labels on icon buttons, larger tap targets, higher-contrast status badges
+  and secondary text, inputs that grow with large text.
 - Faster library lists; covers are cached on disk. The app stays in light mode until dark mode exists.
 
 ---
@@ -125,9 +128,9 @@ Things users can feel are wrong today.
 ## Phase 7: Product & reach
 - [ ] Streak freeze / grace day (builds on fair streaks).
 - [ ] Built-in reading timer on the hero (survives backgrounding, prefills the logger).
-- [ ] "Finish by" estimate from pages-per-minute (no schema change).
-- [ ] "Streak at risk" evening reminder ("12 more minutes keeps your 9-day streak").
-- [ ] **Accessibility pass:**
+- [x] "Finish by" estimate from pages-per-minute (no schema change).
+- [x] "Streak at risk" reminder text ("12 more minutes keeps your 9-day streak"); the time is user-set via the "at a set time" mode.
+- [x] **Accessibility pass** (labels/roles/hitSlop on icon buttons, contrast tokens, minHeight inputs; a full screen-reader walk-through on device is still worth doing):
   - Labels and roles on 105 touchables.
   - hitSlop for small icons.
   - Contrast (white on want-to-read amber is 2.97:1; tertiary text is 2.58:1).

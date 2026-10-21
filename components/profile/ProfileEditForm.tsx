@@ -47,6 +47,9 @@ export default function ProfileEditForm({
   return (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
       <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={t("a11y.close")}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         style={styles.backButton}
         onPress={onCancel}
         disabled={loading}

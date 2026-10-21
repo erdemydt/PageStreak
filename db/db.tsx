@@ -1,4 +1,5 @@
 import { openDatabaseSync, SQLiteDatabase, SQLiteExecuteAsyncResult } from 'expo-sqlite';
+import type { SQLiteRunResult } from 'expo-sqlite';
 import { log } from '../utils/logger';
 
 // Open or create a local SQLite database
@@ -49,7 +50,6 @@ export async function queryFirst<T = any>(sql: string, params?: any): Promise<T 
  * @param sql SQL statement
  * @param params Query parameters (array or object)
  */
-import type { SQLiteRunResult } from 'expo-sqlite';
 export async function execute(sql: string, params?: any): Promise<SQLiteRunResult> {
   return db.runAsync(sql, params ?? []);
 }

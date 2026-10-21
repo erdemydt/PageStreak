@@ -5,7 +5,7 @@ import i18n from '../i18n';
 import { dateToLocalDateString, getTodayDateString } from '../utils/dateUtils';
 import { formatDuration } from '../utils/format';
 import { log } from '../utils/logger';
-import { getTodayReadingMinutes } from '../utils/readingProgress';
+import { getReadingStreak, getTodayReadingMinutes } from '../utils/readingProgress';
 
 /**
  * Stateless reminder scheduling. Every function reads what it needs and
@@ -112,6 +112,14 @@ export async function generateReminderMessage(firesToday: boolean = true): Promi
     const remainingMinutes = firesToday ? goal.remainingMinutes : goal.dailyGoal;
     if (remainingMinutes === 0) {
       return i18n.t(`${key}.goalCompleted`);
+    }
+    // A live streak is the strongest nudge: name it when today can still keep it
+    const streak = firesToday ? await getReadingStreak() : 0;
+    if (streak > 0) {
+      return i18n.t(`${key}.streakAtRisk`, {
+        remainingTime: formatDuration(remainingMinutes, 'long'),
+        streak,
+      });
     }
     return i18n.t(`${key}.goalRemaining`, {
       baseMessage,

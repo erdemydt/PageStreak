@@ -1,6 +1,6 @@
 import type { ReadingSession } from "../../types/models";
 import { emitDataChange } from "../../utils/dataEvents";
-import { getTodayDateString } from "../../utils/dateUtils";
+import { addDaysToDateString, getTodayDateString } from "../../utils/dateUtils";
 import { syncBookCurrentPageFromSessions } from "../../utils/readingProgress";
 import { execute, queryAll, queryFirst } from "../db";
 import { updateBookStatus } from "./books";
@@ -166,4 +166,40 @@ export async function getFirstSessionDate(): Promise<string | null> {
     "SELECT MIN(date) as first_date FROM reading_sessions",
   );
   return row?.first_date ?? null;
+}
+
+/**
+ * Reading pace from sessions that recorded pages: this book's when it has
+ * enough data, else across all books. null when there's too little to say.
+ */
+export async function getPagesPerMinute(
+  bookId: number,
+): Promise<number | null> {
+  const MIN_PAGES = 10;
+  const pace = async (where: string, params: number[]) => {
+    const row = await queryFirst<{
+      pages: number | null;
+      minutes: number | null;
+    }>(
+      `SELECT SUM(pages_read) as pages, SUM(minutes_read) as minutes
+       FROM reading_sessions WHERE pages_read > 0 ${where}`,
+      params,
+    );
+    return row && (row.pages ?? 0) >= MIN_PAGES && (row.minutes ?? 0) > 0
+      ? row.pages! / row.minutes!
+      : null;
+  };
+  return (await pace("AND book_id = ?", [bookId])) ?? (await pace("", []));
+}
+
+/** Average minutes read per day over the last `days` days (including today) */
+export async function getAverageMinutesPerDay(
+  days: number = 14,
+): Promise<number> {
+  const since = addDaysToDateString(getTodayDateString(), -(days - 1));
+  const row = await queryFirst<{ total: number | null }>(
+    "SELECT SUM(minutes_read) as total FROM reading_sessions WHERE date >= ?",
+    [since],
+  );
+  return (row?.total ?? 0) / days;
 }

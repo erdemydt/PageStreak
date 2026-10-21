@@ -133,7 +133,7 @@ export const introStyles = StyleSheet.create({
   },
   input: {
     width: "100%",
-    height: 56,
+    minHeight: 56,
     borderColor: COLORS.neutral[200],
     borderWidth: 2,
     borderRadius: 16,
@@ -152,7 +152,7 @@ export const introStyles = StyleSheet.create({
   },
   goalInput: {
     width: "auto",
-    height: 56,
+    minHeight: 56,
     borderColor: COLORS.neutral[200],
     borderWidth: 2,
     borderRadius: 16,

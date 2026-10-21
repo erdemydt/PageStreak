@@ -326,6 +326,9 @@ export default function WeeklyStatsView({
       <View style={styles.header}>
         <View style={styles.weekNavigation}>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.previousWeek")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             onPress={() => onNavigateWeek("prev")}
             style={styles.navButton}
           >
@@ -347,6 +350,9 @@ export default function WeeklyStatsView({
           </TouchableOpacity>
 
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.nextWeek")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             onPress={() => onNavigateWeek("next")}
             style={styles.navButton}
           >
@@ -877,7 +883,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   barFooter: {
-    height: 16,
+    minHeight: 16,
     justifyContent: "center",
   },
   sessionsCount: {

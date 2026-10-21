@@ -2,19 +2,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    BackupOptions,
-    exportAndSaveBackup,
+  BackupOptions,
+  exportAndSaveBackup,
 } from "../services/dataBackupService";
 import { COLORS } from "../themes/colors";
 
@@ -139,7 +139,13 @@ export default function DataExportModal({
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.close")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPress={onClose}
+            style={styles.closeButton}
+          >
             <Ionicons name="close" size={24} color={COLORS.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>{t("dataBackup.export.title")}</Text>

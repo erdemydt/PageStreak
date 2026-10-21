@@ -27,6 +27,7 @@ import { TYPE } from "../../../themes/typography";
 import { getStatusColor, getStatusText } from "../../../utils/bookStatus";
 import {
   getBookReadingTime,
+  estimateDaysToFinish,
   getEnhancedBookProgress,
 } from "../../../utils/readingProgress";
 import {
@@ -36,6 +37,11 @@ import {
 } from "../../../utils/format";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
 import { showToast } from "../../../utils/toast";
+import { getDailyGoal } from "../../../db/repos/preferences";
+import {
+  getAverageMinutesPerDay,
+  getPagesPerMinute,
+} from "../../../db/repos/sessions";
 
 export default function BookDetailsScreen() {
   const router = useRouter();
@@ -49,6 +55,7 @@ export default function BookDetailsScreen() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [isEditingPages, setIsEditingPages] = useState(false);
   const [pagesInput, setPagesInput] = useState("");
+  const [daysToFinish, setDaysToFinish] = useState<number | null>(null);
   const [progressData, setProgressData] = useState<{
     pagesRead: number;
     percentage: number;
@@ -84,6 +91,28 @@ export default function BookDetailsScreen() {
       setBook(foundBook);
       setReadingTimeMinutes(readingTime);
       setProgressData(progress);
+
+      // "Finish by" estimate: pace (pages/min) x recent minutes per day,
+      // falling back to the daily goal if nothing was read lately
+      if (
+        foundBook.reading_status === "currently_reading" &&
+        foundBook.page > 0
+      ) {
+        const [pagesPerMinute, averageMinutes] = await Promise.all([
+          getPagesPerMinute(foundBook.id),
+          getAverageMinutesPerDay(),
+        ]);
+        setDaysToFinish(
+          estimateDaysToFinish({
+            remainingPages: foundBook.page - progress.pagesRead,
+            pagesPerMinute,
+            minutesPerDay:
+              averageMinutes > 0 ? averageMinutes : await getDailyGoal(),
+          }),
+        );
+      } else {
+        setDaysToFinish(null);
+      }
     } catch (e) {
       console.error("Failed to load book details:", e);
       setError(t("booksPage.failedToLoad"));
@@ -273,6 +302,24 @@ export default function BookDetailsScreen() {
                   style={[styles.progressFill, { width: `${progress}%` }]}
                 />
               </View>
+              {daysToFinish !== null && (
+                <Text style={styles.finishEstimate}>
+                  {t(
+                    daysToFinish === 1
+                      ? "components.bookDetailModal.finishEstimateOne"
+                      : "components.bookDetailModal.finishEstimate",
+                    {
+                      days: daysToFinish,
+                      date: formatDate(
+                        new Date(
+                          Date.now() + daysToFinish * 24 * 60 * 60 * 1000,
+                        ),
+                        { month: "short", day: "numeric" },
+                      ),
+                    },
+                  )}
+                </Text>
+              )}
             </View>
           </View>
         )}
@@ -579,6 +626,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: COLORS.accent.strong,
+  },
+  finishEstimate: {
+    ...TYPE.meta,
+    color: COLORS.text.secondary,
+    marginTop: SPACING[2],
   },
   progressSummary: {
     ...TYPE.meta,

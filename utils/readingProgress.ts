@@ -200,3 +200,19 @@ export const getBookReadingTime = async (bookId: number): Promise<number> => {
     return 0;
   }
 };
+
+/**
+ * Days until a book is finished at the given pace, or null when it can't be
+ * estimated (no pace yet, nothing read lately, or nothing left to read).
+ */
+export const estimateDaysToFinish = (input: {
+  remainingPages: number;
+  pagesPerMinute: number | null;
+  minutesPerDay: number;
+}): number | null => {
+  const { remainingPages, pagesPerMinute, minutesPerDay } = input;
+  if (!pagesPerMinute || pagesPerMinute <= 0 || minutesPerDay <= 0 || remainingPages <= 0) {
+    return null;
+  }
+  return Math.max(1, Math.ceil(remainingPages / (pagesPerMinute * minutesPerDay)));
+};

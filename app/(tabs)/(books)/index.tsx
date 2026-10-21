@@ -90,6 +90,9 @@ function ManualBookEntry(props: BooksearchProps) {
         <View style={styles.modalHeader}>
           <Text style={styles.cardTitle}>{t("booksPage.addManualButton")}</Text>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.close")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             style={styles.closeButton}
             onPress={props.onClose}
             disabled={props.loading}
@@ -644,7 +647,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   input: {
-    height: 48,
+    minHeight: 48,
     borderColor: COLORS.neutral[200],
     borderWidth: 1.5,
     borderRadius: 12,

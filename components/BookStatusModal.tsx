@@ -129,7 +129,13 @@ export default function BookStatusModal({
         >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{t("bookStatus.title")}</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel={t("a11y.close")}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Text style={styles.closeButtonText}>
                 {t("bookStatus.close")}
               </Text>
@@ -143,6 +149,10 @@ export default function BookStatusModal({
           <View style={styles.statusOptions}>
             {statusOptions.map((option) => (
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityState={{
+                  selected: shown.current.currentStatus === option.value,
+                }}
                 key={option.value}
                 style={[
                   styles.statusOption,

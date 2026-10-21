@@ -361,7 +361,13 @@ export default function BookCard({
         </View>
 
         {showDeleteButton && onDelete && (
-          <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t("a11y.deleteBook")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.deleteButton}
+            onPress={onDelete}
+          >
             <Text style={styles.deleteButtonText}>🗑️</Text>
           </TouchableOpacity>
         )}

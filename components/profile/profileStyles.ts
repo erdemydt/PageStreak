@@ -221,7 +221,7 @@ export const profileStyles = StyleSheet.create({
     alignItems: "center",
   },
   input: {
-    height: 48,
+    minHeight: 48,
     borderColor: COLORS.neutral[200],
     borderWidth: 1.5,
     borderRadius: 12,

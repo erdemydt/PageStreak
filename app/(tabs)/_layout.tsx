@@ -16,6 +16,8 @@ export default function TabLayout() {
           tabBarActiveTintColor: COLORS.primary,
           tabBarInactiveTintColor: COLORS.neutral[400],
           tabBarLabelStyle: styles.tabBarLabel,
+          // The tab bar has a fixed height; scaled labels would be clipped
+          tabBarAllowFontScaling: false,
           headerStyle: styles.header,
           headerTitleStyle: styles.headerTitle,
           headerTintColor: COLORS.white,
@@ -59,6 +61,9 @@ export default function TabLayout() {
             headerShown: true,
             headerLeft: () => (
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={t("a11y.back")}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 onPress={() => router.replace("/(tabs)/profile")}
                 style={styles.headerBackButton}
               >

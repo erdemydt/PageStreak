@@ -31,7 +31,8 @@ export const COLORS = {
   text: {
     primary: "#26261F",
     secondary: "#6A6A5E",
-    tertiary: "#A2A294",
+    // Darkened from #A2A294 for WCAG AA (4.5:1) on page and card backgrounds
+    tertiary: "#717167",
     inverse: "#FFFFFF",
   },
   accent: {
@@ -43,8 +44,9 @@ export const COLORS = {
   overlay: "rgba(0, 0, 0, 0.5)",
   status: {
     currently_reading: "#2F6E5B",
-    read: "#3F8F5C",
-    want_to_read: "#C8892F",
+    read: "#3A8455",
+    // Darkened from #C8892F / #3F8F5C for WCAG AA (4.5:1) with white badge text
+    want_to_read: "#9D6C25",
     unknown: "#6A6A5E",
   },
   state: {

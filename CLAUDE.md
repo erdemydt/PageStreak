@@ -242,3 +242,6 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   lines, stateless); EditSessionModal extracted (readinglogs 1347 → 670); onboarding's final step and styles
   extracted, and onboarding now uses `computeGrowthGoalFields` like Profile and Growth (intro 1292 → 689);
   Profile's edit form and styles extracted (908 → 486). Lint: 5 exhaustive-deps warnings remain.
+- **Phase 7 (part 1).** Accessibility (a11y labels/roles/hitSlop, WCAG AA contrast for status badges and tertiary
+  text, minHeight inputs, non-scaling tab labels), a "finish by" estimate (pace from page-logged sessions x recent
+  minutes per day), streak-at-risk reminder text. Remaining Phase 7 features await owner decisions (see ROADMAP).

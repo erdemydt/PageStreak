@@ -262,6 +262,9 @@ const resources = {
           cancel: "Cancel",
           invalidPageCount: "Please enter a valid page count.",
           pagesOf: "{{pagesRead}} / {{totalPages}} pages",
+          finishEstimate:
+            "At your recent pace, you'll finish in about {{days}} days ({{date}})",
+          finishEstimateOne: "At your recent pace, you'll finish tomorrow ({{date}})",
         },
       },
 
@@ -363,6 +366,14 @@ const resources = {
         },
       },
       error: "Error",
+      a11y: {
+        back: "Back",
+        close: "Close",
+        previousWeek: "Previous week",
+        nextWeek: "Next week",
+        clearPages: "Clear pages",
+        deleteBook: "Delete book",
+      },
       ok: "OK",
       datePlaceholder: "DD/MM/YYYY",
       duration: {
@@ -416,6 +427,8 @@ const resources = {
           "Test notification scheduled for {{hours}} hours from now!",
         permissionRequired: "Permission Required",
         notificationMessages: {
+          streakAtRisk:
+            "Read {{remainingTime}} more to keep your {{streak}}-day streak! 🔥",
           goalCompleted:
             "Congratulations! You've already reached your daily reading goal! 🎉",
           goalRemaining:
@@ -1134,6 +1147,9 @@ const resources = {
           cancel: "İptal",
           invalidPageCount: "Lütfen geçerli bir sayfa sayısı girin.",
           pagesOf: "{{pagesRead}} / {{totalPages}} sayfa",
+          finishEstimate:
+            "Son temponuzla yaklaşık {{days}} günde bitireceksiniz ({{date}})",
+          finishEstimateOne: "Son temponuzla yarın bitireceksiniz ({{date}})",
         },
       },
 
@@ -1236,6 +1252,14 @@ const resources = {
         },
       },
       error: "Hata",
+      a11y: {
+        back: "Geri",
+        close: "Kapat",
+        previousWeek: "Önceki hafta",
+        nextWeek: "Sonraki hafta",
+        clearPages: "Sayfaları temizle",
+        deleteBook: "Kitabı sil",
+      },
       ok: "Tamam",
       datePlaceholder: "GG/AA/YYYY",
       duration: {
@@ -1289,6 +1313,8 @@ const resources = {
           "Test bildirimi {{hours}} saat sonra için zamanlandı!",
         permissionRequired: "İzin Gerekli",
         notificationMessages: {
+          streakAtRisk:
+            "{{remainingTime}} daha okuyarak {{streak}} günlük serinizi koruyun! 🔥",
           goalCompleted:
             "Tebrikler! Günlük okuma hedefinize zaten ulaştınız! 🎉",
           goalRemaining:

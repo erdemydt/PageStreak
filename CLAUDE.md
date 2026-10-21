@@ -68,6 +68,7 @@ utils/
   goalSettings.ts        Growth-goal validation and derived fields
   goalHistory.ts         Goal timeline: recordGoalChange, loadGoalForDate, backfill
   logger.ts              Dev-only log/warn
+  readingTimer.ts        Home card timer (AsyncStorage timestamps: running / stopped)
   format.ts              formatDuration / formatDate in the app language (use these, no local formatters)
   dataEvents.ts          Change bus: repo writes emit books/sessions/preferences
   devData.ts             Dev-only random session generator
@@ -117,6 +118,7 @@ tables there and to the backup service. Test migrations against real DB files: s
 - **Book writes** go through `db/repos/books.ts` (`addBook`, `updateBookStatus`, `deleteBookWithSessions`).
   Lists come from `listBooksWithStats` (one JOIN carrying `reading_time` and `pages_from_sessions`);
   `BookCard` derives progress from those props via `computeBookProgress`.
+- **Goals** (daily/target minutes, target date) are edited only in Growth Journey; Profile edits name, yearly goal and genres.
 - **Yearly goal** counts books with status `read` whose `date_finished` is in the current year.
 - **Notifications**: a single reminder with the fixed identifier `daily-reminder`, scheduled only on
   `'background'` (never `'inactive'`) through a serialized queue. Schedule paths never prompt for
@@ -245,3 +247,5 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
 - **Phase 7 (part 1).** Accessibility (a11y labels/roles/hitSlop, WCAG AA contrast for status badges and tertiary
   text, minHeight inputs, non-scaling tab labels), a "finish by" estimate (pace from page-logged sessions x recent
   minutes per day), streak-at-risk reminder text. Remaining Phase 7 features await owner decisions (see ROADMAP).
+- **Phase 7 (part 2), owner decisions applied:** no streak freezes; goals edited only in Growth Journey; a reading
+  timer on the Home card; dark mode deferred to its own phase.

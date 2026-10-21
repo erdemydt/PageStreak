@@ -2,6 +2,7 @@ import { execute, runInTransaction } from '../db/db';
 import NotificationService from '../services/notificationService';
 import { emitDataChange } from './dataEvents';
 import { log, warn } from './logger';
+import { clearReadingTimer } from './readingTimer';
 
 /**
  * Every table holding user data. The schema itself (and its version) is kept:
@@ -44,6 +45,8 @@ export const logoutUser = async () => {
       // Restart AUTOINCREMENT ids like a fresh install
       await execute('DELETE FROM sqlite_sequence');
     });
+    // The Home timer lives in AsyncStorage and may reference an erased book
+    await clearReadingTimer().catch(() => {});
     emitDataChange('books', 'sessions', 'preferences');
     log('🎉 All user data erased');
     return true;

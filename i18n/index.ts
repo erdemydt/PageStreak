@@ -23,6 +23,20 @@ const resources = {
         discoverBooks: "🔍 Discover Books",
         noBookInProgress: "No book in progress",
         chooseBookToRead: "📚 Choose a book to read",
+        timer: {
+          start: "⏱ Timer",
+          stop: "Stop",
+          ready: "⏱ {{minutes}} min ready to log",
+          log: "Log",
+          discard: "Discard",
+          discardTitle: "Discard timer?",
+          discardMessage: "The timed minutes won't be logged.",
+          runningA11y: "Reading timer running, {{minutes}} minutes",
+          review: "Review",
+          longTitle: "Long timer",
+          longMessage:
+            "The timer ran for over {{hours}} hours. Did you forget to stop it? Review the minutes before logging.",
+        },
         streakShort: "{{count}}d streak",
       },
 
@@ -265,6 +279,9 @@ const resources = {
           finishEstimate:
             "At your recent pace, you'll finish in about {{days}} days ({{date}})",
           finishEstimateOne: "At your recent pace, you'll finish tomorrow ({{date}})",
+          finishEstimateGoal:
+            "Reading your daily goal, you'll finish in about {{days}} days ({{date}})",
+          finishEstimateGoalOne: "Reading your daily goal, you'll finish tomorrow ({{date}})",
         },
       },
 
@@ -787,6 +804,10 @@ const resources = {
           title: "Weekly Minutes Growth",
           subtitle: "Visualize and edit your gradual reading goal",
         },
+        goalsEditedInGrowth: "Edit your daily and target minutes and the target date here",
+        discardChangesTitle: "Discard changes?",
+        discardChangesMessage: "Your unsaved profile changes will be lost.",
+        discardChanges: "Discard",
         units: {
           minutes: "minutes",
           minPerDay: "min/day",
@@ -907,6 +928,20 @@ const resources = {
         discoverBooks: "🔍 Kitap Keşfet",
         noBookInProgress: "Şu anda okunan kitap yok",
         chooseBookToRead: "📚 Okumak için bir kitap seçin",
+        timer: {
+          start: "⏱ Zamanlayıcı",
+          stop: "Durdur",
+          ready: "⏱ {{minutes}} dk kaydedilmeye hazır",
+          log: "Kaydet",
+          discard: "Sil",
+          discardTitle: "Zamanlayıcı silinsin mi?",
+          discardMessage: "Ölçülen dakikalar kaydedilmeyecek.",
+          runningA11y: "Okuma zamanlayıcısı çalışıyor, {{minutes}} dakika",
+          review: "Gözden geçir",
+          longTitle: "Uzun süre",
+          longMessage:
+            "Zamanlayıcı {{hours}} saatten uzun çalıştı. Durdurmayı unuttunuz mu? Kaydetmeden önce dakikaları kontrol edin.",
+        },
         streakShort: "{{count}} günlük seri",
       },
 
@@ -1150,6 +1185,9 @@ const resources = {
           finishEstimate:
             "Son temponuzla yaklaşık {{days}} günde bitireceksiniz ({{date}})",
           finishEstimateOne: "Son temponuzla yarın bitireceksiniz ({{date}})",
+          finishEstimateGoal:
+            "Günlük hedefinizi okursanız yaklaşık {{days}} günde bitireceksiniz ({{date}})",
+          finishEstimateGoalOne: "Günlük hedefinizi okursanız yarın bitireceksiniz ({{date}})",
         },
       },
 
@@ -1669,6 +1707,10 @@ const resources = {
           title: "Haftalık Dakika Artışı",
           subtitle: "Kademeli okuma hedefinizi görselleştirin ve düzenleyin",
         },
+        goalsEditedInGrowth: "Günlük ve hedef dakikalarınızı ve hedef tarihini buradan düzenleyin",
+        discardChangesTitle: "Değişiklikler silinsin mi?",
+        discardChangesMessage: "Kaydedilmemiş profil değişiklikleriniz kaybolacak.",
+        discardChanges: "Sil",
         units: {
           minutes: "dakika",
           minPerDay: "dk/gün",

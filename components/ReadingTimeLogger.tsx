@@ -27,6 +27,11 @@ interface ReadingTimeLoggerProps {
   onClose: () => void;
   /** Optional: listeners via useFocusRefresh already reload on save */
   onSuccess?: () => void;
+  /** Pre-fill from the reading timer */
+  initialMinutes?: number;
+  initialBookId?: number;
+  /** YYYY-MM-DD; defaults to today */
+  initialDate?: string;
 }
 
 const { width: screenWidth } = Dimensions.get("window");
@@ -35,6 +40,9 @@ export default function ReadingTimeLogger({
   visible,
   onClose,
   onSuccess,
+  initialMinutes,
+  initialBookId,
+  initialDate,
 }: ReadingTimeLoggerProps) {
   const { t } = useTranslation();
   const [minutes, setMinutes] = useState("");
@@ -54,8 +62,10 @@ export default function ReadingTimeLogger({
     if (visible) {
       loadCurrentlyReadingBooks();
       // Default to today each time the logger opens (it may stay mounted past midnight)
-      setSessionDate(getTodayDateString());
+      setSessionDate(initialDate ?? getTodayDateString());
+      if (initialMinutes) setMinutes(String(initialMinutes));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   useEffect(() => {
@@ -96,6 +106,11 @@ export default function ReadingTimeLogger({
       // one book, and drop a selection that is no longer being read (e.g. a book
       // finished in the previous session) so we never log time against it.
       setSelectedBook((previous) => {
+        if (initialBookId !== undefined) {
+          // The timer's book only; if it's no longer being read, let the user
+          // choose rather than silently crediting another book
+          return books.find((book) => book.id === initialBookId) ?? null;
+        }
         if (books.length === 1) return books[0];
         return books.find((book) => book.id === previous?.id) ?? null;
       });

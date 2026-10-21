@@ -1,6 +1,10 @@
 import type { ReadingSession } from "../../types/models";
 import { emitDataChange } from "../../utils/dataEvents";
-import { addDaysToDateString, getTodayDateString } from "../../utils/dateUtils";
+import {
+  addDaysToDateString,
+  getTodayDateString,
+  parseLocalDateString,
+} from "../../utils/dateUtils";
 import { syncBookCurrentPageFromSessions } from "../../utils/readingProgress";
 import { execute, queryAll, queryFirst } from "../db";
 import { updateBookStatus } from "./books";
@@ -192,14 +196,36 @@ export async function getPagesPerMinute(
   return (await pace("AND book_id = ?", [bookId])) ?? (await pace("", []));
 }
 
-/** Average minutes read per day over the last `days` days (including today) */
+/**
+ * Average minutes read per day over the last `days` days (including today),
+ * optionally for one book. Divides by the days since the first session when
+ * that's shorter, so new users aren't averaged over days before they started.
+ */
 export async function getAverageMinutesPerDay(
   days: number = 14,
+  bookId?: number,
 ): Promise<number> {
-  const since = addDaysToDateString(getTodayDateString(), -(days - 1));
+  const today = getTodayDateString();
+  const since = addDaysToDateString(today, -(days - 1));
+  const params: (string | number)[] = [since];
+  if (bookId !== undefined) params.push(bookId);
   const row = await queryFirst<{ total: number | null }>(
-    "SELECT SUM(minutes_read) as total FROM reading_sessions WHERE date >= ?",
-    [since],
+    `SELECT SUM(minutes_read) as total FROM reading_sessions
+     WHERE date >= ? ${bookId !== undefined ? "AND book_id = ?" : ""}`,
+    params,
   );
-  return (row?.total ?? 0) / days;
+  const firstEver = await getFirstSessionDate();
+  if (!row?.total || !firstEver) return 0;
+
+  let span = days;
+  if (firstEver > since) {
+    const msPerDay = 24 * 60 * 60 * 1000;
+    span =
+      Math.round(
+        (parseLocalDateString(today).getTime() -
+          parseLocalDateString(firstEver).getTime()) /
+          msPerDay,
+      ) + 1;
+  }
+  return row.total / Math.max(1, Math.min(days, span));
 }

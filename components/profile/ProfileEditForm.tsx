@@ -17,29 +17,27 @@ interface ProfileEditFormProps {
   values: {
     username: string;
     yearlyGoal: string;
-    dailyGoal: string;
-    targetGoal: string;
     genres: string[];
   };
   onChange: {
     username: (value: string) => void;
     yearlyGoal: (value: string) => void;
-    dailyGoal: (value: string) => void;
-    targetGoal: (value: string) => void;
   };
   onToggleGenre: (genre: string) => void;
   onCancel: () => void;
   onSave: () => void;
+  onOpenGrowthJourney: () => void;
   loading: boolean;
 }
 
-/** Profile's edit mode: name, yearly goal, daily/target minutes, genres */
+/** Profile's edit mode: name, yearly goal, genres (daily goals live in Growth Journey) */
 export default function ProfileEditForm({
   values,
   onChange,
   onToggleGenre,
   onCancel,
   onSave,
+  onOpenGrowthJourney,
   loading,
 }: ProfileEditFormProps) {
   const { t } = useTranslation();
@@ -99,40 +97,35 @@ export default function ProfileEditForm({
         </View>
       </View>
 
-      {/* Reading Time Goals */}
+      {/* Reading goals are edited in one place: Growth Journey */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t("profile.sections.goals")}</Text>
-        <View style={styles.card}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              <Ionicons name="time" size={16} color={COLORS.success} />{" "}
-              {t("profile.fields.currentDailyGoal")}
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={values.dailyGoal}
-              onChangeText={onChange.dailyGoal}
-              placeholder={t("profile.placeholders.dailyGoal")}
-              keyboardType="numeric"
-              editable={!loading}
+        <TouchableOpacity
+          style={styles.growthJourneyButton}
+          onPress={onOpenGrowthJourney}
+          disabled={loading}
+        >
+          <View style={styles.growthJourneyIconWrap}>
+            <Ionicons
+              name="stats-chart"
+              size={18}
+              color={COLORS.accent.strong}
             />
           </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              <Ionicons name="trending-up" size={16} color={COLORS.warning} />{" "}
-              {t("profile.fields.targetDailyGoal")}
+          <View style={styles.growthJourneyTextWrap}>
+            <Text style={styles.growthJourneyTitle}>
+              {t("profile.growth.title")}
             </Text>
-            <TextInput
-              style={styles.input}
-              value={values.targetGoal}
-              onChangeText={onChange.targetGoal}
-              placeholder={t("profile.placeholders.targetGoal")}
-              keyboardType="numeric"
-              editable={!loading}
-            />
+            <Text style={styles.growthJourneySubtitle}>
+              {t("profile.goalsEditedInGrowth")}
+            </Text>
           </View>
-        </View>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={COLORS.neutral[500]}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Preferred Genres */}

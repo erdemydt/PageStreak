@@ -13,10 +13,6 @@ import {
 import { getUserPreferences, updateProfile } from "../../db/repos/preferences";
 import type { UserPreferences } from "../../types/models";
 import { COLORS } from "../../themes/colors";
-import {
-  computeGrowthGoalFields,
-  validateGrowthGoals,
-} from "../../utils/goalSettings";
 import { formatDate } from "../../utils/format";
 import { genreLabel, parseGenres } from "../../utils/genres";
 import { useFocusRefresh } from "../../hooks/useFocusRefresh";
@@ -33,12 +29,9 @@ export default function ProfileScreen() {
   // Editable fields
   const [editedUsername, setEditedUsername] = useState("");
   const [editedYearlyGoal, setEditedYearlyGoal] = useState("");
-  const [editedDailyGoal, setEditedDailyGoal] = useState("");
-  const [editedTargetGoal, setEditedTargetGoal] = useState("");
   const [editedGenres, setEditedGenres] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
-
 
   // Background reloads (focus, data-change events) must not overwrite what
   // the user is typing; edit fields are only refreshed when not editing
@@ -64,12 +57,6 @@ export default function ProfileScreen() {
   const populateEditFields = (user: UserPreferences) => {
     setEditedUsername(user.username);
     setEditedYearlyGoal(user.yearly_book_goal.toString());
-    setEditedDailyGoal(
-      user.current_reading_rate_minutes_per_day?.toString() || "30",
-    );
-    setEditedTargetGoal(
-      user.end_reading_rate_goal_minutes_per_day?.toString() || "60",
-    );
     setEditedGenres(parseGenres(user.preferred_genres));
   };
 
@@ -81,8 +68,6 @@ export default function ProfileScreen() {
 
   const savePreferences = async () => {
     const yearlyGoal = Number(editedYearlyGoal);
-    const currentDailyGoal = Number(editedDailyGoal);
-    const targetDailyGoal = Number(editedTargetGoal);
 
     if (!editedUsername.trim()) {
       Alert.alert(
@@ -100,47 +85,14 @@ export default function ProfileScreen() {
       return;
     }
 
-    const growthValidation = validateGrowthGoals({
-      currentDailyGoal,
-      targetDailyGoal,
-      targetDate: userPreferences?.end_reading_rate_goal_date,
-    });
-
-    if (growthValidation) {
-      const messageKey =
-        growthValidation === "current_daily_required" ||
-        growthValidation === "current_daily_range"
-          ? "profile.validation.dailyGoalRequired"
-          : "profile.validation.targetGoalRequired";
-
-      Alert.alert(t("profile.error.title"), t(messageKey));
-      return;
-    }
-
     setLoading(true);
     try {
-      const goalsChanged =
-        currentDailyGoal !==
-          userPreferences?.current_reading_rate_minutes_per_day ||
-        targetDailyGoal !==
-          userPreferences?.end_reading_rate_goal_minutes_per_day;
-
-      // Only re-plan growth when the goals actually changed; otherwise the
-      // initial rate, last-updated date and weekly increase would reset
-      await updateProfile(
-        {
-          username: editedUsername.trim(),
-          yearlyBookGoal: yearlyGoal,
-          preferredGenres: editedGenres,
-        },
-        goalsChanged
-          ? computeGrowthGoalFields({
-              currentDailyGoal,
-              targetDailyGoal,
-              targetDate: userPreferences?.end_reading_rate_goal_date,
-            })
-          : null,
-      );
+      // Daily/target goals are edited in Growth Journey only
+      await updateProfile({
+        username: editedUsername.trim(),
+        yearlyBookGoal: yearlyGoal,
+        preferredGenres: editedGenres,
+      });
 
       isEditingRef.current = false;
       setIsEditing(false);
@@ -450,24 +402,52 @@ export default function ProfileScreen() {
     </ScrollView>
   );
 
+  // Leaving edit mode for Growth Journey drops unsaved edits: ask first
+  const openGrowthJourneyFromEdit = () => {
+    const leave = () => {
+      cancelEdit();
+      router.push("/(tabs)/reading-growth");
+    };
+    const saved = userPreferences;
+    const hasChanges =
+      !!saved &&
+      (editedUsername.trim() !== saved.username ||
+        Number(editedYearlyGoal) !== saved.yearly_book_goal ||
+        editedGenres.join(",") !==
+          parseGenres(saved.preferred_genres).join(","));
+    if (!hasChanges) {
+      leave();
+      return;
+    }
+    Alert.alert(
+      t("profile.discardChangesTitle"),
+      t("profile.discardChangesMessage"),
+      [
+        { text: t("booksPage.alert.cancel"), style: "cancel" },
+        {
+          text: t("profile.discardChanges"),
+          style: "destructive",
+          onPress: leave,
+        },
+      ],
+    );
+  };
+
   const renderEditMode = () => (
     <ProfileEditForm
       values={{
         username: editedUsername,
         yearlyGoal: editedYearlyGoal,
-        dailyGoal: editedDailyGoal,
-        targetGoal: editedTargetGoal,
         genres: editedGenres,
       }}
       onChange={{
         username: setEditedUsername,
         yearlyGoal: setEditedYearlyGoal,
-        dailyGoal: setEditedDailyGoal,
-        targetGoal: setEditedTargetGoal,
       }}
       onToggleGenre={toggleGenre}
       onCancel={cancelEdit}
       onSave={savePreferences}
+      onOpenGrowthJourney={openGrowthJourneyFromEdit}
       loading={loading}
     />
   );

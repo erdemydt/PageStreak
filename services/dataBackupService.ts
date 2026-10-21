@@ -8,6 +8,7 @@ import type { UserPreferences } from '../types/models';
 import i18n from '../i18n';
 import { emitDataChange } from '../utils/dataEvents';
 import { backfillGoalHistoryIfEmpty } from '../utils/goalHistory';
+import { clearReadingTimer } from '../utils/readingTimer';
 import { syncBookCurrentPageFromSessions } from '../utils/readingProgress';
 
 // Current app schema version - increment when making breaking changes to backup format
@@ -678,6 +679,10 @@ export async function importDataFromBackup(
       await backfillGoalHistoryIfEmpty();
     }
 
+    // Replace mode swaps all books; a running timer could point at an unrelated one
+    if (options.mode === 'replace') {
+      await clearReadingTimer().catch(() => {});
+    }
     emitDataChange('books', 'sessions', 'preferences');
     onProgress?.(100, i18n.t('backupProgress.importComplete'));
     importResult.success = true;

@@ -35,6 +35,8 @@ Kept for the owner's release notes; clear it when a release ships.
 - "Finish by" estimate on the book page; reminders mention a streak at risk.
 - Accessibility: screen-reader labels on icon buttons, larger tap targets, higher-contrast status badges
   and secondary text, inputs that grow with large text.
+- Reading timer on the Home card: start, stop (opens the logger pre-filled), or log/discard later.
+- Daily and target goals are edited in one place, Growth Journey.
 - Faster library lists; covers are cached on disk. The app stays in light mode until dark mode exists.
 
 ---
@@ -94,8 +96,7 @@ Things users can feel are wrong today.
 - [x] Replace ~12 blocking success alerts with a toast/haptic (export and import currently double-alert). Add undo for session delete.
 - [x] Delete the 57 verified-unused i18n keys (list in the UX audit; put `booksPage.search.failed` to use instead).
 - [x] Polish: Turkish sen/siz consistency (now formal throughout), frozen "Weekly goal" on Profile, duplicate-add check in search.
-- [ ] **Decide (owner):** a single place to edit goals. Profile and Growth Journey both edit current/target
-  goals, and only Growth Journey edits the date. Deferred because it's a design choice, not a fix.
+- [x] Single place to edit goals: **Growth Journey only** (Profile shows them read-only; edit mode links there).
 
 ## Phase 4: Native cleanup (Release B, needs rebuild + `pod install` + device QA)
 - [x] Uninstall unused packages: `notifee`, `@notifee/react-native`, `@expo/ngrok`, `react-native-permissions`,
@@ -126,8 +127,8 @@ Things users can feel are wrong today.
 - [ ] Optional (deferred, visible behavior change): move reading-growth into a Stack under profile, for a native back gesture.
 
 ## Phase 7: Product & reach
-- [ ] Streak freeze / grace day (builds on fair streaks).
-- [ ] Built-in reading timer on the hero (survives backgrounding, prefills the logger).
+- [x] ~~Streak freeze / grace day~~: owner decided no freezes (streaks stay strict).
+- [x] Built-in reading timer on the hero (survives backgrounding and app kill, prefills the logger; a cancelled log keeps the stopped timer).
 - [x] "Finish by" estimate from pages-per-minute (no schema change).
 - [x] "Streak at risk" reminder text ("12 more minutes keeps your 9-day streak"); the time is user-set via the "at a set time" mode.
 - [x] **Accessibility pass** (labels/roles/hitSlop on icon buttons, contrast tokens, minHeight inputs; a full screen-reader walk-through on device is still worth doing):
@@ -135,6 +136,6 @@ Things users can feel are wrong today.
   - hitSlop for small icons.
   - Contrast (white on want-to-read amber is 2.97:1; tertiary text is 2.58:1).
   - Fixed heights that clip with large text.
-- [ ] Real dark mode (L).
+- [ ] Real dark mode (L): owner wants it as its own phase after the Phase 7 features.
 - [ ] Consider `expo-updates` so JS-only fixes skip App Store review.
 - [ ] Tests (separate track, when we're ready).

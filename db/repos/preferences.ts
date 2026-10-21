@@ -1,7 +1,6 @@
 import type { UserPreferences } from "../../types/models";
 import { emitDataChange } from "../../utils/dataEvents";
 import { recordGoalChange } from "../../utils/goalHistory";
-import type { GrowthGoalComputation } from "../../utils/goalSettings";
 import { execute, queryFirst, runInTransaction } from "../db";
 
 const DEFAULT_DAILY_GOAL = 30;
@@ -67,58 +66,20 @@ export async function saveOnboardingPreferences(
   emitDataChange("preferences");
 }
 
-/**
- * Save the profile. Name, yearly goal and genres always; the growth plan only
- * when `goals` is given (re-planning resets the initial rate, last-updated
- * date and weekly increase). One transaction, one change event.
- */
-export async function updateProfile(
-  basics: {
-    username: string;
-    yearlyBookGoal: number;
-    preferredGenres: string[];
-  },
-  goals?: GrowthGoalComputation | null,
-): Promise<void> {
-  await runInTransaction(async () => {
-    await execute(
-      `UPDATE user_preferences SET
-        username = ?,
-        yearly_book_goal = ?,
-        preferred_genres = ?,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = 1`,
-      [
-        basics.username,
-        basics.yearlyBookGoal,
-        basics.preferredGenres.join(","),
-      ],
-    );
-    if (goals) {
-      await execute(
-        `UPDATE user_preferences SET
-          weekly_reading_goal = ?,
-          initial_reading_rate_minutes_per_day = ?,
-          end_reading_rate_goal_minutes_per_day = ?,
-          end_reading_rate_goal_date = ?,
-          current_reading_rate_minutes_per_day = ?,
-          current_reading_rate_last_updated = ?,
-          weekly_reading_rate_increase_minutes = ?,
-          weekly_reading_rate_increase_minutes_percentage = ?
-        WHERE id = 1`,
-        [
-          goals.weeklyReadingGoal,
-          goals.initialReadingRate,
-          goals.targetReadingRate,
-          goals.endGoalDate,
-          goals.currentReadingRate,
-          new Date().toISOString(),
-          goals.weeklyIncreaseMinutes,
-          goals.weeklyIncreasePercentage,
-        ],
-      );
-      await recordGoalChange(goals.currentReadingRate);
-    }
-  });
+/** Name, yearly goal and genres. Daily goals change via Growth Journey (goalSettings). */
+export async function updateProfile(basics: {
+  username: string;
+  yearlyBookGoal: number;
+  preferredGenres: string[];
+}): Promise<void> {
+  await execute(
+    `UPDATE user_preferences SET
+      username = ?,
+      yearly_book_goal = ?,
+      preferred_genres = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = 1`,
+    [basics.username, basics.yearlyBookGoal, basics.preferredGenres.join(",")],
+  );
   emitDataChange("preferences");
 }

@@ -1,7 +1,8 @@
 import { Link, router } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -19,12 +20,30 @@ import { BookWithStats, listBooksWithStats } from "../../../db/repos/books";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
-import { parseDbDate } from "../../../utils/dateUtils";
+import {
+  parseDbDate,
+  dateToLocalDateString,
+  getTodayDateString,
+} from "../../../utils/dateUtils";
 import {
   getReadingStreak,
   getTodayReadingMinutes,
 } from "../../../utils/readingProgress";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
+import {
+  clearReadingTimer,
+  getElapsedMinutes,
+  getElapsedMs,
+  getReadingTimer,
+  ReadingTimerState,
+  startReadingTimer,
+  stopReadingTimer,
+} from "../../../utils/readingTimer";
+import TimerClock from "../../../components/TimerClock";
+
+// Shorter timed stops are treated as accidental; longer ones ask first
+const MIN_TIMED_MS = 30 * 1000;
+const LONG_TIMER_MS = 4 * 60 * 60 * 1000;
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -32,6 +51,8 @@ export default function HomeScreen() {
   const [userPreferences, setUserPreferences] =
     useState<UserPreferences | null>(null);
   const [showReadingLogger, setShowReadingLogger] = useState(false);
+  const [timer, setTimer] = useState<ReadingTimerState | null>(null);
+  const [loggerFromTimer, setLoggerFromTimer] = useState(false);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [readingStreak, setReadingStreak] = useState(0);
 
@@ -48,6 +69,7 @@ export default function HomeScreen() {
       await loadReadingStreak();
 
       setBooks(await listBooksWithStats({ order: "recent" }));
+      setTimer(await getReadingTimer());
     } catch (e) {
       console.error("Failed to load data:", e);
     }
@@ -100,6 +122,128 @@ export default function HomeScreen() {
       pathname: "/(tabs)/(home)/book/[id]",
       params: { id: bookId.toString() },
     });
+
+  // Guards against double taps (Start and Stop share a spot on the card)
+  const timerBusy = useRef(false);
+  const withTimerLock = async (action: () => Promise<void>) => {
+    if (timerBusy.current) return;
+    timerBusy.current = true;
+    try {
+      await action();
+    } catch (error) {
+      console.error("Reading timer error:", error);
+    } finally {
+      timerBusy.current = false;
+    }
+  };
+
+  const handleStartTimer = () =>
+    withTimerLock(async () => {
+      setTimer(await startReadingTimer(currentBook?.id));
+    });
+
+  const openLoggerFromTimer = () => {
+    setLoggerFromTimer(true);
+    setShowReadingLogger(true);
+  };
+
+  const discardTimer = async () => {
+    await clearReadingTimer();
+    setTimer(null);
+  };
+
+  const handleStopTimer = () =>
+    withTimerLock(async () => {
+      const stopped = await stopReadingTimer();
+      setTimer(stopped);
+      if (!stopped) return;
+      const elapsedMs = getElapsedMs(stopped);
+      if (elapsedMs < MIN_TIMED_MS) {
+        // An accidental start/stop isn't a reading session
+        await discardTimer();
+        return;
+      }
+      if (elapsedMs > LONG_TIMER_MS) {
+        // Probably forgotten: ask before pre-filling hours of reading
+        Alert.alert(
+          t("home.timer.longTitle"),
+          t("home.timer.longMessage", {
+            hours: Math.floor(elapsedMs / (60 * 60 * 1000)),
+          }),
+          [
+            {
+              text: t("home.timer.discard"),
+              style: "destructive",
+              onPress: () => withTimerLock(discardTimer),
+            },
+            { text: t("home.timer.review"), onPress: openLoggerFromTimer },
+          ],
+        );
+        return;
+      }
+      openLoggerFromTimer();
+    });
+
+  const handleDiscardTimer = () => {
+    Alert.alert(t("home.timer.discardTitle"), t("home.timer.discardMessage"), [
+      { text: t("booksPage.alert.cancel"), style: "cancel" },
+      {
+        text: t("home.timer.discard"),
+        style: "destructive",
+        onPress: () => withTimerLock(discardTimer),
+      },
+    ]);
+  };
+
+  // A timed session that got logged is done; a cancelled logger keeps the
+  // stopped timer on the card so the minutes aren't lost
+  const handleLoggerSuccess = async () => {
+    if (loggerFromTimer) {
+      await withTimerLock(discardTimer);
+    }
+  };
+
+  // A timer started before today logs to the day it started
+  const timerStartDate = timer
+    ? dateToLocalDateString(new Date(timer.startedAt))
+    : undefined;
+
+  const renderTimerControls = (state: ReadingTimerState) =>
+    state.stoppedAt ? (
+      <View style={styles.timerRow}>
+        <Text style={styles.timerText}>
+          {t("home.timer.ready", { minutes: getElapsedMinutes(state) })}
+        </Text>
+        <TouchableOpacity
+          style={styles.heroPrimaryButton}
+          onPress={openLoggerFromTimer}
+        >
+          <Text style={styles.heroPrimaryButtonText}>
+            {t("home.timer.log")}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.heroSecondaryButton}
+          onPress={handleDiscardTimer}
+        >
+          <Text style={styles.heroSecondaryButtonText}>
+            {t("home.timer.discard")}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    ) : (
+      <View style={styles.timerRow}>
+        <TimerClock timer={state} style={styles.timerText} />
+        <TouchableOpacity
+          style={styles.heroPrimaryButton}
+          onPress={handleStopTimer}
+        >
+          <Text style={styles.heroPrimaryButtonText}>
+            {t("home.timer.stop")}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
 
   const renderBook = ({ item }: { item: BookWithStats }) => (
     <BookCard book={item} compact={true} onPress={() => openBook(item.id)} />
@@ -161,17 +305,32 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.heroPrimaryButton}
-              onPress={() => setShowReadingLogger(true)}
-            >
-              <Text style={styles.heroPrimaryButtonText}>
-                {t("home.logReadingTime")}
-              </Text>
-            </TouchableOpacity>
+            {timer ? (
+              renderTimerControls(timer)
+            ) : (
+              <View style={styles.heroButtonRow}>
+                <TouchableOpacity
+                  style={[styles.heroPrimaryButton, styles.heroButtonGrow]}
+                  onPress={() => setShowReadingLogger(true)}
+                >
+                  <Text style={styles.heroPrimaryButtonText}>
+                    {t("home.logReadingTime")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.heroSecondaryButton}
+                  onPress={handleStartTimer}
+                >
+                  <Text style={styles.heroSecondaryButtonText}>
+                    {t("home.timer.start")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         ) : (
           <View style={styles.heroEmptyState}>
+            {timer && renderTimerControls(timer)}
             <Text style={styles.heroEmptyTitle}>
               {books.length > 0
                 ? t("home.noBookInProgress")
@@ -312,7 +471,22 @@ export default function HomeScreen() {
       {/* Reading Time Logger Modal */}
       <ReadingTimeLogger
         visible={showReadingLogger}
-        onClose={() => setShowReadingLogger(false)}
+        onClose={() => {
+          setShowReadingLogger(false);
+          setLoggerFromTimer(false);
+        }}
+        onSuccess={handleLoggerSuccess}
+        initialMinutes={
+          loggerFromTimer && timer ? getElapsedMinutes(timer) : undefined
+        }
+        initialBookId={loggerFromTimer ? timer?.bookId : undefined}
+        initialDate={
+          loggerFromTimer &&
+          timerStartDate &&
+          timerStartDate < getTodayDateString()
+            ? timerStartDate
+            : undefined
+        }
       />
     </View>
   );
@@ -403,6 +577,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.text.secondary,
     fontWeight: "500",
+  },
+  heroButtonRow: {
+    flexDirection: "row",
+    gap: SPACING[2],
+  },
+  heroButtonGrow: {
+    flex: 1,
+  },
+  heroSecondaryButton: {
+    borderWidth: 1,
+    borderColor: COLORS.accent.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroSecondaryButtonText: {
+    color: COLORS.accent.primary,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  timerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING[2],
+  },
+  timerText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.text.primary,
+    fontVariant: ["tabular-nums"],
   },
   heroPrimaryButton: {
     backgroundColor: COLORS.accent.primary,

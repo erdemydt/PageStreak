@@ -42,6 +42,10 @@ import {
   getAverageMinutesPerDay,
   getPagesPerMinute,
 } from "../../../db/repos/sessions";
+import {
+  addDaysToDateString,
+  getTodayDateString,
+} from "../../../utils/dateUtils";
 
 export default function BookDetailsScreen() {
   const router = useRouter();
@@ -55,7 +59,10 @@ export default function BookDetailsScreen() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [isEditingPages, setIsEditingPages] = useState(false);
   const [pagesInput, setPagesInput] = useState("");
-  const [daysToFinish, setDaysToFinish] = useState<number | null>(null);
+  const [finishEstimate, setFinishEstimate] = useState<{
+    days: number;
+    basedOnGoal: boolean;
+  } | null>(null);
   const [progressData, setProgressData] = useState<{
     pagesRead: number;
     percentage: number;
@@ -92,26 +99,29 @@ export default function BookDetailsScreen() {
       setReadingTimeMinutes(readingTime);
       setProgressData(progress);
 
-      // "Finish by" estimate: pace (pages/min) x recent minutes per day,
-      // falling back to the daily goal if nothing was read lately
+      // "Finish by" estimate: pace (pages/min) x minutes per day, using this
+      // book's recent reading, else all recent reading, else the daily goal
       if (
         foundBook.reading_status === "currently_reading" &&
         foundBook.page > 0
       ) {
-        const [pagesPerMinute, averageMinutes] = await Promise.all([
+        const [pagesPerMinute, bookMinutes, allMinutes] = await Promise.all([
           getPagesPerMinute(foundBook.id),
-          getAverageMinutesPerDay(),
+          getAverageMinutesPerDay(14, foundBook.id),
+          getAverageMinutesPerDay(14),
         ]);
-        setDaysToFinish(
-          estimateDaysToFinish({
-            remainingPages: foundBook.page - progress.pagesRead,
-            pagesPerMinute,
-            minutesPerDay:
-              averageMinutes > 0 ? averageMinutes : await getDailyGoal(),
-          }),
+        const recentMinutes = bookMinutes > 0 ? bookMinutes : allMinutes;
+        const days = estimateDaysToFinish({
+          remainingPages: foundBook.page - progress.pagesRead,
+          pagesPerMinute,
+          minutesPerDay:
+            recentMinutes > 0 ? recentMinutes : await getDailyGoal(),
+        });
+        setFinishEstimate(
+          days === null ? null : { days, basedOnGoal: recentMinutes <= 0 },
         );
       } else {
-        setDaysToFinish(null);
+        setFinishEstimate(null);
       }
     } catch (e) {
       console.error("Failed to load book details:", e);
@@ -302,17 +312,20 @@ export default function BookDetailsScreen() {
                   style={[styles.progressFill, { width: `${progress}%` }]}
                 />
               </View>
-              {daysToFinish !== null && (
+              {finishEstimate && (
                 <Text style={styles.finishEstimate}>
                   {t(
-                    daysToFinish === 1
-                      ? "components.bookDetailModal.finishEstimateOne"
-                      : "components.bookDetailModal.finishEstimate",
+                    `components.bookDetailModal.${
+                      finishEstimate.basedOnGoal
+                        ? "finishEstimateGoal"
+                        : "finishEstimate"
+                    }${finishEstimate.days === 1 ? "One" : ""}`,
                     {
-                      days: daysToFinish,
+                      days: finishEstimate.days,
                       date: formatDate(
-                        new Date(
-                          Date.now() + daysToFinish * 24 * 60 * 60 * 1000,
+                        addDaysToDateString(
+                          getTodayDateString(),
+                          finishEstimate.days,
                         ),
                         { month: "short", day: "numeric" },
                       ),

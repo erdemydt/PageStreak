@@ -20,7 +20,8 @@ npm run lint         # expo lint (eslint-config-expo). Keep it at 0 errors
 npx tsc --noEmit     # typecheck (strict). Keep it clean
 ```
 
-There is **no test framework**. Verify with `tsc` + `lint`. For pure logic (dates, streaks,
+There is **no test framework**. Verify with `tsc` + `lint`, and after any change to `db/db.tsx` run
+`scripts/db-migration-check/run.sh` (real SQLite files, the original app's schema, and the boot race). For pure logic (dates, streaks,
 goal math), transpile the module with `typescript.transpileModule`, stub `db/db`, and run it
 under several `TZ=` values (at least America/Los_Angeles, Europe/Istanbul, Pacific/Auckland).
 Adding Jest for `utils/` is on the roadmap.
@@ -174,6 +175,8 @@ tables there and to the backup service. Test migrations against real DB files: s
   of each phase's diff. Commit at the end of each phase.
 
 ## Known issues / roadmap (ranked)
+
+**New session? Read the "▶ Start here" section at the top of ROADMAP.md first.**
 
 The full phased plan lives in **ROADMAP.md**; work from it and tick items off there. Must-knows
 from the audit: never run `expo prebuild --clean` (iOS builds from committed `ios/` via Xcode

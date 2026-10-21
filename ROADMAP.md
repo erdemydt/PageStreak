@@ -10,6 +10,26 @@ Every change reaches users only through an App Store release. **When to release 
 decision**; phases end in a commit, not a ship. The version is hard-coded in
 `ios/PageStreak/Info.plist` (`1.0.0` / `1`); bump it there for every release.
 
+## ▶ Start here (handoff, updated 2026-10-22)
+Phases 1–7 are done and committed (see CLAUDE.md "Journey log"). **Nothing has been released**; the owner
+decides when to ship and tests on device first.
+
+**Owner to-do before the next App Store release:**
+1. `cd ios && pod install`, then commit `Podfile.lock` (packages were removed and versions bumped in Phase 4;
+   CocoaPods wasn't available to Claude).
+2. Device QA: first launch of an *existing* install (runs the v4 migration), reminders in both modes, onboarding
+   (including restoring a backup), export/import, the Home reading timer.
+3. Bump the version in `ios/PageStreak/Info.plist` (app.json `version` is ignored).
+4. Still open: an Android notification icon asset; choose Xcode Cloud vs EAS.
+
+**Next work, in order:**
+1. **Dark mode** (its own phase; owner chose "after the features"). Start by proposing a dark palette derived
+   from `themes/colors.ts` for owner approval, then move every screen to theme tokens and un-force light mode
+   (app.json, Info.plist, Android `styles.xml`).
+2. **Tests** (separate track, when the owner says): Jest for `utils/` (dates, streaks, goal math), the repos,
+   and `scripts/db-migration-check/` as a CI step.
+3. Optional: move Growth Journey into a stack under Profile (native back gesture); consider `expo-updates`.
+
 ## Unreleased user-visible changes (for release notes)
 Kept for the owner's release notes; clear it when a release ships.
 - Streaks: each day counts against the goal that applied that day, so a weekly goal increase no

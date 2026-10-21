@@ -31,6 +31,7 @@ import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
 import { getStatusText } from "../../../utils/bookStatus";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
+import { showToast } from "../../../utils/toast";
 type BooksearchProps = {
   name: string;
   setName: (name: string) => void;
@@ -355,12 +356,11 @@ export default function HomeScreen() {
     try {
       await updateBookStatus(selectedBook.id, newStatus);
 
-      Alert.alert(
-        t("booksPage.alert.statusUpdated"),
-        t("booksPage.alert.bookStatusUpdated", {
+      showToast({
+        message: t("booksPage.alert.bookStatusUpdated", {
           statusText: getStatusText(t, newStatus),
         }),
-      );
+      });
     } catch (e) {
       setError(t("booksPage.alert.failedUpdate"));
       console.error("Update status error:", e);
@@ -397,7 +397,7 @@ export default function HomeScreen() {
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
       <View style={{ flex: 1 }}>
-        <Stack.Screen options={{ title: "Books" }} />
+        <Stack.Screen options={{ title: t("navigation.books") }} />
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>{t("booksPage.title")}</Text>

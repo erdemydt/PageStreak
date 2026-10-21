@@ -75,13 +75,13 @@ export default function BookStatusModal({
     }
   }, [visible, fadeAnim, scaleAnim]);
 
-  const statusOptions: Array<{
+  const statusOptions: {
     value: BookStatus;
     label: string;
     description: string;
     emoji: string;
     color: string;
-  }> = [
+  }[] = [
     {
       value: "want_to_read",
       label: t("bookStatus.options.wantToRead.label"),

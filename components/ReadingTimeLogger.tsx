@@ -13,11 +13,14 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { EnhancedBook } from "../db/db";
-import { listBooksWithStats } from "../db/repos/books";
+import { listBooksWithStats, updateBookStatus } from "../db/repos/books";
 import { logSession } from "../db/repos/sessions";
+import { getTodayDateString } from "../utils/dateUtils";
+import SessionDatePicker from "./SessionDatePicker";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import { getEnhancedBookProgress } from "../utils/readingProgress";
+import { showToast } from "../utils/toast";
 
 interface ReadingTimeLoggerProps {
   visible: boolean;
@@ -44,10 +47,14 @@ export default function ReadingTimeLogger({
   const [loading, setLoading] = useState(false);
   const [remainingPages, setRemainingPages] = useState<number>(0);
   const [finishBook, setFinishBook] = useState(false);
+  const [sessionDate, setSessionDate] = useState(getTodayDateString());
+  const [wantToReadBooks, setWantToReadBooks] = useState<EnhancedBook[]>([]);
 
   useEffect(() => {
     if (visible) {
       loadCurrentlyReadingBooks();
+      // Default to today each time the logger opens (it may stay mounted past midnight)
+      setSessionDate(getTodayDateString());
     }
   }, [visible]);
 
@@ -92,8 +99,27 @@ export default function ReadingTimeLogger({
         if (books.length === 1) return books[0];
         return books.find((book) => book.id === previous?.id) ?? null;
       });
+
+      setWantToReadBooks(
+        books.length === 0
+          ? await listBooksWithStats({
+              status: "want_to_read",
+              order: "recent",
+            })
+          : [],
+      );
     } catch (error) {
       console.error("Error loading currently reading books:", error);
+    }
+  };
+
+  const startReading = async (bookId: number) => {
+    try {
+      await updateBookStatus(bookId, "currently_reading");
+      await loadCurrentlyReadingBooks();
+    } catch (error) {
+      console.error("Error starting book:", error);
+      Alert.alert(t("error"), t("booksPage.alert.failedUpdate"));
     }
   };
 
@@ -145,6 +171,7 @@ export default function ReadingTimeLogger({
         minutes: Number(minutes),
         pages: pagesRead,
         notes: notes.trim() || null,
+        date: sessionDate,
         finishBook,
       });
 
@@ -159,6 +186,7 @@ export default function ReadingTimeLogger({
       );
       setNotes("");
       setFinishBook(false);
+      setSessionDate(getTodayDateString());
 
       onSuccess?.();
       onClose();
@@ -178,7 +206,7 @@ export default function ReadingTimeLogger({
               bookName: selectedBook.name,
             });
 
-      Alert.alert(t("components.readingTimeLogger.success"), successMessage);
+      showToast({ message: successMessage });
     } catch (error) {
       console.error("Error logging reading time:", error);
       Alert.alert(
@@ -198,6 +226,7 @@ export default function ReadingTimeLogger({
     );
     setNotes("");
     setFinishBook(false);
+    setSessionDate(getTodayDateString());
     onClose();
   };
   const notesInputRef = useRef<TextInput>(null);
@@ -247,6 +276,32 @@ export default function ReadingTimeLogger({
                 <Text style={styles.noBooksText}>
                   {t("components.readingTimeLogger.noBooksFound")}
                 </Text>
+                {/* Not a dead end: start one of the want-to-read books here */}
+                {wantToReadBooks.length > 0 && (
+                  <View style={styles.startReadingList}>
+                    <Text style={styles.startReadingHint}>
+                      {t("components.readingTimeLogger.startReadingHint")}
+                    </Text>
+                    {wantToReadBooks.slice(0, 5).map((book) => (
+                      <View key={book.id} style={styles.startReadingRow}>
+                        <Text
+                          style={styles.startReadingTitle}
+                          numberOfLines={1}
+                        >
+                          {book.name}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.startReadingButton}
+                          onPress={() => startReading(book.id)}
+                        >
+                          <Text style={styles.startReadingButtonText}>
+                            {t("components.readingTimeLogger.startReading")}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             ) : (
               <View style={styles.booksList}>
@@ -290,6 +345,14 @@ export default function ReadingTimeLogger({
                 ))}
               </View>
             )}
+          </View>
+
+          {/* Date (backfill a forgotten session) */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {t("components.sessionDate.title")}
+            </Text>
+            <SessionDatePicker value={sessionDate} onChange={setSessionDate} />
           </View>
 
           {/* Time Input */}
@@ -629,6 +692,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
+  },
+  startReadingList: {
+    marginTop: 12,
+    gap: 8,
+  },
+  startReadingHint: {
+    color: COLORS.state.warningText,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  startReadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  startReadingTitle: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.neutral[700],
+  },
+  startReadingButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  startReadingButtonText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "600",
   },
   booksList: {
     gap: 8,

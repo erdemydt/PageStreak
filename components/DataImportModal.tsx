@@ -1,23 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    BackupValidationResult,
-    getBackupInfo,
-    importDataFromBackup,
-    ImportOptions,
-    pickBackupFile,
-    validateBackupFile,
+  BackupValidationResult,
+  getBackupInfo,
+  importDataFromBackup,
+  ImportOptions,
+  pickBackupFile,
+  validateBackupFile,
 } from "../services/dataBackupService";
 import { COLORS } from "../themes/colors";
 
@@ -63,6 +63,12 @@ export default function DataImportModal({
     setProcessingMessage("");
     setImportResult(null);
   };
+
+  // Start from file selection on every open, even if the parent closed the
+  // modal itself (e.g. onboarding after a restore) instead of via handleClose
+  useEffect(() => {
+    if (visible) resetState();
+  }, [visible]);
 
   const handleClose = () => {
     if (!isProcessing) {

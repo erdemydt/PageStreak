@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Animated,
-  Dimensions,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -16,12 +15,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { saveOnboardingPreferences } from "../db/repos/preferences";
+import DataImportModal from "../components/DataImportModal";
+import {
+  getUserPreferences,
+  saveOnboardingPreferences,
+} from "../db/repos/preferences";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
+import { formatDate } from "../utils/format";
+import { GENRE_KEYS, genreLabel } from "../utils/genres";
+import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
 import { log } from "../utils/logger";
-
-const { width: screenWidth } = Dimensions.get("window");
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -33,33 +37,20 @@ export default function IntroScreen() {
   const [preferredGenres, setPreferredGenres] = useState<string[]>([]);
   const [dailyReadingGoal, setDailyReadingGoal] = useState("");
   const [targetDailyGoal, setTargetDailyGoal] = useState("");
-  const [goalDate, setGoalDate] = useState<Date>(new Date());
+  // Default the target ~3 months out; "today" made the whole increase land in one week
+  const [goalDate, setGoalDate] = useState<Date>(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + 3);
+    return date;
+  });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
   const slideAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(1)).current;
 
-  const genres = [
-    t("intro.genres.options.fiction"),
-    t("intro.genres.options.nonFiction"),
-    t("intro.genres.options.mystery"),
-    t("intro.genres.options.romance"),
-    t("intro.genres.options.sciFi"),
-    t("intro.genres.options.fantasy"),
-    t("intro.genres.options.biography"),
-    t("intro.genres.options.history"),
-    t("intro.genres.options.selfHelp"),
-    t("intro.genres.options.business"),
-    t("intro.genres.options.poetry"),
-    t("intro.genres.options.philosophy"),
-    t("intro.genres.options.thriller"),
-    t("intro.genres.options.horror"),
-    t("intro.genres.options.adventure"),
-    t("intro.genres.options.comedy"),
-    t("intro.genres.options.drama"),
-    t("intro.genres.options.educational"),
-  ];
+  const genres = GENRE_KEYS;
 
   useEffect(() => {}, []);
 
@@ -299,10 +290,6 @@ export default function IntroScreen() {
     }
   };
 
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
-  };
-
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
       {[1, 2, 3, 4, 5].map((step) => (
@@ -357,8 +344,36 @@ export default function IntroScreen() {
           maxLength={50}
         />
       </View>
+
+      <TouchableOpacity
+        style={styles.restoreLink}
+        onPress={() => setShowImportModal(true)}
+        disabled={loading}
+      >
+        <Text style={styles.restoreLinkText}>
+          {t("intro.welcome.restoreBackup")}
+        </Text>
+      </TouchableOpacity>
     </>
   );
+
+  const handleRestoreSuccess = async () => {
+    setShowImportModal(false);
+    try {
+      // The restored plan may be weeks old: catch up its goal before Home loads
+      await applyWeeklyGoalGrowth();
+      // A backup with a profile makes onboarding unnecessary
+      if (await getUserPreferences()) {
+        // Let the import sheet finish dismissing before replacing this screen
+        setTimeout(() => router.replace("/(tabs)/(home)"), 400);
+      } else {
+        setError(t("intro.welcome.restoreNoProfile"));
+      }
+    } catch (e) {
+      console.error("Error after restoring backup:", e);
+      setError(t("intro.validation.saveFailed"));
+    }
+  };
 
   const renderStep2 = () => (
     <>
@@ -436,7 +451,7 @@ export default function IntroScreen() {
                     styles.genreChipTextSelected,
                 ]}
               >
-                {genre}
+                {genreLabel(genre)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -577,7 +592,7 @@ export default function IntroScreen() {
             />
             <Text style={styles.selectedDateText}>
               {t("intro.targetGoal.selectedDate")}:{" "}
-              {goalDate.toLocaleDateString("en-US", {
+              {formatDate(goalDate, {
                 weekday: "long",
                 year: "numeric",
                 month: "long",
@@ -607,7 +622,7 @@ export default function IntroScreen() {
               >
                 📅{" "}
                 {goalDate
-                  ? goalDate.toLocaleDateString("en-US", {
+                  ? formatDate(goalDate, {
                       weekday: "long",
                       year: "numeric",
                       month: "long",
@@ -649,9 +664,13 @@ export default function IntroScreen() {
 
         <Text style={styles.weeklyIncreaseText}>
           {t("intro.targetGoal.currentWeeklyIncrease", {
-            percentage: calculateNeededWeeklyPercentageIncrease(),
+            minutes: calculateWeeklyIncreaseMinutes(),
             classification: classifyPercentageIncrease(
-              Number(calculateNeededWeeklyPercentageIncrease()),
+              Number(dailyReadingGoal) > 0
+                ? (calculateWeeklyIncreaseMinutes() /
+                    Number(dailyReadingGoal)) *
+                    100
+                : 0,
             ),
           })}
         </Text>
@@ -705,31 +724,9 @@ export default function IntroScreen() {
           loading && styles.nextButtonDisabled,
         ]}
         onPress={currentStep === 5 ? handleGetStarted : handleNext}
-        disabled={
-          loading ||
-          (currentStep === 1 &&
-            (!username.trim() ||
-              username.trim().length < 2 ||
-              username.trim().length > 50)) ||
-          (currentStep === 2 &&
-            (!yearlyGoal.trim() ||
-              isNaN(Number(yearlyGoal)) ||
-              Number(yearlyGoal) <= 0 ||
-              Number(yearlyGoal) > 1000 ||
-              !Number.isInteger(Number(yearlyGoal)))) ||
-          (currentStep === 4 &&
-            (!dailyReadingGoal.trim() ||
-              isNaN(Number(dailyReadingGoal)) ||
-              Number(dailyReadingGoal) <= 0 ||
-              Number(dailyReadingGoal) > 480)) ||
-          (currentStep === 5 &&
-            (!targetDailyGoal.trim() ||
-              isNaN(Number(targetDailyGoal)) ||
-              Number(targetDailyGoal) <= 0 ||
-              Number(targetDailyGoal) > 480 ||
-              Number(targetDailyGoal) < Number(dailyReadingGoal) ||
-              new Date(goalDate) < new Date(new Date().setHours(0, 0, 0, 0))))
-        }
+        // Only blocked while saving: tapping with invalid input shows the
+        // validation message instead of a silently disabled button
+        disabled={loading}
       >
         <Text style={styles.nextButtonText}>
           {loading
@@ -741,34 +738,16 @@ export default function IntroScreen() {
       </TouchableOpacity>
     </View>
   );
-  const calculateNeededWeeklyPercentageIncrease = () => {
+  // Same linear model the app applies (and saves): +N minutes per week
+  const calculateWeeklyIncreaseMinutes = () => {
     const initial = Number(dailyReadingGoal);
     const target = Number(targetDailyGoal);
-    if (isNaN(initial) || isNaN(target) || initial <= 0 || target <= 0)
-      return "0.00";
-
-    // If target is same as initial, no increase needed
-    if (target === initial) return "0.00";
-
-    // Calculate weeks until goal date
-    const timeDifferenceMs = goalDate.getTime() - new Date().getTime();
+    if (!(initial > 0) || !(target > initial)) return 0;
     const weeks = Math.max(
       1,
-      Math.ceil(timeDifferenceMs / (1000 * 60 * 60 * 24 * 7)),
+      Math.ceil((goalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 7)),
     );
-
-    // If target is less than initial, return 0 (no increase needed)
-    if (target < initial) return "0.00";
-
-    // percentage^weeks = target/initial
-    // weeks * log(percentage) = log(target/initial)
-    // log(percentage) = log(target/initial) / weeks
-    // percentage = 10^(log(target/initial) / weeks)
-    // percentage increase = (percentage - 1) * 100
-    const percentage = Math.pow(10, Math.log10(target / initial) / weeks);
-    const weeklyIncrease = (percentage - 1) * 100;
-    let unformatted = Math.max(0, weeklyIncrease);
-    return unformatted.toFixed(2);
+    return Math.ceil((target - initial) / weeks);
   };
 
   const classifyPercentageIncrease = (percentage: number) => {
@@ -860,6 +839,12 @@ export default function IntroScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <DataImportModal
+        visible={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={handleRestoreSuccess}
+      />
     </>
   );
 }
@@ -981,6 +966,17 @@ const styles = StyleSheet.create({
   inputContainer: {
     width: "100%",
     alignItems: "center",
+  },
+  restoreLink: {
+    marginTop: 20,
+    alignSelf: "center",
+    padding: 8,
+  },
+  restoreLinkText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.primary,
+    textAlign: "center",
   },
   input: {
     width: "100%",

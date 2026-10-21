@@ -5,6 +5,7 @@ import type { AppUsageTracking, EnhancedBook, NotificationPreferences, ReadingSe
 import type { SQLiteBindValue, SQLiteDatabase } from 'expo-sqlite';
 import db, { initializeDatabase, queryAll } from '../db/db';
 import type { UserPreferences } from '../types/models';
+import i18n from '../i18n';
 import { emitDataChange } from '../utils/dataEvents';
 import { backfillGoalHistoryIfEmpty } from '../utils/goalHistory';
 import { syncBookCurrentPageFromSessions } from '../utils/readingProgress';
@@ -87,12 +88,12 @@ export async function exportAndSaveBackup(
       return exportResult;
     }
 
-    onProgress?.(80, 'Preparing file for save...');
+    onProgress?.(80, i18n.t('backupProgress.preparingSave'));
 
     // Now let user save it to their preferred location
     const saved = await shareBackupFile(exportResult.filePath);
     
-    onProgress?.(100, saved ? 'File saved successfully!' : 'Backup created locally');
+    onProgress?.(100, i18n.t(saved ? 'backupProgress.fileSaved' : 'backupProgress.savedLocally'));
 
     return {
       ...exportResult,
@@ -116,7 +117,7 @@ export async function exportDataToBackup(
   onProgress?: (progress: number, message: string) => void
 ): Promise<{ success: boolean; filePath?: string; error?: string }> {
   try {
-    onProgress?.(0, 'Starting backup...');
+    onProgress?.(0, i18n.t('backupProgress.startingBackup'));
 
     const backupData: BackupData = {
       app: APP_IDENTIFIER,
@@ -133,7 +134,7 @@ export async function exportDataToBackup(
 
     // Export enhanced_books
     if (options.includeBooks) {
-      onProgress?.(progress, 'Exporting books...');
+      onProgress?.(progress, i18n.t('backupProgress.exportingBooks'));
       const books = await queryAll<EnhancedBook>('SELECT * FROM enhanced_books ORDER BY id');
       backupData.tables.enhanced_books = books;
       progress += 15;
@@ -141,7 +142,7 @@ export async function exportDataToBackup(
 
     // Export reading_sessions
     if (options.includeReadingSessions) {
-      onProgress?.(progress, 'Exporting reading sessions...');
+      onProgress?.(progress, i18n.t('backupProgress.exportingSessions'));
       const sessions = await queryAll<ReadingSession>('SELECT * FROM reading_sessions ORDER BY created_at');
       backupData.tables.reading_sessions = sessions;
       progress += 15;
@@ -149,7 +150,7 @@ export async function exportDataToBackup(
 
     // Export user_preferences
     if (options.includeUserPreferences) {
-      onProgress?.(progress, 'Exporting user preferences...');
+      onProgress?.(progress, i18n.t('backupProgress.exportingPreferences'));
       const preferences = await queryAll<UserPreferences>('SELECT * FROM user_preferences');
       backupData.tables.user_preferences = preferences;
       backupData.tables.goal_history = await queryAll<{ effective_date: string; minutes: number }>(
@@ -160,7 +161,7 @@ export async function exportDataToBackup(
 
     // Export weekly_progress
     if (options.includeWeeklyProgress) {
-      onProgress?.(progress, 'Exporting weekly progress...');
+      onProgress?.(progress, i18n.t('backupProgress.exportingWeeklyProgress'));
       const weeklyProgress = await queryAll<WeeklyProgress>('SELECT * FROM weekly_progress ORDER BY id');
       backupData.tables.weekly_progress = weeklyProgress;
       progress += 10;
@@ -168,7 +169,7 @@ export async function exportDataToBackup(
 
     // Export notification_preferences
     if (options.includeNotificationPreferences) {
-      onProgress?.(progress, 'Exporting notification settings...');
+      onProgress?.(progress, i18n.t('backupProgress.exportingNotifications'));
       const notificationPrefs = await queryAll<NotificationPreferences>('SELECT * FROM notification_preferences');
       backupData.tables.notification_preferences = notificationPrefs;
       progress += 10;
@@ -176,13 +177,13 @@ export async function exportDataToBackup(
 
     // Export app_usage_tracking (optional, might be large)
     if (options.includeAppUsage) {
-      onProgress?.(progress, 'Exporting app usage data...');
+      onProgress?.(progress, i18n.t('backupProgress.exportingAppUsage'));
       const appUsage = await queryAll<AppUsageTracking>('SELECT * FROM app_usage_tracking ORDER BY date DESC');
       backupData.tables.app_usage_tracking = appUsage;
       progress += 10;
     }
 
-    onProgress?.(80, 'Creating backup file...');
+    onProgress?.(80, i18n.t('backupProgress.creatingFile'));
 
     // Create filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
@@ -195,7 +196,7 @@ export async function exportDataToBackup(
     const jsonContent = JSON.stringify(backupData, null, 2);
     await FileSystem.writeAsStringAsync(filePath, jsonContent);
 
-    onProgress?.(100, 'Backup complete!');
+    onProgress?.(100, i18n.t('backupProgress.backupComplete'));
 
     return { success: true, filePath };
   } catch (error) {
@@ -394,7 +395,7 @@ export async function importDataFromBackup(
   };
 
   try {
-    onProgress?.(0, 'Reading backup file...');
+    onProgress?.(0, i18n.t('backupProgress.readingFile'));
 
     // Read and validate backup
     const validationResult = await validateBackupFile(fileUri);
@@ -405,7 +406,7 @@ export async function importDataFromBackup(
     const fileContent = await FileSystem.readAsStringAsync(fileUri);
     const backupData: BackupData = JSON.parse(fileContent);
 
-    onProgress?.(10, 'Starting import...');
+    onProgress?.(10, i18n.t('backupProgress.startingImport'));
 
     // Ensure database is properly initialized with latest schema
     await initializeDatabase();
@@ -430,7 +431,7 @@ export async function importDataFromBackup(
 
       // Import based on mode
       if (options.mode === 'replace') {
-        onProgress?.(progress, 'Clearing existing data...');
+        onProgress?.(progress, i18n.t('backupProgress.clearingData'));
         
         // Clear existing data in reverse dependency order
         if (backupData.tables.reading_sessions) {
@@ -457,7 +458,7 @@ export async function importDataFromBackup(
 
       // Import user preferences first
       if (backupData.tables.user_preferences?.length) {
-        onProgress?.(progress, 'Importing user preferences...');
+        onProgress?.(progress, i18n.t('backupProgress.importingPreferences'));
         for (const pref of backupData.tables.user_preferences) {
           if (options.mode === 'replace') {
             await runIn(txn, `
@@ -501,7 +502,7 @@ export async function importDataFromBackup(
 
       // Import books
       if (backupData.tables.enhanced_books?.length) {
-        onProgress?.(progress, 'Importing books...');
+        onProgress?.(progress, i18n.t('backupProgress.importingBooks'));
         for (const book of backupData.tables.enhanced_books) {
           if (options.mode === 'replace') {
             await runIn(txn, `
@@ -551,7 +552,7 @@ export async function importDataFromBackup(
 
       // Import reading sessions
       if (backupData.tables.reading_sessions?.length) {
-        onProgress?.(progress, 'Importing reading sessions...');
+        onProgress?.(progress, i18n.t('backupProgress.importingSessions'));
         for (const session of backupData.tables.reading_sessions) {
           if (options.mode === 'replace') {
             await runIn(txn, `
@@ -598,7 +599,7 @@ export async function importDataFromBackup(
       // by id; merging them by id would overwrite unrelated local rows, so they
       // are only restored in replace mode.
       if (options.mode === 'replace' && backupData.tables.weekly_progress?.length) {
-        onProgress?.(progress, 'Importing weekly progress...');
+        onProgress?.(progress, i18n.t('backupProgress.importingWeeklyProgress'));
         for (const weeklyProg of backupData.tables.weekly_progress) {
           const insertQuery = options.mode === 'replace' 
             ? 'INSERT INTO weekly_progress'
@@ -616,7 +617,7 @@ export async function importDataFromBackup(
       }
 
       if (backupData.tables.notification_preferences?.length) {
-        onProgress?.(progress, 'Importing notification preferences...');
+        onProgress?.(progress, i18n.t('backupProgress.importingNotifications'));
         for (const notifPref of backupData.tables.notification_preferences) {
           const insertQuery = options.mode === 'replace' 
             ? 'INSERT INTO notification_preferences'
@@ -637,7 +638,7 @@ export async function importDataFromBackup(
       }
 
       if (options.mode === 'replace' && backupData.tables.app_usage_tracking?.length) {
-        onProgress?.(progress, 'Importing app usage data...');
+        onProgress?.(progress, i18n.t('backupProgress.importingAppUsage'));
         for (const usage of backupData.tables.app_usage_tracking) {
           const insertQuery = options.mode === 'replace' 
             ? 'INSERT INTO app_usage_tracking'
@@ -675,7 +676,7 @@ export async function importDataFromBackup(
     }
 
     emitDataChange('books', 'sessions', 'preferences');
-    onProgress?.(100, 'Import completed successfully!');
+    onProgress?.(100, i18n.t('backupProgress.importComplete'));
     importResult.success = true;
 
   } catch (error) {

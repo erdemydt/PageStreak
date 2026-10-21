@@ -55,6 +55,11 @@ export default function SettingsScreen() {
         style: "cancel",
       },
       {
+        // Erasing can't be undone; offer a backup right from the warning
+        text: t("settings.exportFirst"),
+        onPress: () => setShowExportModal(true),
+      },
+      {
         text: t("settings.logout"),
         style: "destructive",
         onPress: async () => {
@@ -73,36 +78,6 @@ export default function SettingsScreen() {
         },
       },
     ]);
-  };
-
-  const handleExportSuccess = (filePath: string) => {
-    Alert.alert(
-      t("dataBackup.export.messages.exportComplete"),
-      t("dataBackup.export.messages.exportCompleteMessage"),
-      [{ text: "OK" }],
-    );
-  };
-
-  const handleImportSuccess = (importedData: {
-    books: number;
-    sessions: number;
-  }) => {
-    Alert.alert(
-      t("dataBackup.import.messages.importComplete"),
-      t("dataBackup.import.messages.importSuccessMessage", {
-        books: importedData.books,
-        sessions: importedData.sessions,
-      }),
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            // Reload user preferences to reflect any changes
-            loadUserPreferences();
-          },
-        },
-      ],
-    );
   };
 
   return (
@@ -225,14 +200,12 @@ export default function SettingsScreen() {
       <DataExportModal
         visible={showExportModal}
         onClose={() => setShowExportModal(false)}
-        onSuccess={handleExportSuccess}
       />
 
       {/* Data Import Modal */}
       <DataImportModal
         visible={showImportModal}
         onClose={() => setShowImportModal(false)}
-        onSuccess={handleImportSuccess}
       />
     </View>
   );

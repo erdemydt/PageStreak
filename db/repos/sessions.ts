@@ -72,27 +72,53 @@ export async function getSession(id: number): Promise<ReadingSession | null> {
 
 export async function updateSession(
   id: number,
-  changes: { minutes: number; notes?: string | null; pages?: number | null },
+  changes: {
+    minutes: number;
+    notes?: string | null;
+    pages?: number | null;
+    /** YYYY-MM-DD; unchanged when omitted */
+    date?: string;
+  },
 ): Promise<void> {
   const session = await getSession(id);
   if (!session) throw new Error("Session not found");
 
   await execute(
-    "UPDATE reading_sessions SET minutes_read = ?, notes = ?, pages_read = ? WHERE id = ?",
-    [changes.minutes, changes.notes || null, changes.pages || null, id],
+    "UPDATE reading_sessions SET minutes_read = ?, notes = ?, pages_read = ?, date = ? WHERE id = ?",
+    [
+      changes.minutes,
+      changes.notes || null,
+      changes.pages || null,
+      changes.date ?? session.date,
+      id,
+    ],
   );
   // Always re-derive: clearing the pages field must lower progress too
   await syncBookCurrentPageFromSessions(session.book_id);
   emitDataChange("sessions", "books");
 }
 
-export async function deleteSession(id: number): Promise<void> {
+/** Deletes a session and returns it, so the caller can offer undo (restoreSession) */
+export async function deleteSession(id: number): Promise<ReadingSession> {
   const session = await getSession(id);
   if (!session) throw new Error("Session not found");
 
   await execute("DELETE FROM reading_sessions WHERE id = ?", [id]);
   await syncBookCurrentPageFromSessions(session.book_id);
   emitDataChange("sessions", "books");
+  return session;
+}
+
+/** Re-insert a session returned by deleteSession (undo) */
+export async function restoreSession(session: ReadingSession): Promise<void> {
+  await logSession({
+    bookId: session.book_id,
+    minutes: session.minutes_read,
+    pages: session.pages_read ?? null,
+    notes: session.notes ?? null,
+    date: session.date,
+    createdAt: session.created_at,
+  });
 }
 
 /** Sessions in [startDate, endDate] (YYYY-MM-DD) with their book's name and author */

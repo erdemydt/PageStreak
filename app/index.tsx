@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Image, StyleSheet, Text, View } from "react-native";
 import {
   checkNotificationDatabaseIntegrity,
@@ -14,8 +15,8 @@ import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
 import { log } from "../utils/logger";
 
 export default function Index() {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
-  const [hasUser, setHasUser] = useState(false);
 
   useEffect(() => {
     initializeAppDatabase();
@@ -83,7 +84,6 @@ export default function Index() {
     } catch (error) {
       console.error("❌ Failed to initialize app database:", error);
       // If database initialization fails, still try to show intro
-      setHasUser(false);
       router.replace("/intro");
       setIsLoading(false);
     }
@@ -92,7 +92,6 @@ export default function Index() {
   const checkUserSetup = async () => {
     try {
       const user = await getUserPreferences();
-      setHasUser(!!user);
 
       // Automatically navigate based on user status
       if (user) {
@@ -103,7 +102,6 @@ export default function Index() {
     } catch (error) {
       console.error("❌ Error checking user setup:", error);
       // If table doesn't exist or error, show intro
-      setHasUser(false);
       router.replace("/intro");
     } finally {
       setIsLoading(false);
@@ -131,7 +129,7 @@ export default function Index() {
         style={styles.loadingLogo}
         resizeMode="contain"
       />
-      <Text style={styles.loadingText}>Loading...</Text>
+      <Text style={styles.loadingText}>{t("navigation.loading")}</Text>
     </View>
   );
 }

@@ -29,6 +29,7 @@ import { parseDbDate } from "../../../utils/dateUtils";
 import { computeBookProgress } from "../../../utils/readingProgress";
 import { getStatusText } from "../../../utils/bookStatus";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
+import { showToast } from "../../../utils/toast";
 
 type SortOption =
   "date_added" | "title" | "author" | "reading_time" | "progress";
@@ -98,12 +99,11 @@ export default function MyBooksScreen() {
     try {
       await updateBookStatus(selectedBook.id, newStatus);
 
-      Alert.alert(
-        t("booksPage.alert.statusUpdated"),
-        t("booksPage.alert.bookStatusUpdated", {
+      showToast({
+        message: t("booksPage.alert.bookStatusUpdated", {
           statusText: getStatusText(t, newStatus),
         }),
-      );
+      });
     } catch (e) {
       setError(t("booksPage.alert.failedUpdate"));
       console.error("Update status error:", e);
@@ -227,7 +227,7 @@ export default function MyBooksScreen() {
 
   return (
     <View style={styles.container} pointerEvents={loading ? "none" : "auto"}>
-      <Stack.Screen options={{ title: "My Books" }} />
+      <Stack.Screen options={{ title: t("navigation.myBooks") }} />
 
       <BookStatusModal
         visible={statusModalVisible}
@@ -251,7 +251,7 @@ export default function MyBooksScreen() {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by title, author, or publisher..."
+          placeholder={t("booksPage.search.libraryPlaceholder")}
           placeholderTextColor={COLORS.neutral[400]}
           value={searchQuery}
           onChangeText={setSearchQuery}

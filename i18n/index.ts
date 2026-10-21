@@ -21,6 +21,8 @@ const resources = {
         noBooksYet: "No books yet",
         startDiscovering: "Start by discovering and adding books!",
         discoverBooks: "🔍 Discover Books",
+        noBookInProgress: "No book in progress",
+        chooseBookToRead: "📚 Choose a book to read",
         streakShort: "{{count}}d streak",
       },
 
@@ -32,14 +34,12 @@ const resources = {
           read: "Read",
           wantToRead: "Want to Read",
           unknown: "Unknown",
-          complete: "complete",
           finished: "✅ Finished:",
           readingTime: "reading time",
         },
 
         dailyProgress: {
           title: "📅 Today's Reading Progress",
-          complete: "complete",
           today: "Today",
           goal: "Goal",
           dayStreak: "Day Streak",
@@ -52,6 +52,12 @@ const resources = {
           leftToReach: "{{time}} left to reach your daily goal",
         },
 
+        sessionDate: {
+          title: "📅 When did you read?",
+          today: "Today",
+          yesterday: "Yesterday",
+          pickDate: "Pick date",
+        },
         readingTimeLogger: {
           title: "📖 Log Reading Time",
           cancel: "Cancel",
@@ -60,6 +66,8 @@ const resources = {
           whichBook: "📚 Which book were you reading?",
           noBooksFound:
             'No currently reading books found. Add a book to your "Currently Reading" list first.',
+          startReadingHint: "Or start one from your reading list:",
+          startReading: "Start reading",
           howManyMinutes: "⏰ How many minutes did you read?",
           enterCustomMinutes: "Enter custom minutes",
           minutesShort: "m",
@@ -99,7 +107,6 @@ const resources = {
           enterValidMinutes: "Please enter a valid number of minutes",
           selectBook: "Select a Book",
           pleaseSelectBook: "Please select which book you were reading",
-          success: "Success! 🎉",
           loggedMinutes:
             'Logged {{minutes}} minutes of reading for "{{bookName}}"',
           loggedMinutesAndPages:
@@ -130,10 +137,9 @@ const resources = {
           enterValidMinutes: "Please enter a valid number of minutes",
           updateError: "Error",
           updateErrorMessage: "Failed to update session",
-          updateSuccess: "Success",
           updateSuccessMessage: "Session updated successfully",
-          deleteSuccess: "Success",
           deleteSuccessMessage: "Session deleted successfully",
+          undo: "Undo",
           deleteError: "Error",
           deleteErrorMessage: "Failed to delete session",
         },
@@ -155,20 +161,6 @@ const resources = {
             thu: "Thu",
             fri: "Fri",
             sat: "Sat",
-          },
-          months: {
-            january: "January",
-            february: "February",
-            march: "March",
-            april: "April",
-            may: "May",
-            june: "June",
-            july: "July",
-            august: "August",
-            september: "September",
-            october: "October",
-            november: "November",
-            december: "December",
           },
           sessionCardBy: "by",
           minutesSuffix: "m",
@@ -259,9 +251,6 @@ const resources = {
           changeStatus: "Change Status",
           totalPages: "Total Pages",
           notes: "🗒️ Notes",
-          minutes: "minutes",
-          hours: "hours",
-          hour: "hour",
           edit: "Edit",
           logs: "Logs",
           library: "Library",
@@ -295,8 +284,6 @@ const resources = {
         },
         listHeader: {
           myBooks: "📚 My Books",
-          showing: "showing",
-          of: "of",
           viewAll: "View All",
         },
         empty: {
@@ -319,16 +306,15 @@ const resources = {
           progress: "Progress",
           unknown: "Unknown",
         },
-        status: {
-          want_to_read: "Want to Read",
-          currently_reading: "Reading",
-          read: "Read",
-        },
         search: {
           general: "General",
           title: "Title",
           author: "Author",
           placeholder: "Search for books, authors, or titles...",
+          libraryPlaceholder: "Search by title, author, or publisher...",
+          alreadyInLibraryTitle: "Already in your library",
+          alreadyInLibraryMessage: '"{{title}}" is already in your library. Add it again?',
+          addAnyway: "Add anyway",
           noResults: "No Results",
           searchTitle: "🔍 Discover New Books",
           searchSubtitle: "Search millions of books from Open Library",
@@ -340,8 +326,6 @@ const resources = {
           headerTitle: "Search Books",
           noResultsMessage:
             "No books found for your search. Try different keywords.",
-          failedToSearchBooks: "Failed to search books",
-          success: "Success",
           bookAddedMessage:
             '"{{title}}" has been added to your library as {{status}}!',
           failedToAddBook:
@@ -356,7 +340,6 @@ const resources = {
           startSearchingSubtext:
             "Enter a book title, author name, or keywords to discover new books",
           searchingBooks: "Searching books...",
-          ok: "OK",
           statusLabels: {
             want_to_read: "Want to Read",
             currently_reading: "Currently Reading",
@@ -370,10 +353,8 @@ const resources = {
         },
         alert: {
           deleteTitle: "Delete Book",
-          deleteMessage: 'Are you sure you want to delete "{{title}}"?',
           cancel: "Cancel",
           delete: "Delete",
-          statusUpdated: "Status Updated",
           bookStatusUpdated: "Book status has been updated to {{statusText}}.",
           failedUpdate: "Failed to update book status. Please try again.",
           deleteWithSessionsMessage:
@@ -382,6 +363,8 @@ const resources = {
         },
       },
       error: "Error",
+      ok: "OK",
+      datePlaceholder: "DD/MM/YYYY",
       duration: {
         minutes: "{{count}} min",
         hours: "{{count}} h",
@@ -392,7 +375,6 @@ const resources = {
         subtitle: "Manage your PageStreak preferences",
         profile: "Profile",
         goal: "📖 Goal: {{goal}} books this year",
-        editProfile: "Tap to view & edit full profile",
         language: "Language",
         about: "About",
         appName: "PageStreak",
@@ -400,24 +382,14 @@ const resources = {
         trackReading: "Track Your Reading",
         builtForBookLovers: "Built for book lovers",
         account: "Account",
-        logout: "Log Out",
-        logoutDescription: "Clear all data and start fresh",
+        logout: "Erase All Data",
+        logoutDescription: "Delete all books, sessions and settings",
         logoutConfirmMessage:
-          "Are you sure you want to log out? This will delete all your books and reading progress. This action cannot be undone.",
-        logoutFailed: "Failed to log out. Please try again.",
+          "This permanently deletes all your books, reading sessions and settings. Export a backup first if you might want them back.",
+        logoutFailed: "Failed to erase data. Please try again.",
+        exportFirst: "Export first",
         madeWithLove: "Made with ❤️ for book lovers",
         notifications: "Notifications",
-        notificationSettings: "Notification Settings",
-        enableNotifications: "Enable Notifications",
-        dailyReminders: "Daily Reading Reminders",
-        reminderDelay: "Reminder Delay",
-        reminderDelayDescription: "Hours after last app visit",
-        hours: "hours",
-        notificationTitle: "Notification Title",
-        notificationMessage: "Notification Message",
-        testNotification: "Send Test Notification",
-        notificationPermissionRequired:
-          "Notification permission is required to send reminders",
         notificationPermissionDenied:
           "Notifications are disabled in your device settings. Please enable them to receive reading reminders.",
         pushNotifications: "Push Notifications",
@@ -428,7 +400,6 @@ const resources = {
         reminderTiming: "Reminder Timing",
         reminderTimingDescription:
           "Send reminder {{hours}} hours after I close the app",
-        hoursAfterClosingApp: "Hours after closing app:",
         hourSelectionDescription:
           "Choose when to receive reading reminders after closing the app",
         hourSingular: "hour",
@@ -442,22 +413,6 @@ const resources = {
         testScheduledMessage:
           "Test notification scheduled for {{hours}} hours from now!",
         permissionRequired: "Permission Required",
-        hourOptions: {
-          "1": "1hr",
-          "3": "3hr",
-          "5": "5hr",
-          "8": "8hr",
-          "12": "12hr",
-          "24": "24hr",
-        },
-        hourDescriptions: {
-          "1": "Quick reminder",
-          "3": "Short break",
-          "5": "Regular gap",
-          "8": "Work day",
-          "12": "Half day",
-          "24": "Daily",
-        },
         notificationMessages: {
           goalCompleted:
             "Congratulations! You've already reached your daily reading goal! 🎉",
@@ -510,7 +465,6 @@ const resources = {
               "Your notification preferences",
             includeAppUsage: "App Usage Data",
             includeAppUsageDescription: "Your app usage statistics (optional)",
-            compressed: "Compress Backup",
           },
           size: {
             small: "Small (< 1MB)",
@@ -518,14 +472,10 @@ const resources = {
             large: "Large (1-5MB)",
           },
           buttons: {
-            export: "Export Data",
             cancel: "Cancel",
-            save: "Save",
-            share: "Share",
           },
           messages: {
             preparing: "Preparing export...",
-            exporting: "Exporting data...",
             success: "Export Successful",
             successMessage:
               "Your backup has been saved to your chosen location successfully!",
@@ -533,12 +483,6 @@ const resources = {
             backupCreatedMessage:
               "Your backup file has been created. You can find it in the app's documents folder.",
             exportFailed: "Export Failed",
-            exportComplete: "Export Complete",
-            exportCompleteMessage:
-              "Your data has been exported successfully! The backup file is ready to be shared or saved.",
-            shareFailed: "Share Failed",
-            shareFailedMessage:
-              "Could not share the backup file, but it has been saved locally.",
             warning:
               "Keep your backup file safe! It contains your personal reading data. You'll be able to choose where to save the backup file on your device.",
             unknownError: "An unknown error occurred",
@@ -587,7 +531,6 @@ const resources = {
               options: {
                 merge: "Merge Data",
                 replace: "Replace Data",
-                validateIntegrity: "Validate Data Integrity",
                 mergeDescription:
                   "Add backup data to your existing data. Duplicate entries will be updated.",
                 replaceDescription:
@@ -602,7 +545,6 @@ const resources = {
             },
             import: {
               importing: "Importing data...",
-              success: "Import Successful",
               importingTitle: "Importing Data",
               importingDescription:
                 "Please wait while we import your backup data",
@@ -626,10 +568,6 @@ const resources = {
           messages: {
             error: "Error",
             failedToSelect: "Failed to select file",
-            importSuccess: "Data imported successfully!",
-            importComplete: "Import Complete",
-            importSuccessMessage:
-              "Successfully imported {{books}} books and {{sessions}} reading sessions!",
             replaceConfirmTitle: "Replace All Data?",
             replaceConfirmMessage:
               "This will DELETE all your current data and replace it with the backup. This action cannot be undone. Are you sure?",
@@ -643,6 +581,52 @@ const resources = {
         books: "Books",
         profile: "Profile",
         settings: "Settings",
+        searchBooks: "Search Books",
+        myBooks: "My Books",
+        bookDetails: "Book Details",
+        notFoundTitle: "This screen doesn't exist.",
+        goHome: "Go to home screen",
+        loading: "Loading...",
+      },
+
+      languages: {
+        eng: "English",
+        tur: "Turkish",
+        fre: "French",
+        ger: "German",
+        spa: "Spanish",
+        ita: "Italian",
+        por: "Portuguese",
+        rus: "Russian",
+        jpn: "Japanese",
+        chi: "Chinese",
+        ara: "Arabic",
+        dut: "Dutch",
+      },
+
+      backupProgress: {
+        startingBackup: "Starting backup...",
+        exportingBooks: "Exporting books...",
+        exportingSessions: "Exporting reading sessions...",
+        exportingPreferences: "Exporting user preferences...",
+        exportingWeeklyProgress: "Exporting weekly progress...",
+        exportingNotifications: "Exporting notification settings...",
+        exportingAppUsage: "Exporting app usage data...",
+        creatingFile: "Creating backup file...",
+        backupComplete: "Backup complete!",
+        preparingSave: "Preparing file for save...",
+        fileSaved: "File saved successfully!",
+        savedLocally: "Backup created locally",
+        readingFile: "Reading backup file...",
+        startingImport: "Starting import...",
+        clearingData: "Clearing existing data...",
+        importingPreferences: "Importing user preferences...",
+        importingBooks: "Importing books...",
+        importingSessions: "Importing reading sessions...",
+        importingWeeklyProgress: "Importing weekly progress...",
+        importingNotifications: "Importing notification preferences...",
+        importingAppUsage: "Importing app usage data...",
+        importComplete: "Import completed successfully!",
       },
 
       intro: {
@@ -654,6 +638,8 @@ const resources = {
           title: "Nice to meet you!",
           subtitle: "What should we call you on your reading journey?",
           placeholder: "Enter your name",
+          restoreBackup: "Coming from another device? Restore a backup",
+          restoreNoProfile: "The backup was imported, but it has no profile. Please finish setting up.",
         },
         goal: {
           title: "Set your goal, {{username}}!",
@@ -706,7 +692,7 @@ const resources = {
           selectedDate: "Selected Date",
           tapToSelectDate: "Tap to select date",
           currentWeeklyIncrease:
-            "Current Weekly Increase Needed: {{percentage}}% ({{classification}})",
+            "Weekly increase: +{{minutes}} min/week ({{classification}})",
         },
         buttons: {
           back: "← Back",
@@ -755,16 +741,11 @@ const resources = {
       },
 
       profile: {
-        title: "👤 Profile",
         subtitle: "Manage your preferences",
         edit: "Edit Profile",
-        save: "Save Changes",
-        cancel: "Cancel",
-        saving: "Saving...",
         sections: {
           personal: "👤 Personal Information",
           goals: "🎯 Reading Goals",
-          preferences: "📚 Reading Preferences",
           preferredGenres: "🎭 Preferred Genres",
           statistics: "📊 Statistics",
           account: "ℹ️ Account Information",
@@ -795,20 +776,11 @@ const resources = {
           targetGoal: "e.g., 60",
         },
         stats: {
-          memberSince: "Member since {{date}}",
-          booksRead: "Books Read",
-          currentStreak: "Current Streak",
-          totalReadingTime: "Total Reading Time",
-          averagePerDay: "Average per Day",
-          goalProgress: "Goal Progress",
           totalIncrease: "Total Increase",
           currentRate: "Current Rate",
           startingRate: "Starting Rate",
           goalTargetDate: "Goal Target Date",
           noGenres: "No genres selected",
-          days: "{{count}} days",
-          hours: "{{count}}h {{minutes}}m",
-          minutes: "{{count}}m",
         },
         buttons: {
           cancel: "Cancel",
@@ -820,7 +792,6 @@ const resources = {
           lastUpdated: "Last Updated",
         },
         success: {
-          title: "Success",
           message: "Your profile has been updated!",
         },
         error: {
@@ -841,7 +812,6 @@ const resources = {
         title: "Reading Growth Journey",
         subtitle:
           "Track target vs actual weekly minutes with adjustable goals.",
-        backToProfile: "Back to profile",
         loading: "Loading weekly growth...",
         success: "Growth goals updated successfully!",
         controls: {
@@ -898,7 +868,7 @@ const resources = {
     translation: {
       home: {
         title: "PageStreak",
-        welcomeBack: "Tekrar hoş geldin, {{username}}!",
+        welcomeBack: "Tekrar hoş geldiniz, {{username}}!",
         logReadingTime: "📖 Okuma Süresi Kaydet",
         viewReadingLogs: "Okuma Kayıtlarını Görüntüle →",
         readingJourney: "📊 Bu Yıl Okuma Yolculuğun",
@@ -913,7 +883,9 @@ const resources = {
         noBooksYet: "Henüz kitap yok",
         startDiscovering: "Kitap keşfetmeye ve eklemeye başlayın!",
         discoverBooks: "🔍 Kitap Keşfet",
-        streakShort: "{{count}} gün seri",
+        noBookInProgress: "Şu anda okunan kitap yok",
+        chooseBookToRead: "📚 Okumak için bir kitap seçin",
+        streakShort: "{{count}} günlük seri",
       },
 
       components: {
@@ -924,26 +896,30 @@ const resources = {
           read: "Okundu",
           wantToRead: "Okuma Listesinde",
           unknown: "Bilinmiyor",
-          complete: "tamamlandı",
           finished: "✅ Bitirildi:",
           readingTime: "okuma süresi",
         },
 
         dailyProgress: {
           title: "📅 Bugünkü Okuma İlerlemeniz",
-          complete: "tamamlandı",
           today: "Bugün",
           goal: "Hedef",
           dayStreak: "Gün Serisi",
           goalCrushed: "🎉 Hedef aşıldı! Harika iş!",
-          almostThere: "💪 Neredeyse geldin! Devam et!",
-          goodProgress: "📖 İyi ilerleme! Yarı yoldasın!",
+          almostThere: "💪 Neredeyse geldiniz! Devam edin!",
+          goodProgress: "📖 İyi ilerleme! Yarı yoldasınız!",
           greatStart: "🌱 Harika başlangıç! Momentumu korumaya devam et!",
-          everyMinute: "📚 Her dakika değerli! Başarabilirsin!",
-          readyToStart: "☕ Okuma seansına başlamaya hazır mısın?",
+          everyMinute: "📚 Her dakika değerli! Başarabilirsiniz!",
+          readyToStart: "☕ Okuma seansına başlamaya hazır mısınız?",
           leftToReach: "Günlük hedefinize ulaşmak için {{time}} kaldı",
         },
 
+        sessionDate: {
+          title: "📅 Ne zaman okudunuz?",
+          today: "Bugün",
+          yesterday: "Dün",
+          pickDate: "Tarih seç",
+        },
         readingTimeLogger: {
           title: "📖 Okuma Süresi Kaydet",
           cancel: "İptal",
@@ -952,6 +928,8 @@ const resources = {
           whichBook: "📚 Okuduğunuz Kitabı Seçiniz",
           noBooksFound:
             'Şu anda okunuyor durumunda kitap bulunamadı. Önce "Şu anda Okunmakta" listenize bir kitap ekleyin.',
+          startReadingHint: "Ya da okuma listenizden birine başlayın:",
+          startReading: "Okumaya başla",
           howManyMinutes: "⏰ Kaç dakika okudunuz?",
           enterCustomMinutes: "Özel dakika girin",
           minutesShort: "dk",
@@ -990,7 +968,6 @@ const resources = {
           enterValidMinutes: "Lütfen geçerli bir dakika sayısı girin",
           selectBook: "Kitap Seçin",
           pleaseSelectBook: "Lütfen hangi kitabı okuduğunuzu seçin",
-          success: "Başarılı! 🎉",
           loggedMinutes:
             '"{{bookName}}" için {{minutes}} dakika okuma süresi kaydedildi',
           loggedMinutesAndPages:
@@ -1021,10 +998,9 @@ const resources = {
           enterValidMinutes: "Lütfen geçerli bir dakika sayısı girin",
           updateError: "Hata",
           updateErrorMessage: "Seans güncellenemedi",
-          updateSuccess: "Başarılı",
           updateSuccessMessage: "Seans başarıyla güncellendi",
-          deleteSuccess: "Başarılı",
           deleteSuccessMessage: "Seans başarıyla silindi",
+          undo: "Geri al",
           deleteError: "Hata",
           deleteErrorMessage: "Seans silinemedi",
         },
@@ -1046,20 +1022,6 @@ const resources = {
             thu: "Per",
             fri: "Cum",
             sat: "Cmt",
-          },
-          months: {
-            january: "Ocak",
-            february: "Şubat",
-            march: "Mart",
-            april: "Nisan",
-            may: "Mayıs",
-            june: "Haziran",
-            july: "Temmuz",
-            august: "Ağustos",
-            september: "Eylül",
-            october: "Ekim",
-            november: "Kasım",
-            december: "Aralık",
           },
           sessionCardBy: "yazan",
           minutesSuffix: "dk",
@@ -1152,9 +1114,6 @@ const resources = {
           changeStatus: "Durum Değiştir",
           totalPages: "Sayfa",
           notes: "🗒️ Notlar",
-          minutes: "dakika",
-          hours: "saat",
-          hour: "saat",
           edit: "Düzenle",
           logs: "Kayıtlar",
           library: "Kütüphane",
@@ -1188,8 +1147,6 @@ const resources = {
         },
         listHeader: {
           myBooks: "📚 Kitaplarım",
-          showing: "",
-          of: "/",
           viewAll: "Tümünü Gör",
         },
         empty: {
@@ -1212,11 +1169,6 @@ const resources = {
           progress: "İlerleme",
           unknown: "Bilinmiyor",
         },
-        status: {
-          want_to_read: "Okuma Listesinde",
-          currently_reading: "Okunmakta",
-          read: "Okundu",
-        },
         search: {
           general: "Genel",
           title: "Başlık",
@@ -1227,14 +1179,16 @@ const resources = {
           searchTitle: "🔍 Yeni Kitaplar Keşfedin",
           searchSubtitle: "Open Library'den milyonlarca kitabı arayın",
           placeholder: "Kitap, yazar veya başlık ara...",
+          libraryPlaceholder: "Başlık, yazar veya yayınevine göre ara...",
+          alreadyInLibraryTitle: "Zaten kütüphanenizde",
+          alreadyInLibraryMessage: '"{{title}}" zaten kütüphanenizde. Tekrar eklensin mi?',
+          addAnyway: "Yine de ekle",
           error: "Arama Hatası",
           enterSearchTerm: "Lütfen bir arama terimi girin",
           failed: "Arama başarısız oldu. Lütfen tekrar deneyin.",
           headerTitle: "Kitap Ara",
           noResultsMessage:
             "Aramanız için kitap bulunamadı. Farklı anahtar kelimeler deneyin.",
-          failedToSearchBooks: "Kitap arama başarısız",
-          success: "Başarılı",
           bookAddedMessage:
             '"{{title}}" kütüphanenize {{status}} olarak eklendi!',
           failedToAddBook:
@@ -1249,7 +1203,6 @@ const resources = {
           startSearchingSubtext:
             "Yeni kitaplar keşfetmek için kitap başlığı, yazar adı veya anahtar kelimeler girin",
           searchingBooks: "Kitaplar aranıyor...",
-          ok: "Tamam",
           statusLabels: {
             want_to_read: "Okuma Listesinde",
             currently_reading: "Okunmakta",
@@ -1264,11 +1217,8 @@ const resources = {
 
         alert: {
           deleteTitle: "Kitabı Sil",
-          deleteMessage:
-            '"{{title}}" kitabını silmek istediğinizden emin misiniz?',
           cancel: "İptal",
           delete: "Sil",
-          statusUpdated: "Durum Güncellendi",
           bookStatusUpdated: "Kitap durumu {{statusText}} olarak güncellendi.",
           failedUpdate: "Kitap durumu güncellenemedi. Lütfen tekrar deneyin.",
           deleteWithSessionsMessage:
@@ -1277,6 +1227,8 @@ const resources = {
         },
       },
       error: "Hata",
+      ok: "Tamam",
+      datePlaceholder: "GG/AA/YYYY",
       duration: {
         minutes: "{{count}} dk",
         hours: "{{count}} sa",
@@ -1287,7 +1239,6 @@ const resources = {
         subtitle: "PageStreak tercihlerinizi yönetin",
         profile: "Profil",
         goal: "📖 Hedef: Bu yıl {{goal}} kitap",
-        editProfile: "Profili görüntülemek ve düzenlemek için dokunun",
         language: "Dil",
         about: "Hakkında",
         appName: "PageStreak",
@@ -1295,24 +1246,14 @@ const resources = {
         trackReading: "Okumalarınızı Takip Edin",
         builtForBookLovers: "Kitap severler için yapıldı",
         account: "Hesap",
-        logout: "Çıkış Yap",
-        logoutDescription: "Tüm verileri sil ve sıfırdan başla",
+        logout: "Tüm Verileri Sil",
+        logoutDescription: "Tüm kitapları, seansları ve ayarları sil",
         logoutConfirmMessage:
-          "Çıkış yapmak istediğinizden emin misiniz? Tüm kitaplarınız ve okuma ilerlemeniz silinecek. Bu işlem geri alınamaz.",
-        logoutFailed: "Çıkış yapılamadı. Lütfen tekrar deneyin.",
+          "Bu işlem tüm kitaplarınızı, okuma seanslarınızı ve ayarlarınızı kalıcı olarak siler. Geri isteyebilecekseniz önce bir yedek alın.",
+        logoutFailed: "Veriler silinemedi. Lütfen tekrar deneyin.",
+        exportFirst: "Önce yedekle",
         madeWithLove: "Kitap severler için ❤️ ile yapıldı",
         notifications: "Bildirimler",
-        notificationSettings: "Bildirim Ayarları",
-        enableNotifications: "Bildirimleri Etkinleştir",
-        dailyReminders: "Günlük Okuma Hatırlatıcıları",
-        reminderDelay: "Hatırlatıcı Gecikmesi",
-        reminderDelayDescription: "Son uygulama ziyaretinden sonraki saatler",
-        hours: "saat",
-        notificationTitle: "Bildirim Başlığı",
-        notificationMessage: "Bildirim Mesajı",
-        testNotification: "Test Bildirimi Gönder",
-        notificationPermissionRequired:
-          "Hatırlatıcı göndermek için bildirim izni gerekiyor",
         notificationPermissionDenied:
           "Cihaz ayarlarınızda bildirimler devre dışı. Okuma hatırlatıcıları almak için lütfen etkinleştirin.",
         pushNotifications: "Anlık Bildirimler",
@@ -1323,7 +1264,6 @@ const resources = {
         reminderTiming: "Hatırlatıcı Zamanlaması",
         reminderTimingDescription:
           "Uygulamayı kapattıktan {{hours}} saat sonra hatırlatıcı gönder",
-        hoursAfterClosingApp: "Uygulamayı kapattıktan sonraki saatler:",
         hourSelectionDescription:
           "Uygulamayı kapattıktan sonra okuma hatırlatıcılarını ne zaman alacağınızı seçin",
         hourSingular: "saat",
@@ -1337,22 +1277,6 @@ const resources = {
         testScheduledMessage:
           "Test bildirimi {{hours}} saat sonra için zamanlandı!",
         permissionRequired: "İzin Gerekli",
-        hourOptions: {
-          "1": "1saat",
-          "3": "3saat",
-          "5": "5saat",
-          "8": "8saat",
-          "12": "12saat",
-          "24": "24saat",
-        },
-        hourDescriptions: {
-          "1": "Hızlı hatırlatıcı",
-          "3": "Kısa mola",
-          "5": "Normal aralık",
-          "8": "İş günü",
-          "12": "Yarım gün",
-          "24": "Günlük",
-        },
         notificationMessages: {
           goalCompleted:
             "Tebrikler! Günlük okuma hedefinize zaten ulaştınız! 🎉",
@@ -1406,7 +1330,6 @@ const resources = {
             includeAppUsage: "Uygulama Kullanım Verileri",
             includeAppUsageDescription:
               "Uygulama kullanım istatistikleriniz (isteğe bağlı)",
-            compressed: "Yedeği Sıkıştır",
           },
           size: {
             small: "Küçük (< 1MB)",
@@ -1414,26 +1337,16 @@ const resources = {
             large: "Büyük (1-5MB)",
           },
           buttons: {
-            export: "Veri Dışa Aktar",
             cancel: "İptal",
-            save: "Kaydet",
-            share: "Paylaş",
           },
           messages: {
             preparing: "Dışa aktarma hazırlanıyor...",
-            exporting: "Veriler dışa aktarılıyor...",
             success: "Dışa Aktarma Başarılı",
             successMessage: "Yedeğiniz seçtiğiniz konuma başarıyla kaydedildi!",
             backupCreated: "Yedek Oluşturuldu",
             backupCreatedMessage:
               "Yedek dosyanız oluşturuldu. Uygulamanın belgeler klasöründe bulabilirsiniz.",
             exportFailed: "Dışa Aktarma Başarısız",
-            exportComplete: "Dışa Aktarma Tamamlandı",
-            exportCompleteMessage:
-              "Verileriniz başarıyla dışa aktarıldı! Yedek dosya paylaşılmaya veya kaydedilmeye hazır.",
-            shareFailed: "Paylaşım Başarısız",
-            shareFailedMessage:
-              "Yedek dosya paylaşılamadı, ancak yerel olarak kaydedildi.",
             warning:
               "Yedek dosyanızı güvende tutun! Kişisel okuma verilerinizi içerir. Dosyayı cihazınızda nereye kaydedeceğinizi seçebilirsiniz.",
             unknownError: "Bilinmeyen bir hata oluştu",
@@ -1482,7 +1395,6 @@ const resources = {
               options: {
                 merge: "Veri Birleştir",
                 replace: "Veri Değiştir",
-                validateIntegrity: "Veri Bütünlüğünü Doğrula",
                 mergeDescription:
                   "Yedek verilerini mevcut verilerinize ekleyin. Tekrarlanan girişler güncellenecek.",
                 replaceDescription:
@@ -1497,7 +1409,6 @@ const resources = {
             },
             import: {
               importing: "Veriler içe aktarılıyor...",
-              success: "İçe Aktarma Başarılı",
               importingTitle: "Veriler İçe Aktarılıyor",
               importingDescription:
                 "Yedek verilerinizi içe aktarırken lütfen bekleyin",
@@ -1521,10 +1432,6 @@ const resources = {
           messages: {
             error: "Hata",
             failedToSelect: "Dosya seçilemedi",
-            importSuccess: "Veriler başarıyla içe aktarıldı!",
-            importComplete: "İçe Aktarma Tamamlandı",
-            importSuccessMessage:
-              "{{books}} kitap ve {{sessions}} okuma seansı başarıyla içe aktarıldı!",
             replaceConfirmTitle: "Tüm Veriyi Değiştir?",
             replaceConfirmMessage:
               "Bu, TÜM mevcut verilerinizi SİLECEK ve yedeği ile değiştirecek. Bu işlem geri alınamaz. Emin misiniz?",
@@ -1538,6 +1445,52 @@ const resources = {
         books: "Kitaplar",
         profile: "Profil",
         settings: "Ayarlar",
+        searchBooks: "Kitap Ara",
+        myBooks: "Kitaplarım",
+        bookDetails: "Kitap Detayları",
+        notFoundTitle: "Bu ekran mevcut değil.",
+        goHome: "Ana sayfaya git",
+        loading: "Yükleniyor...",
+      },
+
+      languages: {
+        eng: "İngilizce",
+        tur: "Türkçe",
+        fre: "Fransızca",
+        ger: "Almanca",
+        spa: "İspanyolca",
+        ita: "İtalyanca",
+        por: "Portekizce",
+        rus: "Rusça",
+        jpn: "Japonca",
+        chi: "Çince",
+        ara: "Arapça",
+        dut: "Felemenkçe",
+      },
+
+      backupProgress: {
+        startingBackup: "Yedekleme başlıyor...",
+        exportingBooks: "Kitaplar dışa aktarılıyor...",
+        exportingSessions: "Okuma seansları dışa aktarılıyor...",
+        exportingPreferences: "Kullanıcı tercihleri dışa aktarılıyor...",
+        exportingWeeklyProgress: "Haftalık ilerleme dışa aktarılıyor...",
+        exportingNotifications: "Bildirim ayarları dışa aktarılıyor...",
+        exportingAppUsage: "Uygulama kullanım verileri dışa aktarılıyor...",
+        creatingFile: "Yedek dosyası oluşturuluyor...",
+        backupComplete: "Yedekleme tamamlandı!",
+        preparingSave: "Dosya kaydetmeye hazırlanıyor...",
+        fileSaved: "Dosya başarıyla kaydedildi!",
+        savedLocally: "Yedek cihazda oluşturuldu",
+        readingFile: "Yedek dosyası okunuyor...",
+        startingImport: "İçe aktarma başlıyor...",
+        clearingData: "Mevcut veriler temizleniyor...",
+        importingPreferences: "Kullanıcı tercihleri içe aktarılıyor...",
+        importingBooks: "Kitaplar içe aktarılıyor...",
+        importingSessions: "Okuma seansları içe aktarılıyor...",
+        importingWeeklyProgress: "Haftalık ilerleme içe aktarılıyor...",
+        importingNotifications: "Bildirim tercihleri içe aktarılıyor...",
+        importingAppUsage: "Uygulama kullanım verileri içe aktarılıyor...",
+        importComplete: "İçe aktarma başarıyla tamamlandı!",
       },
 
       intro: {
@@ -1549,6 +1502,8 @@ const resources = {
           title: "Tanıştığımıza memnun oldum!",
           subtitle: "Okuma yolculuğunuzda size nasıl hitap edelim?",
           placeholder: "İsminizi girin",
+          restoreBackup: "Başka bir cihazdan mı geliyorsunuz? Yedeği geri yükleyin",
+          restoreNoProfile: "Yedek içe aktarıldı ama profil içermiyor. Lütfen kurulumu tamamlayın.",
         },
         goal: {
           title: "Hedefinizi belirleyin, {{username}}!",
@@ -1599,7 +1554,7 @@ const resources = {
           selectedDate: "Seçilen Tarih",
           tapToSelectDate: "Tarih seçmek için dokunun",
           currentWeeklyIncrease:
-            "Gerekli Haftalık Artış: %{{percentage}} ({{classification}})",
+            "Haftalık artış: haftada +{{minutes}} dk ({{classification}})",
         },
         buttons: {
           back: "← Geri",
@@ -1646,16 +1601,11 @@ const resources = {
       },
 
       profile: {
-        title: "👤 Profil",
         subtitle: "Tercihlerinizi yönetin",
         edit: "Profili Düzenle",
-        save: "Değişiklikleri Kaydet",
-        cancel: "İptal",
-        saving: "Kaydediliyor...",
         sections: {
           personal: "👤 Kişisel Bilgiler",
           goals: "🎯 Okuma Hedefleri",
-          preferences: "📚 Okuma Tercihleri",
           preferredGenres: "🎭 Tercih Edilen Türler",
           statistics: "📊 İstatistikler",
           account: "ℹ️ Hesap Bilgileri",
@@ -1686,20 +1636,11 @@ const resources = {
           targetGoal: "örn. 60",
         },
         stats: {
-          memberSince: "{{date}} tarihinden beri üye",
-          booksRead: "Okunan Kitaplar",
-          currentStreak: "Mevcut Seri",
-          totalReadingTime: "Toplam Okuma Süresi",
-          averagePerDay: "Günlük Ortalama",
-          goalProgress: "Hedef İlerlemesi",
           totalIncrease: "Toplam Artış",
           currentRate: "Mevcut Oran",
           startingRate: "Başlangıç Oranı",
           goalTargetDate: "Hedef Tarih",
           noGenres: "Tür seçilmedi",
-          days: "{{count}} gün",
-          hours: "{{count}}s {{minutes}}d",
-          minutes: "{{count}}d",
         },
         buttons: {
           cancel: "İptal",
@@ -1711,7 +1652,6 @@ const resources = {
           lastUpdated: "Son Güncelleme",
         },
         success: {
-          title: "Başarılı",
           message: "Profiliniz güncellendi!",
         },
         error: {
@@ -1732,7 +1672,6 @@ const resources = {
         title: "Okuma Artış Yolculuğu",
         subtitle:
           "Hedef ve gerçek haftalık dakikaları karşılaştırın, hedeflerinizi düzenleyin.",
-        backToProfile: "Profile dön",
         loading: "Haftalık artış yükleniyor...",
         success: "Artış hedefleri başarıyla güncellendi!",
         controls: {

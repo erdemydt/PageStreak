@@ -65,7 +65,7 @@ export default function DataExportModal({
             t("dataBackup.export.messages.successMessage"),
             [
               {
-                text: "OK",
+                text: t("ok"),
                 onPress: () => {
                   onSuccess?.(result.filePath!);
                   onClose();
@@ -80,7 +80,7 @@ export default function DataExportModal({
             t("dataBackup.export.messages.backupCreatedMessage"),
             [
               {
-                text: "OK",
+                text: t("ok"),
                 onPress: () => {
                   onSuccess?.(result.filePath!);
                   onClose();

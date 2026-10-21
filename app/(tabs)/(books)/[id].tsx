@@ -29,8 +29,13 @@ import {
   getBookReadingTime,
   getEnhancedBookProgress,
 } from "../../../utils/readingProgress";
-import { formatDate, formatDuration } from "../../../utils/format";
+import {
+  formatDate,
+  formatDuration,
+  formatLanguage,
+} from "../../../utils/format";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
+import { showToast } from "../../../utils/toast";
 
 export default function BookDetailsScreen() {
   const router = useRouter();
@@ -104,12 +109,11 @@ export default function BookDetailsScreen() {
       await updateBookStatus(book.id, status);
       closeStatusModal();
 
-      Alert.alert(
-        t("booksPage.alert.statusUpdated"),
-        t("booksPage.alert.bookStatusUpdated", {
+      showToast({
+        message: t("booksPage.alert.bookStatusUpdated", {
           statusText: getStatusText(t, status),
         }),
-      );
+      });
     } catch (e) {
       console.error("Failed to update status:", e);
       Alert.alert(t("error"), t("booksPage.alert.failedUpdate"));
@@ -228,7 +232,9 @@ export default function BookDetailsScreen() {
 
           <TouchableOpacity
             style={styles.quickActionButton}
-            onPress={() => router.push("/readinglogs")}
+            onPress={() =>
+              router.push("/(tabs)/(home)/readinglogs", { withAnchor: true })
+            }
           >
             <Text style={styles.quickActionText}>
               {t("components.bookDetailModal.logs")}
@@ -237,7 +243,9 @@ export default function BookDetailsScreen() {
 
           <TouchableOpacity
             style={styles.quickActionButton}
-            onPress={() => router.push("/my-books")}
+            onPress={() =>
+              router.push("/(tabs)/(books)/my-books", { withAnchor: true })
+            }
           >
             <Text style={styles.quickActionText}>
               {t("components.bookDetailModal.library")}
@@ -357,7 +365,9 @@ export default function BookDetailsScreen() {
                 <Text style={styles.infoLabel}>
                   {t("components.bookDetailModal.language")}
                 </Text>
-                <Text style={styles.infoValue}>{book.language}</Text>
+                <Text style={styles.infoValue}>
+                  {formatLanguage(book.language)}
+                </Text>
               </View>
             )}
             {book.isbn && (

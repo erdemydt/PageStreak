@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
-  Dimensions,
   Modal,
   RefreshControl,
   ScrollView,
@@ -13,11 +12,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import SessionDatePicker from "../../../components/SessionDatePicker";
 import WeeklyStatsView from "../../../components/WeeklyStatsView";
 import { EnhancedBook } from "../../../db/db";
 import { getBook } from "../../../db/repos/books";
 import {
   deleteSession,
+  restoreSession,
   listSessionsWithBooks,
   SessionWithBook,
   updateSession,
@@ -32,6 +33,7 @@ import { generateRandomReadingData } from "../../../utils/devData";
 import { getEnhancedBookProgress } from "../../../utils/readingProgress";
 import { formatDate, LONG_DATE } from "../../../utils/format";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
+import { showToast } from "../../../utils/toast";
 interface WeekDay {
   date: string;
   day: string;
@@ -49,12 +51,11 @@ interface EditSessionModalProps {
     sessionId: number,
     minutes: number,
     notes: string,
-    pages?: number,
+    pages: number | undefined,
+    date: string,
   ) => void;
   onDelete: (sessionId: number) => void;
 }
-
-const { width: screenWidth } = Dimensions.get("window");
 
 function EditSessionModal({
   visible,
@@ -66,6 +67,7 @@ function EditSessionModal({
   const [minutes, setMinutes] = useState("");
   const [pages, setPages] = useState("");
   const [notes, setNotes] = useState("");
+  const [sessionDate, setSessionDate] = useState(getTodayDateString());
   const [loading, setLoading] = useState(false);
   const [bookData, setBookData] = useState<EnhancedBook | null>(null);
   const [remainingPages, setRemainingPages] = useState<number>(0);
@@ -86,6 +88,7 @@ function EditSessionModal({
       setMinutes(session.minutes_read.toString());
       setPages(session.pages_read ? session.pages_read.toString() : "");
       setNotes(session.notes || "");
+      setSessionDate(session.date);
       loadBookData();
     } else {
       setMinutes("");
@@ -93,7 +96,9 @@ function EditSessionModal({
       setNotes("");
       setBookData(null);
     }
-  }, [session]);
+    // Also re-run on each open: Cancel keeps the same session object, and
+    // its unsaved edits (incl. the date) must not survive a reopen
+  }, [session, visible]);
 
   const calculateRemainingPages = async () => {
     if (!bookData || !session) {
@@ -165,7 +170,13 @@ function EditSessionModal({
     setLoading(true);
     try {
       const pagesValue = pages.trim() ? Number(pages) : undefined;
-      await onSave(session.id, Number(minutes), notes.trim(), pagesValue);
+      await onSave(
+        session.id,
+        Number(minutes),
+        notes.trim(),
+        pagesValue,
+        sessionDate,
+      );
       onClose();
     } catch {
       Alert.alert(
@@ -243,6 +254,13 @@ function EditSessionModal({
                 {t("components.readingLogsEditModal.by")} {session.book_author}
               </Text>
             </View>
+          </View>
+
+          <View style={styles.modalSection}>
+            <Text style={styles.modalSectionTitle}>
+              {t("components.sessionDate.title")}
+            </Text>
+            <SessionDatePicker value={sessionDate} onChange={setSessionDate} />
           </View>
 
           <View style={styles.modalSection}>
@@ -505,15 +523,14 @@ export default function ReadingLogs() {
     sessionId: number,
     minutes: number,
     notes: string,
-    pages?: number,
+    pages: number | undefined,
+    date: string,
   ) => {
     try {
-      await updateSession(sessionId, { minutes, notes, pages });
-
-      Alert.alert(
-        t("components.readingLogsEditModal.updateSuccess"),
-        t("components.readingLogsEditModal.updateSuccessMessage"),
-      );
+      await updateSession(sessionId, { minutes, notes, pages, date });
+      showToast({
+        message: t("components.readingLogsEditModal.updateSuccessMessage"),
+      });
     } catch (error) {
       console.error("Error updating session:", error);
       throw error;
@@ -522,12 +539,16 @@ export default function ReadingLogs() {
 
   const handleDeleteSession = async (sessionId: number) => {
     try {
-      await deleteSession(sessionId);
-
-      Alert.alert(
-        t("components.readingLogsEditModal.deleteSuccess"),
-        t("components.readingLogsEditModal.deleteSuccessMessage"),
-      );
+      const deleted = await deleteSession(sessionId);
+      showToast({
+        message: t("components.readingLogsEditModal.deleteSuccessMessage"),
+        actionLabel: t("components.readingLogsEditModal.undo"),
+        onAction: () => {
+          restoreSession(deleted).catch((error) =>
+            console.error("Error restoring session:", error),
+          );
+        },
+      });
     } catch (error) {
       console.error("Error deleting session:", error);
       Alert.alert(

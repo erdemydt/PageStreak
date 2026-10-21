@@ -65,3 +65,10 @@ export function formatDate(
   if (!date) return typeof value === "string" ? value : "";
   return date.toLocaleDateString(getAppLocale(), options);
 }
+
+/** Open Library language code ("eng") to a localized name, else the raw code */
+export function formatLanguage(code?: string | null): string {
+  if (!code) return "";
+  const key = `languages.${code.toLowerCase()}`;
+  return i18n.exists(key) ? i18n.t(key) : code.toUpperCase();
+}

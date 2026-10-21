@@ -22,6 +22,14 @@ Kept for the owner's release notes; clear it when a release ships.
 - Backup merge no longer overwrites existing books; goal history is included in backups.
 - Durations read "45 min", "1 h 30 min" everywhere. Dates follow the app language, not the device language.
   An unset date on Profile shows "—".
+- Log a session for yesterday or any past date; edit a session's date.
+- Tapping books on Home opens them. With no book in progress, the logger offers "Start reading" for
+  want-to-read books.
+- "Log Out" is now "Erase All Data" and offers "Export first". Onboarding can restore a backup.
+- Onboarding goal step: shows "+N min/week", defaults the date to 3 months out, explains invalid input.
+- Success pop-ups are now brief toasts; deleting a session can be undone. Search stays open after
+  adding a book and warns about duplicates.
+- Turkish: remaining English text translated, consistently formal tone. Genres survive language switches.
 - Faster library lists; covers are cached on disk. The app stays in light mode until dark mode exists.
 
 ---
@@ -63,24 +71,26 @@ Things users can feel are wrong today.
 - *Not doing:* Redux/Zustand/React Query, an ORM, FK constraints, normalizing stored dates.
 
 ## Phase 3: UX quick wins (Release A or A2, JS-only)
-- [ ] **Backfill:** a date chip (Today / Yesterday / pick a date) in the logger, and an editable date in session edit.
-- [ ] **Home dead ends:**
+- [x] **Backfill:** a date chip (Today / Yesterday / pick a date) in the logger, and an editable date in session edit.
+- [x] **Home dead ends:**
   - Book cards and the hero should open the book detail.
   - The hero shouldn't show a non-reading book under "Reading".
   - The empty logger should offer "Start reading" for a library book.
-- [ ] **"Log Out" → "Erase all data"**, with "Export first" in the confirm dialog. Add "Restore from backup" in onboarding.
-- [ ] **Onboarding goals:**
+- [x] **"Log Out" → "Erase all data"**, with "Export first" in the confirm dialog. Add "Restore from backup" in onboarding.
+- [x] **Onboarding goals:**
   - Show validation errors instead of silently disabling the button.
   - Show "+N min/week" instead of a compounding %.
   - Default the target date to about 3 months out.
-- [ ] **i18n leftovers:**
+- [x] **i18n leftovers:**
   - Books stack headers, search placeholder, "OK" buttons, backup progress text, the raw Open Library error,
     the boot "Loading...", not-found screen, the raw language code ("eng"), "1 hours".
   - Dates in the app language (onboarding is hard-coded to `en-US`).
-- [ ] **Genres:** store stable keys, not translated labels (breaks after a language switch). Migrate existing values.
-- [ ] Replace ~12 blocking success alerts with a toast/haptic (export and import currently double-alert). Add undo for session delete.
-- [ ] Delete the 57 verified-unused i18n keys (list in the UX audit; put `booksPage.search.failed` to use instead).
-- [ ] Polish: Turkish sen/siz consistency, frozen "Weekly goal" on profile, a single place to edit goals, duplicate-add check in search.
+- [x] **Genres:** store stable keys, not translated labels (breaks after a language switch). Migrate existing values.
+- [x] Replace ~12 blocking success alerts with a toast/haptic (export and import currently double-alert). Add undo for session delete.
+- [x] Delete the 57 verified-unused i18n keys (list in the UX audit; put `booksPage.search.failed` to use instead).
+- [x] Polish: Turkish sen/siz consistency (now formal throughout), frozen "Weekly goal" on Profile, duplicate-add check in search.
+- [ ] **Decide (owner):** a single place to edit goals. Profile and Growth Journey both edit current/target
+  goals, and only Growth Journey edits the date. Deferred because it's a design choice, not a fix.
 
 ## Phase 4: Native cleanup (Release B, needs rebuild + `pod install` + device QA)
 - [ ] Uninstall unused packages: `notifee`, `@notifee/react-native`, `@expo/ngrok`, `react-native-permissions`,

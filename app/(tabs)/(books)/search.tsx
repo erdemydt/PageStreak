@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -18,7 +18,7 @@ import { Image } from "expo-image";
 import BookStatusModal, {
   BookStatus,
 } from "../../../components/BookStatusModal";
-import { addBook } from "../../../db/repos/books";
+import { addBook, findBookByOpenLibraryKey } from "../../../db/repos/books";
 import {
   OpenLibraryService,
   SearchBookResult,
@@ -26,9 +26,9 @@ import {
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
+import { showToast } from "../../../utils/toast";
 
 export default function BookSearchScreen() {
-  const router = useRouter();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchBookResult[]>([]);
@@ -91,9 +91,8 @@ export default function BookSearchScreen() {
       console.error("Search error:", error);
       Alert.alert(
         t("booksPage.search.error"),
-        error instanceof Error
-          ? error.message
-          : t("booksPage.search.failedToSearchBooks"),
+        // The service's error messages are English-only; show our own text
+        t("booksPage.search.failed"),
       );
     } finally {
       setLoading(false);
@@ -101,6 +100,30 @@ export default function BookSearchScreen() {
   };
 
   const handleSelectBook = async (book: SearchBookResult) => {
+    let existing = null;
+    try {
+      existing = await findBookByOpenLibraryKey(book.key);
+    } catch (error) {
+      // The duplicate check is a courtesy; never block adding over it
+      console.error("Duplicate check failed:", error);
+    }
+    if (existing) {
+      Alert.alert(
+        t("booksPage.search.alreadyInLibraryTitle"),
+        t("booksPage.search.alreadyInLibraryMessage", { title: book.title }),
+        [
+          { text: t("booksPage.alert.cancel"), style: "cancel" },
+          {
+            text: t("booksPage.search.addAnyway"),
+            onPress: () => {
+              setSelectedBook(book);
+              openStatusModal();
+            },
+          },
+        ],
+      );
+      return;
+    }
     setSelectedBook(book);
     openStatusModal();
   };
@@ -140,19 +163,13 @@ export default function BookSearchScreen() {
 
       const statusText = t(`booksPage.search.statusLabels.${status}`);
 
-      Alert.alert(
-        t("booksPage.search.success"),
-        t("booksPage.search.bookAddedMessage", {
+      // Stay on the results so several books can be added in a row
+      showToast({
+        message: t("booksPage.search.bookAddedMessage", {
           title: selectedBook.title,
           status: statusText,
         }),
-        [
-          {
-            text: t("booksPage.search.ok"),
-            onPress: () => router.back(),
-          },
-        ],
-      );
+      });
     } catch (error) {
       console.error("Error adding book:", error);
       Alert.alert(t("error"), t("booksPage.search.failedToAddBook"));

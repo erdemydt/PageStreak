@@ -1,4 +1,4 @@
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -31,13 +31,11 @@ export default function HomeScreen() {
   const [books, setBooks] = useState<BookWithStats[]>([]);
   const [userPreferences, setUserPreferences] =
     useState<UserPreferences | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showReadingLogger, setShowReadingLogger] = useState(false);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [readingStreak, setReadingStreak] = useState(0);
 
   const loadData = async () => {
-    setLoading(true);
     try {
       // Load user preferences
       const user = await getUserPreferences();
@@ -52,8 +50,6 @@ export default function HomeScreen() {
       setBooks(await listBooksWithStats({ order: "recent" }));
     } catch (e) {
       console.error("Failed to load data:", e);
-    } finally {
-      setLoading(false);
     }
   };
   // Reload on focus, and when books/sessions/preferences change underneath
@@ -95,13 +91,18 @@ export default function HomeScreen() {
   const yearlyGoal = userPreferences?.yearly_book_goal || 0;
   const progressPercentage =
     yearlyGoal > 0 ? Math.min((booksRead / yearlyGoal) * 100, 100) : 0;
+  // Only a book actually in progress belongs under the "Reading" label
   const currentBook =
-    books.find((book) => book.reading_status === "currently_reading") ||
-    books[0] ||
-    null;
+    books.find((book) => book.reading_status === "currently_reading") ?? null;
+
+  const openBook = (bookId: number) =>
+    router.push({
+      pathname: "/(tabs)/(home)/book/[id]",
+      params: { id: bookId.toString() },
+    });
 
   const renderBook = ({ item }: { item: BookWithStats }) => (
-    <BookCard book={item} compact={true} />
+    <BookCard book={item} compact={true} onPress={() => openBook(item.id)} />
   );
 
   // Rendered as an element (not a component type defined during render), so the
@@ -128,7 +129,11 @@ export default function HomeScreen() {
 
         {currentBook ? (
           <>
-            <View style={styles.heroBookRow}>
+            <TouchableOpacity
+              style={styles.heroBookRow}
+              onPress={() => openBook(currentBook.id)}
+              accessibilityRole="button"
+            >
               {currentBook.cover_url ? (
                 <Image
                   source={{ uri: currentBook.cover_url }}
@@ -154,7 +159,7 @@ export default function HomeScreen() {
                   {currentBook.page} {t("components.bookCard.pages")}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.heroPrimaryButton}
@@ -167,11 +172,25 @@ export default function HomeScreen() {
           </>
         ) : (
           <View style={styles.heroEmptyState}>
-            <Text style={styles.heroEmptyTitle}>{t("home.noBooksYet")}</Text>
-            <Link href={"/(books)" as any} asChild>
+            <Text style={styles.heroEmptyTitle}>
+              {books.length > 0
+                ? t("home.noBookInProgress")
+                : t("home.noBooksYet")}
+            </Text>
+            <Link
+              href={
+                books.length > 0
+                  ? "/(tabs)/(books)/my-books"
+                  : "/(tabs)/(books)"
+              }
+              withAnchor
+              asChild
+            >
               <TouchableOpacity style={styles.heroPrimaryButton}>
                 <Text style={styles.heroPrimaryButtonText}>
-                  {t("home.discoverBooks")}
+                  {books.length > 0
+                    ? t("home.chooseBookToRead")
+                    : t("home.discoverBooks")}
                 </Text>
               </TouchableOpacity>
             </Link>
@@ -196,7 +215,7 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
         </Link>
-        <Link href={"/(books)" as any} asChild>
+        <Link href="/(tabs)/(books)" asChild>
           <TouchableOpacity style={styles.secondaryActionButton}>
             <Text style={styles.secondaryActionButtonText}>
               {t("home.seeAll")}
@@ -254,7 +273,7 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>
             {t("home.recentBooks", { count: books.length })}
           </Text>
-          <Link href={"/(books)" as any} asChild>
+          <Link href="/(tabs)/(books)" asChild>
             <TouchableOpacity style={styles.seeAllBtn}>
               <Text style={styles.seeAllText}>{t("home.seeAll")}</Text>
             </TouchableOpacity>
@@ -278,7 +297,7 @@ export default function HomeScreen() {
             <Text style={styles.emptySubtitle}>
               {t("home.startDiscovering")}
             </Text>
-            <Link href={"/(books)" as any} asChild>
+            <Link href="/(tabs)/(books)" asChild>
               <TouchableOpacity style={styles.addFirstBookBtn}>
                 <Text style={styles.addFirstBookText}>
                   {t("home.discoverBooks")}

@@ -22,7 +22,9 @@ import {
   validateGrowthGoals,
 } from "../../utils/goalSettings";
 import { formatDate } from "../../utils/format";
+import { genreLabel, GENRE_KEYS, parseGenres } from "../../utils/genres";
 import { useFocusRefresh } from "../../hooks/useFocusRefresh";
+import { showToast } from "../../utils/toast";
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -39,51 +41,8 @@ export default function ProfileScreen() {
 
   const [loading, setLoading] = useState(false);
 
-  // Get translated genres
-  const getTranslatedGenres = () => [
-    t("intro.genres.options.fiction"),
-    t("intro.genres.options.nonFiction"),
-    t("intro.genres.options.mystery"),
-    t("intro.genres.options.romance"),
-    t("intro.genres.options.sciFi"),
-    t("intro.genres.options.fantasy"),
-    t("intro.genres.options.biography"),
-    t("intro.genres.options.history"),
-    t("intro.genres.options.selfHelp"),
-    t("intro.genres.options.business"),
-    t("intro.genres.options.poetry"),
-    t("intro.genres.options.philosophy"),
-    t("intro.genres.options.thriller"),
-    t("intro.genres.options.horror"),
-    t("intro.genres.options.adventure"),
-    t("intro.genres.options.comedy"),
-    t("intro.genres.options.drama"),
-    t("intro.genres.options.educational"),
-  ];
-  const genres = [
-    "Fiction",
-    "Non-Fiction",
-    "Mystery",
-    "Romance",
-    "Sci-Fi",
-    "Fantasy",
-    "Biography",
-    "History",
-    "Self-Help",
-    "Business",
-    "Poetry",
-    "Philosophy",
-    "Thriller",
-    "Horror",
-    "Adventure",
-    "Comedy",
-    "Drama",
-    "Educational",
-  ];
-  const getTranslationOfGenre = (genre: string) => {
-    const index = genres.indexOf(genre);
-    return index !== -1 ? getTranslatedGenres()[index] : genre;
-  };
+  const genres = GENRE_KEYS;
+
   // Background reloads (focus, data-change events) must not overwrite what
   // the user is typing; edit fields are only refreshed when not editing
   const isEditingRef = useRef(false);
@@ -114,11 +73,7 @@ export default function ProfileScreen() {
     setEditedTargetGoal(
       user.end_reading_rate_goal_minutes_per_day?.toString() || "60",
     );
-    setEditedGenres(
-      user.preferred_genres
-        ? user.preferred_genres.split(",").filter((g) => g.trim())
-        : [],
-    );
+    setEditedGenres(parseGenres(user.preferred_genres));
   };
 
   const toggleGenre = (genre: string) => {
@@ -193,7 +148,7 @@ export default function ProfileScreen() {
       isEditingRef.current = false;
       setIsEditing(false);
       await loadUserPreferences();
-      Alert.alert(t("profile.success.title"), t("profile.success.message"));
+      showToast({ message: t("profile.success.message") });
     } catch (e) {
       console.error("Save error:", e);
       Alert.alert(t("profile.error.title"), t("profile.error.message"));
@@ -300,7 +255,9 @@ export default function ProfileScreen() {
                 {t("profile.labels.weeklyGoal")}
               </Text>
               <Text style={styles.infoValue}>
-                {userPreferences?.weekly_reading_goal || 0}{" "}
+                {/* weekly_reading_goal is frozen at onboarding; derive from today's goal */}
+                {(userPreferences?.current_reading_rate_minutes_per_day || 0) *
+                  7}{" "}
                 {t("profile.units.minutes")}
               </Text>
             </View>
@@ -436,16 +393,11 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <View style={styles.genresDisplay}>
             {userPreferences?.preferred_genres ? (
-              userPreferences.preferred_genres
-                .split(",")
-                .filter((g) => g.trim())
-                .map((genre, index) => (
-                  <View key={index} style={styles.genreTag}>
-                    <Text style={styles.genreTagText}>
-                      {getTranslationOfGenre(genre.trim())}
-                    </Text>
-                  </View>
-                ))
+              parseGenres(userPreferences.preferred_genres).map((genre) => (
+                <View key={genre} style={styles.genreTag}>
+                  <Text style={styles.genreTagText}>{genreLabel(genre)}</Text>
+                </View>
+              ))
             ) : (
               <Text style={styles.noGenresText}>
                 {t("profile.stats.noGenres")}
@@ -613,7 +565,7 @@ export default function ProfileScreen() {
                       styles.genreChipTextSelected,
                   ]}
                 >
-                  {getTranslatedGenres()[genres.indexOf(genre)]}
+                  {genreLabel(genre)}
                 </Text>
               </TouchableOpacity>
             ))}

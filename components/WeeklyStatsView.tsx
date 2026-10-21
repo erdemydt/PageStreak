@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -59,8 +58,6 @@ interface TimeDistribution {
   percentage: number;
 }
 
-const { width: screenWidth } = Dimensions.get("window");
-const chartWidth = screenWidth - 60;
 const barMaxHeight = 120;
 
 interface WeeklyStatsViewProps {

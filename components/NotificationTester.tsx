@@ -10,7 +10,6 @@ const NotificationTester: React.FC = () => {
   const { t } = useTranslation();
   const [notificationStatus, setNotificationStatus] = useState<any>(null);
   const [isDev, setIsDev] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     checkIfDevelopment();
@@ -22,14 +21,11 @@ const NotificationTester: React.FC = () => {
   };
 
   const loadNotificationStatus = async () => {
-    setLoading(true);
     try {
       const status = await NotificationService.getNotificationStatus();
       setNotificationStatus(status);
     } catch (error) {
       console.error("Error loading notification status:", error);
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -67,6 +67,8 @@ utils/
   format.ts              formatDuration / formatDate in the app language (use these, no local formatters)
   dataEvents.ts          Change bus: repo writes emit books/sessions/preferences
   devData.ts             Dev-only random session generator
+  toast.ts               showToast({message, actionLabel?, onAction?}): non-blocking feedback (ToastHost in root layout)
+  genres.ts              Genre keys; stored as keys, legacy labels normalized on read
 i18n/index.ts            ALL strings, `en` and `tr` in one file
 themes/                  COLORS / SPACING / TYPE tokens (use them; no raw hex in screens)
 ```
@@ -125,8 +127,13 @@ statements in sync** when adding columns, and add new tables to the backup servi
 - **i18n parity**: every key must exist in both `en` and `tr`. No hard-coded user-facing
   strings, including `Alert.alert` titles and buttons. Avoid i18next `_one`/`_other` plurals
   (Hermes `Intl.PluralRules` support is not guaranteed); use explicit keys like `bookCountOne` / `bookCountOther`.
+- Navigating into another tab's stack: pass `withAnchor` (both tab stacks set
+  `unstable_settings.initialRouteName = "index"`), or the user lands on a stack with no way back.
+  Home opens books via its own route `(home)/book/[id]` (re-exports the Books detail screen).
 - Tabs stay mounted: load screen data with `useFocusRefresh(load, topics, deps?)`, not `useEffect([])`.
   New writes belong in a repo and must `emitDataChange(...)` so visible screens refresh.
+- Feedback: success → `showToast` (optionally with Undo); `Alert.alert` only for errors and decisions.
+- Turkish copy uses the formal "siz" form consistently.
 - No SQL in `app/` or `components/` (ESLint `no-restricted-imports`); add a repo function instead.
   `utils/` and `services/` may query, but prefer repos.
 - Don't define components inside render (e.g. `const Header = () => …; <Header/>`); it remounts every render.
@@ -201,3 +208,7 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   (lint rule); a change bus plus `useFocusRefresh`; `BookStatusModal` owns its animation (5 copies
   removed); the dev data generator moved out of readinglogs; the notification service's dead
   "column not found" fallbacks removed; unused imports cleaned (lint warnings 29 → 19).
+- **Phase 3: UX quick wins.** Backfill/edit session dates (SessionDatePicker); Home taps open books;
+  the logger's empty state can start a book; "Erase All Data" with export-first; restore a backup during
+  onboarding; onboarding goal preview and validation; all remaining hard-coded English localized; 84
+  unused keys removed; genres stored as keys; toasts plus undo replace success alerts; duplicate-add warning.

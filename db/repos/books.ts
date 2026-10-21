@@ -171,6 +171,16 @@ export async function deleteBookWithSessions(bookId: number): Promise<void> {
   emitDataChange("books", "sessions");
 }
 
+/** An existing book with this Open Library key (to warn about duplicate adds) */
+export async function findBookByOpenLibraryKey(
+  key: string,
+): Promise<EnhancedBook | null> {
+  return queryFirst<EnhancedBook>(
+    "SELECT * FROM enhanced_books WHERE open_library_key = ?",
+    [key],
+  );
+}
+
 export async function getBook(bookId: number): Promise<EnhancedBook | null> {
   return queryFirst<EnhancedBook>("SELECT * FROM enhanced_books WHERE id = ?", [
     bookId,

@@ -6,6 +6,7 @@ import "../i18n";
 import NotificationService from "../services/notificationService";
 import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
 import { log } from "../utils/logger";
+import ToastHost from "../components/ToastHost";
 
 export default function RootLayout() {
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function RootLayout() {
         />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
+      <ToastHost />
     </LanguageProvider>
   );
 }

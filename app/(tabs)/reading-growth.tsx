@@ -24,6 +24,7 @@ import {
 } from "../../utils/goalSettings";
 import { loadGoalForDate } from "../../utils/goalHistory";
 import { useFocusRefresh } from "../../hooks/useFocusRefresh";
+import { showToast } from "../../utils/toast";
 
 type WeeklyPoint = {
   key: string;
@@ -331,7 +332,7 @@ export default function ReadingGrowthScreen() {
       });
       goalFormDirty.current = false;
       await loadGrowthData();
-      Alert.alert(t("profile.success.title"), t("growthJourney.success"));
+      showToast({ message: t("growthJourney.success") });
     } catch (error) {
       console.error("Failed to save growth settings:", error);
       Alert.alert(t("profile.error.title"), t("profile.error.message"));
@@ -632,7 +633,7 @@ export default function ReadingGrowthScreen() {
             goalFormDirty.current = true;
             setEditedTargetDate(value);
           }}
-          placeholder="DD/MM/YYYY"
+          placeholder={t("datePlaceholder")}
         />
 
         <TouchableOpacity

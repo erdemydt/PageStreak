@@ -589,6 +589,8 @@ const resources = {
         notFoundTitle: "This screen doesn't exist.",
         goHome: "Go to home screen",
         loading: "Loading...",
+        startupError: "PageStreak couldn't open its data. Your data has not been changed.",
+        retry: "Try again",
       },
 
       languages: {
@@ -1460,6 +1462,8 @@ const resources = {
         notFoundTitle: "Bu ekran mevcut değil.",
         goHome: "Ana sayfaya git",
         loading: "Yükleniyor...",
+        startupError: "PageStreak verilerini açamadı. Verileriniz değiştirilmedi.",
+        retry: "Tekrar dene",
       },
 
       languages: {

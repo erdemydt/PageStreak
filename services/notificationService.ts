@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { AppUsageTracking, checkNotificationDatabaseIntegrity, execute, NotificationPreferences, queryFirst, repairNotificationDatabase } from '../db/db';
+import { AppUsageTracking, execute, NotificationPreferences, queryFirst } from '../db/db';
 import i18n from '../i18n';
 import { getDailyGoal } from '../db/repos/preferences';
 import { formatDuration } from '../utils/format';
@@ -211,18 +211,7 @@ export class NotificationService {
       return prefs;
     } catch (error) {
       console.error('❌ Error getting notification preferences:', error);
-      
-      // If table doesn't exist, it might be due to database reset
-      // Try to create default preferences
-      try {
-        await this.createDefaultNotificationPreferences();
-        return await queryFirst<NotificationPreferences>(
-          'SELECT * FROM notification_preferences WHERE id = 1'
-        );
-      } catch (createError) {
-        console.error('❌ Failed to create default notification preferences:', createError);
-        return null;
-      }
+      return null;
     }
   }
 
@@ -278,22 +267,6 @@ export class NotificationService {
    */
   private async createDefaultNotificationPreferences(): Promise<void> {
     try {
-      // First ensure the table exists
-      await execute(`
-        CREATE TABLE IF NOT EXISTS notification_preferences (
-          id INTEGER PRIMARY KEY,
-          notifications_enabled BOOLEAN DEFAULT 1,
-          daily_reminder_enabled BOOLEAN DEFAULT 1,
-          daily_reminder_hours_after_last_open INTEGER DEFAULT 5,
-          daily_reminder_title TEXT DEFAULT 'Time to read! 📚',
-          daily_reminder_body TEXT DEFAULT 'You haven''t reached your daily reading goal yet. Keep your streak going!',
-          reminder_mode TEXT DEFAULT 'after_close',
-          reminder_time TEXT DEFAULT '20:00',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      
       // Check if this is a first-time installation
       const existingPrefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
       const isFirstInstall = !existingPrefs;
@@ -843,32 +816,6 @@ export class NotificationService {
       }
     } catch (error) {
       console.error('❌ Error tracking app opened:', error);
-      
-      // If table doesn't exist, try to create it (might be due to database reset)
-      try {
-        await execute(`
-          CREATE TABLE IF NOT EXISTS app_usage_tracking (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            last_opened_at DATETIME NOT NULL,
-            last_closed_at DATETIME,
-            session_count_today INTEGER DEFAULT 1,
-            date TEXT NOT NULL
-          )
-        `);
-        
-        // Try to track again
-        const now = new Date();
-        const today = dateToLocalDateString(now);
-        await execute(
-          `INSERT INTO app_usage_tracking (last_opened_at, session_count_today, date) 
-           VALUES (?, 1, ?)`,
-          [now.toISOString(), today]
-        );
-        
-        log('✅ Recreated app usage tracking table and logged session');
-      } catch (recreateError) {
-        console.error('❌ Failed to recreate app usage tracking:', recreateError);
-      }
     }
   }
 
@@ -891,33 +838,6 @@ export class NotificationService {
       );
     } catch (error) {
       console.error('❌ Error tracking app closed:', error);
-      
-      // If the update failed, try to ensure the tracking table exists and create a basic record
-      try {
-        await execute(`
-          CREATE TABLE IF NOT EXISTS app_usage_tracking (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            last_opened_at DATETIME NOT NULL,
-            last_closed_at DATETIME,
-            session_count_today INTEGER DEFAULT 1,
-            date TEXT NOT NULL
-          )
-        `);
-        
-        const now = new Date();
-        const today = dateToLocalDateString(now);
-        
-        // Try to insert a basic tracking record
-        await execute(
-          `INSERT OR IGNORE INTO app_usage_tracking (last_opened_at, last_closed_at, session_count_today, date) 
-           VALUES (?, ?, 1, ?)`,
-          [now.toISOString(), now.toISOString(), today]
-        );
-        
-        log('✅ Recreated app usage tracking and logged close event');
-      } catch (recreateError) {
-        console.error('❌ Failed to recreate app usage tracking for close event:', recreateError);
-      }
     }
   }
 
@@ -1056,39 +976,9 @@ export class NotificationService {
       await this.cleanup();
       await this.ensureAndroidChannel();
       
-      // Verify that notification tables exist and are properly set up
-      try {
-        // Check database integrity
-        const integrity = await checkNotificationDatabaseIntegrity();
-        
-        if (!integrity.notification_preferences_exists || !integrity.notification_preferences_has_defaults) {
-          log('🔧 Notification tables missing or incomplete, attempting repair...');
-          const repairSuccess = await repairNotificationDatabase();
-          
-          if (!repairSuccess) {
-            console.error('❌ Failed to repair notification database');
-            return;
-          }
-        }
-        
-        // Now try to ensure notification preferences exist
-        const prefs = await this.getNotificationPreferences();
-        if (prefs) {
-          log('🔔 Notification service reset successfully and preferences restored');
-        } else {
-          log('⚠️ Notification service reset but could not restore preferences');
-        }
-      } catch (dbError) {
-        console.error('⚠️ Database integrity check failed during reset:', dbError);
-        
-        // Try to create default preferences directly as a fallback
-        try {
-          await this.createDefaultNotificationPreferences();
-          log('🔔 Created default notification preferences as fallback');
-        } catch (fallbackError) {
-          console.error('❌ Failed to create default notification preferences as fallback:', fallbackError);
-        }
-      }
+      // Make sure the preferences row exists (the schema is guaranteed by the
+      // migrations in db/db.tsx, which run before this)
+      await this.getNotificationPreferences();
     } catch (error) {
       console.error('❌ Error resetting notification service:', error);
       // Don't throw the error, just log it so app initialization can continue

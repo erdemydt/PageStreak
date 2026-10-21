@@ -1,12 +1,8 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Image, StyleSheet, Text, View } from "react-native";
-import {
-  checkNotificationDatabaseIntegrity,
-  initializeDatabase,
-  repairNotificationDatabase,
-} from "../db/db";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { initializeDatabase } from "../db/db";
 import { getUserPreferences } from "../db/repos/preferences";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
@@ -17,6 +13,7 @@ import { log } from "../utils/logger";
 export default function Index() {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
+  const [initFailed, setInitFailed] = useState(false);
 
   useEffect(() => {
     initializeAppDatabase();
@@ -26,28 +23,17 @@ export default function Index() {
     try {
       log("🔄 Starting app database initialization...");
 
-      // Initialize all database tables first
+      // Schema migrations run first; nothing may touch the DB before this
       await initializeDatabase();
-      log("✅ Database tables initialized");
+      log("✅ Database ready");
 
-      // Verify database integrity before proceeding
-      const dbIntegrity = await checkNotificationDatabaseIntegrity();
-      log("📊 Database integrity check:", dbIntegrity);
-
-      // If notification tables are missing, repair them
-      if (
-        !dbIntegrity.notification_preferences_exists ||
-        !dbIntegrity.notification_preferences_has_defaults
-      ) {
-        log("🔧 Repairing notification database...");
-        await repairNotificationDatabase();
-      }
-
-      // Initialize notification service after database is verified
       try {
         await NotificationService.reset();
+        // Record this app open now that the tables are guaranteed to exist
+        // (root layout only forwards later app-state changes)
+        await NotificationService.onAppStateChange("active");
 
-        // Get or create notification preferences (this will handle first-time permission request)
+        // Make sure the preferences row exists (never prompts)
         const notificationPrefs =
           await NotificationService.getNotificationPreferences();
         log("🔔 Notification preferences initialized:", {
@@ -83,8 +69,9 @@ export default function Index() {
       await checkUserSetup();
     } catch (error) {
       console.error("❌ Failed to initialize app database:", error);
-      // If database initialization fails, still try to show intro
-      router.replace("/intro");
+      // Never fall back to onboarding here: finishing it would overwrite an
+      // existing user's profile. Offer a retry instead.
+      setInitFailed(true);
       setIsLoading(false);
     }
   };
@@ -107,6 +94,24 @@ export default function Index() {
       setIsLoading(false);
     }
   };
+
+  if (initFailed) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.errorTitle}>{t("navigation.startupError")}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => {
+            setInitFailed(false);
+            setIsLoading(true);
+            initializeAppDatabase();
+          }}
+        >
+          <Text style={styles.retryButtonText}>{t("navigation.retry")}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -145,6 +150,24 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 16,
+    color: COLORS.neutral[800],
+    textAlign: "center",
+    marginHorizontal: 32,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "600",
   },
   loadingText: {
     fontSize: 24,

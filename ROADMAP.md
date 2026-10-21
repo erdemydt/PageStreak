@@ -111,11 +111,11 @@ Things users can feel are wrong today.
   commit the updated Podfile.lock, then do full device QA (notifications in both modes, import/export, onboarding).
 
 ## Phase 5: Real migrations (ship alone; highest data risk)
-- [ ] `PRAGMA user_version` with an ordered migrations list in one transaction. Seed from `database_version` (3).
+- [x] `PRAGMA user_version` with an ordered migrations list in one transaction. Seed from `database_version` (3).
   Migration 4 is the current idempotent create/alter set.
-- [ ] `logoutUser` deletes rows instead of dropping and re-creating tables (removes the duplicated schema).
-- [ ] Remove the notification-table "repair" band-aids and the legacy `books` migration (keep it as a one-time step in migration 4).
-- [ ] Before shipping, test against DB copies from old builds.
+- [x] `logoutUser` deletes rows instead of dropping and re-creating tables (removes the duplicated schema).
+- [x] Remove the notification-table "repair" band-aids and the legacy `books` migration (keep it as a one-time step in migration 4).
+- [x] Before shipping, test against DB copies from old builds.
 
 ## Phase 6: Decompose (no behavior change)
 - [ ] Split NotificationService: prefs repo, a stateless scheduler, an app-usage repo. Move dev/test methods out.

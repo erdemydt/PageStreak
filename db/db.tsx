@@ -10,12 +10,6 @@ db.execSync('PRAGMA busy_timeout = 3000');
 export type DB = SQLiteDatabase;
 export type DBResult<T = any> = SQLiteExecuteAsyncResult<T>;
 
-// Database initialization flag to prevent multiple calls
-let isInitialized = false;
-
-// Current database schema version
-const CURRENT_DB_VERSION = 3;
-
 // Type for column definitions
 type ColumnDefinition = {
   name: string;
@@ -60,113 +54,109 @@ export async function execute(sql: string, params?: any): Promise<SQLiteRunResul
   return db.runAsync(sql, params ?? []);
 }
 
+let transactionQueue: Promise<unknown> = Promise.resolve();
+
 /**
- * Initialize all database tables and ensure proper setup
- * This should be called when the app first starts
+ * Run `task` in a transaction on the shared connection. ALWAYS use this
+ * instead of db.withTransactionAsync: that one runs BEGIN/COMMIT on the shared
+ * connection without coordination, so two overlapping calls corrupt each
+ * other (the second BEGIN fails and its ROLLBACK undoes the first one's work,
+ * which then continues in autocommit). Transactions here run one at a time.
+ * Never call runInTransaction from inside a task (it would wait for itself).
  */
-export async function initializeDatabase(): Promise<void> {
-  if (isInitialized) {
-    log('📦 Database already initialized, skipping...');
-    return;
-  }
-
-  try {
-    log('🔄 Initializing database tables...');
-
-    // 0. Create database version tracking table and check version
-    await createOrUpdateDatabaseVersionTable();
-    const needsUpdate = await checkDatabaseVersion();
-
-    if (!needsUpdate && isInitialized) {
-      log('📦 Database is up to date, skipping initialization...');
-      return;
+export function runInTransaction<T>(task: () => Promise<T>): Promise<T> {
+  const run = async () => {
+    await db.execAsync('BEGIN');
+    try {
+      const result = await task();
+      await db.execAsync('COMMIT');
+      return result;
+    } catch (error) {
+      // SQLite may already have rolled back (e.g. disk full); keep the
+      // original error rather than a "no transaction is active" one
+      try {
+        await db.execAsync('ROLLBACK');
+      } catch {}
+      throw error;
     }
-
-    // 1. Create and update enhanced_books table
-    await createOrUpdateEnhancedBooksTable();
-
-    // 2. Create and update user_preferences table
-    await createOrUpdateUserPreferencesTable();
-
-    // 3. Create and update reading_sessions table
-    await createOrUpdateReadingSessionsTable();
-
-    // 4. Create and update weekly_progress table
-    await createOrUpdateWeeklyProgressTable();
-
-    // 5. Create and update notification_preferences table
-    await createOrUpdateNotificationPreferencesTable();
-
-    // 6. Create and update app_usage_tracking table
-    await createOrUpdateAppUsageTrackingTable();
-
-    // 6b. Daily goal history (see utils/goalHistory.ts)
-    await createGoalHistoryTable();
-
-    // 7. Migrate old books if they exist (from legacy 'books' table)
-    await migrateOldBooksIfNeeded();
-
-    // 8. Update database version
-    await updateDatabaseVersion();
-
-    isInitialized = true;
-    log('✅ Database initialization completed successfully');
-
-  } catch (error) {
-    console.error('❌ Database initialization failed:', error);
-    throw error;
-  }
+  };
+  const result = transactionQueue.then(run, run);
+  transactionQueue = result.catch(() => {});
+  return result;
 }
 
 /**
- * Create or update database version tracking table
+ * Schema migrations, tracked with SQLite's `PRAGMA user_version`.
+ *
+ * Rules: append new migrations with the next version number; never edit,
+ * reorder or remove a shipped one. Each runs once, inside a transaction
+ * together with the user_version bump, so a failure leaves the database at
+ * the previous version and it is retried on the next launch.
+ *
+ * Migration 4 is the baseline. Before it, the schema was created by idempotent
+ * "create or add missing columns" steps on every launch (versions 1-3 in the
+ * old database_version table, or just the legacy `books` table). Running those
+ * same steps once brings any earlier install, or a fresh one, to the current
+ * schema, so later migrations can rely on it.
  */
-async function createOrUpdateDatabaseVersionTable(): Promise<void> {
-  await execute(`
-    CREATE TABLE IF NOT EXISTS database_version (
-      id INTEGER PRIMARY KEY,
-      version INTEGER NOT NULL,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-}
+type Migration = {
+  version: number;
+  description: string;
+  up: () => Promise<void>;
+};
+
+const MIGRATIONS: Migration[] = [
+  {
+    version: 4,
+    description: 'Baseline schema (idempotent; safe for any earlier install)',
+    up: async () => {
+      await createOrUpdateEnhancedBooksTable();
+      await createOrUpdateUserPreferencesTable();
+      await createOrUpdateReadingSessionsTable();
+      await createOrUpdateWeeklyProgressTable();
+      await createOrUpdateNotificationPreferencesTable();
+      await createOrUpdateAppUsageTrackingTable();
+      await createGoalHistoryTable();
+      await migrateOldBooksIfNeeded();
+    },
+  },
+];
+
+export const LATEST_DB_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
+
+let initPromise: Promise<void> | null = null;
 
 /**
- * Check if database needs updating based on version
+ * Bring the database schema up to date. Everything that touches the database
+ * at startup awaits this first (root layout, boot screen). Concurrent callers
+ * share one run; after a failure the next call retries.
  */
-async function checkDatabaseVersion(): Promise<boolean> {
-  try {
-    const versionRecord = await queryFirst<{version: number}>('SELECT version FROM database_version WHERE id = 1');
-    
-    if (!versionRecord) {
-      log('📝 No version record found, treating as new installation');
-      return true; // New installation, needs setup
-    }
-    
-    if (versionRecord.version < CURRENT_DB_VERSION) {
-      log(`🔄 Database version ${versionRecord.version} < ${CURRENT_DB_VERSION}, updating...`);
-      return true; // Needs update
-    }
-    
-    log(`✅ Database version ${versionRecord.version} is up to date`);
-    return false; // No update needed
-    
-  } catch {
-    log('📝 Error checking version, treating as new installation');
-    return true; // Treat as new installation if we can't check version
+export function initializeDatabase(): Promise<void> {
+  if (!initPromise) {
+    initPromise = runMigrations().catch((error) => {
+      initPromise = null;
+      console.error('❌ Database initialization failed:', error);
+      throw error;
+    });
   }
+  return initPromise;
 }
 
-/**
- * Update database version after successful initialization
- */
-async function updateDatabaseVersion(): Promise<void> {
-  await execute(`
-    INSERT OR REPLACE INTO database_version (id, version, updated_at)
-    VALUES (1, ?, CURRENT_TIMESTAMP)
-  `, [CURRENT_DB_VERSION]);
-  
-  log(`📝 Updated database version to ${CURRENT_DB_VERSION}`);
+async function runMigrations(): Promise<void> {
+  const row = await queryFirst<{ user_version: number }>('PRAGMA user_version');
+  const currentVersion = row?.user_version ?? 0;
+
+  for (const migration of MIGRATIONS) {
+    if (migration.version <= currentVersion) continue;
+    log(`🔄 Running migration ${migration.version}: ${migration.description}`);
+    await runInTransaction(async () => {
+      await migration.up();
+      // PRAGMA can't take bound parameters; version is a trusted integer
+      await db.execAsync(`PRAGMA user_version = ${migration.version}`);
+    });
+  }
+
+  log(`✅ Database at schema version ${Math.max(currentVersion, LATEST_DB_VERSION)}`);
 }
 
 /**
@@ -178,21 +168,6 @@ async function columnExists(tableName: string, columnName: string): Promise<bool
     return result.some((column: any) => column.name === columnName);
   } catch {
     // Table might not exist yet
-    return false;
-  }
-}
-
-/**
- * Helper function to check if a table exists
- */
-async function tableExists(tableName: string): Promise<boolean> {
-  try {
-    const result = await queryFirst(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
-      [tableName]
-    );
-    return !!result;
-  } catch {
     return false;
   }
 }
@@ -316,12 +291,12 @@ async function createOrUpdateReadingSessionsTable(): Promise<void> {
   // is enforced at the application level (SQLite limitations with existing tables)
 }
 
-export async function createReadingSessionsIndexes(): Promise<void> {
+async function createReadingSessionsIndexes(): Promise<void> {
   await execute('CREATE INDEX IF NOT EXISTS idx_reading_sessions_book_id ON reading_sessions(book_id)');
   await execute('CREATE INDEX IF NOT EXISTS idx_reading_sessions_date ON reading_sessions(date)');
 }
 
-export async function createGoalHistoryTable(): Promise<void> {
+async function createGoalHistoryTable(): Promise<void> {
   await execute(`
     CREATE TABLE IF NOT EXISTS goal_history (
       effective_date TEXT PRIMARY KEY,
@@ -402,18 +377,6 @@ async function createOrUpdateNotificationPreferencesTable(): Promise<void> {
     }
   }
 
-  // Ensure default preferences exist (will handle first-time permission request)
-  try {
-    const existingPrefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
-    if (!existingPrefs) {
-      // Don't create defaults here - let NotificationService handle first-time setup
-      // This ensures permission request happens at the right time
-      log('🔔 No notification preferences found - will be created by NotificationService when needed');
-    }
-  } catch (error) {
-    console.error('⚠️  Failed to check notification preferences:', error);
-  }
-
   log('✅ Created/verified notification_preferences table');
 }
 
@@ -488,72 +451,6 @@ async function migrateOldBooksIfNeeded(): Promise<void> {
   } catch {
     // Old books table doesn't exist, which is fine for new installations
     log('📚 No old books table found, starting fresh');
-  }
-}
-
-/**
- * Reset the initialization flag - useful for testing or forced re-initialization
- */
-export function resetInitializationFlag(): void {
-  isInitialized = false;
-}
-
-/**
- * Check notification database integrity
- */
-export async function checkNotificationDatabaseIntegrity(): Promise<{
-  notification_preferences_exists: boolean;
-  app_usage_tracking_exists: boolean;
-  notification_preferences_has_defaults: boolean;
-  error?: string;
-}> {
-  try {
-    // Check if tables exist
-    const notifTable = await queryFirst(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='notification_preferences'"
-    );
-    const usageTable = await queryFirst(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='app_usage_tracking'"
-    );
-
-    // Check if default preferences exist
-    let hasDefaults = false;
-    if (notifTable) {
-      const defaultPrefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
-      hasDefaults = !!defaultPrefs;
-    }
-
-    return {
-      notification_preferences_exists: !!notifTable,
-      app_usage_tracking_exists: !!usageTable,
-      notification_preferences_has_defaults: hasDefaults
-    };
-  } catch (error) {
-    return {
-      notification_preferences_exists: false,
-      app_usage_tracking_exists: false,
-      notification_preferences_has_defaults: false,
-      error: error?.toString()
-    };
-  }
-}
-
-/**
- * Repair notification database if needed
- */
-export async function repairNotificationDatabase(): Promise<boolean> {
-  try {
-    log('🔧 Repairing notification database...');
-    
-    // Recreate notification tables
-    await createOrUpdateNotificationPreferencesTable();
-    await createOrUpdateAppUsageTrackingTable();
-    
-    log('✅ Notification database repaired');
-    return true;
-  } catch (error) {
-    console.error('❌ Failed to repair notification database:', error);
-    return false;
   }
 }
 

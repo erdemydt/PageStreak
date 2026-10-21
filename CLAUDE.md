@@ -88,11 +88,13 @@ themes/                  COLORS / SPACING / TYPE tokens (use them; no raw hex in
 - `weekly_progress`: **vestigial**. Nothing reads it any more; it's kept only for backup-format compatibility.
 - No FK constraints: deleting a book must delete its sessions (`deleteBookWithSessions`).
 
-Schema changes are additive: add the column to the `requiredColumns` list in the matching
-`createOrUpdate*Table` in `db/db.tsx`; it is `ALTER TABLE ADD COLUMN`ed on next launch.
-(`initializeDatabase` runs fully on every cold start; the version check is effectively a no-op.)
-`utils/migration.ts#logoutUser` drops and recreates every table, so **keep its CREATE
-statements in sync** when adding columns, and add new tables to the backup service.
+Schema changes go through **versioned migrations** in `db/db.tsx` (`MIGRATIONS`, tracked by
+`PRAGMA user_version`). To change the schema, append `{ version: N + 1, description, up }`; never edit,
+reorder or remove a shipped migration. Each runs once, in a transaction with the version bump.
+Migration 4 is the baseline (the old idempotent create/alter steps). It is safe for any earlier
+install. The old `database_version` table is left in place but no longer used. "Erase all data"
+(`utils/migration.ts#logoutUser`) deletes rows from `USER_DATA_TABLES` and keeps the schema, so add new user
+tables there and to the backup service. Test migrations against real DB files: see the Journey log, Phase 5.
 
 ## Domain rules
 
@@ -142,6 +144,12 @@ statements in sync** when adding columns, and add new tables to the backup servi
 - Backup **merge** never writes by primary key; it remaps book ids and dedupes sessions.
 - `utils/devMode.ts#ENABLE_DEV_FEATURES` gates dev tools (NotificationTester, random data). Keep it `false` in commits.
 - Logging: use `log`/`warn` from `utils/logger.ts` (dev-only); `console.error` for real errors.
+- **Transactions:** always `runInTransaction(task)` from `db/db.tsx`; never `db.withTransactionAsync`
+  (overlapping calls on the shared connection corrupt each other: the second BEGIN fails and its ROLLBACK
+  undoes the first transaction, which then continues in autocommit). Never nest `runInTransaction`.
+- **Startup:** `initializeDatabase()` is memoized; the root layout renders nothing and ignores app-state
+  events until it resolves, so even deep-link launches never touch an unmigrated DB. A failed init shows a
+  retry screen (never onboarding, which would overwrite an existing profile).
 - Backup import runs in `db.withExclusiveTransactionAsync`: every statement inside it must use `txn`
   (`runIn(txn, …)`); a global `execute` there fails with "database is locked".
 - Light mode is forced (app.json, Info.plist, Android theme) until real dark mode exists.
@@ -180,7 +188,6 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
 6. Merge-import skips sessions whose book isn't in the backup file (e.g. a sessions-only export).
 7. Growth goal: `goalSettings.validateGrowthGoals` error `target_before_current` shows a generic message;
    profile save recomputes the weekly increase from the old goal date even when it has passed.
-8. `initializeDatabase` version gating doesn't actually gate; schema init runs on every cold start.
 
 ## Journey log
 
@@ -217,3 +224,14 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
 - **Phase 4: native cleanup.** 10 unused packages removed, Expo SDK 54 patch versions aligned (separate
   commits; **needs `pod install` + device QA before release**), Android storage/overlay permissions dropped,
   notification redesign (onboarding opt-in, one switch, "at a set time" mode).
+- **Phase 5: real migrations.** `PRAGMA user_version` plus a `MIGRATIONS` list (baseline = v4, transactional).
+  Logout deletes rows instead of dropping/re-creating tables (the duplicate schema is gone); the
+  notification-table repair code and table-recreation fallbacks were removed; the first "app opened" is
+  tracked after migration. The reviewer found a real corruption race: an overlapping `withTransactionAsync`
+  during the migration (from weekly goal growth on app resume) could mark the DB v4 with columns missing.
+  Fixed with serialized `runInTransaction`, memoized init, and a root layout that waits for init.
+  Verified by shimming expo-sqlite onto Node's built-in `node:sqlite` (the shim must mirror expo-sqlite's
+  BEGIN-inside-try transaction code and yield between calls, or races go unnoticed):
+  fresh, legacy `books`-only, and a DB created by the original app code (commit 2162355) with data, each
+  migrated twice, plus a concurrent run (double init + app-state transaction during the migration), which
+  fails on the old code and passes now. Data intact, schema complete, version 4.

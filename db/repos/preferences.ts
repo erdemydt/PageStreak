@@ -2,7 +2,7 @@ import type { UserPreferences } from "../../types/models";
 import { emitDataChange } from "../../utils/dataEvents";
 import { recordGoalChange } from "../../utils/goalHistory";
 import type { GrowthGoalComputation } from "../../utils/goalSettings";
-import db, { execute, queryFirst } from "../db";
+import { execute, queryFirst, runInTransaction } from "../db";
 
 const DEFAULT_DAILY_GOAL = 30;
 
@@ -38,7 +38,7 @@ export type OnboardingInput = {
 export async function saveOnboardingPreferences(
   input: OnboardingInput,
 ): Promise<void> {
-  await db.withTransactionAsync(async () => {
+  await runInTransaction(async () => {
     await execute(
       `INSERT OR REPLACE INTO user_preferences (
         id, username, yearly_book_goal, preferred_genres, updated_at,
@@ -80,7 +80,7 @@ export async function updateProfile(
   },
   goals?: GrowthGoalComputation | null,
 ): Promise<void> {
-  await db.withTransactionAsync(async () => {
+  await runInTransaction(async () => {
     await execute(
       `UPDATE user_preferences SET
         username = ?,

@@ -1,4 +1,4 @@
-import db, { execute, queryFirst } from "../db/db";
+import { execute, queryFirst, runInTransaction } from "../db/db";
 import { emitDataChange } from "./dataEvents";
 import { parseDbDate } from "./dateUtils";
 import { recordGoalChange } from "./goalHistory";
@@ -127,7 +127,7 @@ export const updateGrowthGoals = async (input: GrowthGoalsInput) => {
   const computed = computeGrowthGoalFields(input);
 
   // Preferences and goal history change together or not at all
-  await db.withTransactionAsync(async () => {
+  await runInTransaction(async () => {
     await execute(
       `UPDATE user_preferences SET
       weekly_reading_goal = ?,
@@ -223,7 +223,7 @@ export const applyWeeklyGoalGrowth = async (): Promise<void> => {
       lastUpdated.getTime() + weeksPassed * MS_PER_WEEK,
     );
 
-    await db.withTransactionAsync(async () => {
+    await runInTransaction(async () => {
       await execute(
         "UPDATE user_preferences SET current_reading_rate_minutes_per_day = ?, current_reading_rate_last_updated = ? WHERE id = 1",
         [newRate, newLastUpdated.toISOString()],

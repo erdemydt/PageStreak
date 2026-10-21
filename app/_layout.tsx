@@ -1,32 +1,32 @@
 import { Stack } from "expo-router";
-import { useEffect } from "react";
-import { AppState, AppStateStatus } from "react-native";
+import { useEffect, useState } from "react";
+import { AppState, AppStateStatus, View } from "react-native";
 import { LanguageProvider } from "../contexts/LanguageContext";
 import "../i18n";
+import { initializeDatabase } from "../db/db";
 import NotificationService from "../services/notificationService";
+import { COLORS } from "../themes/colors";
 import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
-import { log } from "../utils/logger";
 import ToastHost from "../components/ToastHost";
 
 export default function RootLayout() {
+  // Nothing may touch the database before migrations finish, including
+  // screens opened directly by a deep link (which skip app/index.tsx)
+  const [dbAttempted, setDbAttempted] = useState(false);
+
   useEffect(() => {
-    // Initialize notification service and track app opened
-    const initializeNotifications = async () => {
+    initializeDatabase()
+      .catch(() => {}) // app/index.tsx shows the error and offers a retry
+      .finally(() => setDbAttempted(true));
+
+    // The initial "app opened" is recorded by app/index.tsx after the
+    // database is migrated; here we only forward later state changes
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
       try {
-        await NotificationService.onAppStateChange("active");
-
-        // Don't request permissions here - let the first-time setup handle it
-        // This prevents duplicate permission requests
-        log("🔔 Notification service app state tracking initialized");
-      } catch (error) {
-        console.error("❌ Error initializing notifications:", error);
+        await initializeDatabase();
+      } catch {
+        return;
       }
-    };
-
-    initializeNotifications();
-
-    // Set up app state change listener
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === "active") {
         // A warm app may sit across a weekly goal step; apply it on resume.
         // (Cold start applies it in app/index.tsx after the DB is ready.)
@@ -44,6 +44,11 @@ export default function RootLayout() {
       subscription?.remove();
     };
   }, []);
+
+  if (!dbAttempted) {
+    // Brief: the native splash screen is usually still covering this
+    return <View style={{ flex: 1, backgroundColor: COLORS.neutral[50] }} />;
+  }
 
   return (
     <LanguageProvider>

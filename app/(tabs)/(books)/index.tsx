@@ -84,7 +84,7 @@ function ManualBookEntry(props: BooksearchProps) {
       >
         <View style={styles.modalHeader}>
           <Text style={styles.cardTitle}>
-            {t("components.bookSearchModal.title")}
+            {t("booksPage.addManualButton")}
           </Text>
           <TouchableOpacity
             style={styles.closeButton}
@@ -97,7 +97,7 @@ function ManualBookEntry(props: BooksearchProps) {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder={t("components.bookSearchModal.title")}
+            placeholder={t("booksPage.input.title")}
             placeholderTextColor={COLORS.neutral[400]}
             value={props.name}
             onChangeText={props.setName}
@@ -107,7 +107,7 @@ function ManualBookEntry(props: BooksearchProps) {
           />
           <TextInput
             style={styles.input}
-            placeholder={t("components.bookSearchModal.author")}
+            placeholder={t("booksPage.input.author")}
             placeholderTextColor={COLORS.neutral[400]}
             value={props.author}
             onChangeText={props.setAuthor}
@@ -117,7 +117,7 @@ function ManualBookEntry(props: BooksearchProps) {
           />
           <TextInput
             style={styles.input}
-            placeholder={t("components.bookSearchModal.pageCount")}
+            placeholder={t("booksPage.input.pageCount")}
             placeholderTextColor={COLORS.neutral[400]}
             value={props.page}
             onChangeText={props.setPage}

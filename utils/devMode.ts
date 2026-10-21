@@ -18,9 +18,3 @@ export const ENABLE_DEV_FEATURES = false;
 export const isDevModeEnabled = (): boolean => {
   return ENABLE_DEV_FEATURES && __DEV__;
 };
-
-/**
- * Use this instead of __DEV__ directly when you want the ability
- * to turn off dev features even in development builds
- */
-export const showDevFeatures = isDevModeEnabled();

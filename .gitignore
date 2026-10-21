@@ -51,3 +51,5 @@ fastlane/
 *.mobileprovision
 *.keystore
 builds/
+# personal data backups exported from the app
+pagestreak-*backup*.json

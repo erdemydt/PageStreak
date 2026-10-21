@@ -45,7 +45,7 @@ app/
     profile.tsx          Edit name / yearly goal / daily + target goal / genres
     reading-growth.tsx   Growth Journey chart (hidden tab, opened from profile)
     settings.tsx         Language, notifications, backup/restore, logout (wipes all data)
-components/              Screens' building blocks (see "Dead code" below)
+components/              Screens' building blocks
 db/db.tsx                SQLite handle, queryAll/queryFirst/execute, schema init
 services/
   notificationService.ts Singleton. Schedules ONE local reminder N hours after app is backgrounded
@@ -120,17 +120,14 @@ statements in sync** when adding columns, and add new tables to the backup servi
 
 ## Known issues / roadmap (ranked)
 
-1. **Dead code** (~1.9k lines, imported nowhere): `components/BookDetailModal.tsx`, `BookSearchModal.tsx`,
-   `ReadingCalendar.tsx`, `ReadingStats.tsx`; `utils/migration#runMigration`/`resetDatabase`/`getMigrationStatus`.
-   Redundant: `initializeReadingSessions` (re-creates a table `db.tsx` already made), and the
-   notification-table "repair" paths, which run on every boot.
-   Stale docs in the root (`DATABASE_INIT.md`, `PAGE*_*.md`, `*_TRANSLATION_*.md`), `api-test.js`,
-   `scripts/test-*.ts` (not runnable), and two personal backup JSONs committed at the root.
-2. **No tests**. Add Jest for `utils/` (dates, streaks, goal math) and the backup merge.
+1. **Unverified unused i18n keys** (~70, e.g. `profile.stats.*`, `settings.hourOptions.*`,
+   several `settings.*` notification labels). Some may be built dynamically; check before deleting.
+   Unused npm deps are likely (`notifee`, `@expo/ngrok`, `react-native-permissions`, ...); removing them needs a native rebuild.
+2. **No tests** (deliberately out of scope for now). Add Jest for `utils/` (dates, streaks, goal math) and the backup merge.
 3. **Screens are huge** (700–1300 lines), with copy-pasted modal/animation code and inline queries.
    Extract a data layer (repositories/hooks) and shared modal primitives.
 4. Remaining hard-coded English: dev-only `NotificationTester`, readinglogs random-data alerts,
-   `BookSearchModal` (dead), `DataImportModal` validation details, Open Library error messages, home "Reading" label fallback.
+   `DataImportModal` validation details, Open Library error messages, home "Reading" label fallback.
    Dates use `toLocaleDateString()` (device locale), not the app language.
 5. Notification permission is requested on first launch before onboarding (`app/index.tsx`), not at a contextual moment.
 6. Merge-import skips sessions whose book isn't in the backup file (e.g. a sessions-only export).
@@ -152,3 +149,7 @@ statements in sync** when adding columns, and add new tables to the backup servi
   name change; settings not refreshing; home header remounting every render; yearly goal counting
   all-time books; notifications English-only and able to fire at night (quiet hours added);
   many hard-coded English strings; missing TR key; 3 lint errors.
+- **2026-10-21: Session 1b, dead code.** Removed unused components (BookDetailModal,
+  BookSearchModal, ReadingCalendar, ReadingStats), unrunnable `scripts/`, `api-test.js`, stale
+  root docs, unused helpers in `utils/` and the backup service, and their translation keys.
+  Personal backup JSONs are untracked and gitignored, and still on disk. Then ran a multi-agent audit to build the roadmap.

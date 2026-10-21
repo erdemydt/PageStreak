@@ -65,24 +65,6 @@ export type BackupValidationResult = {
 };
 
 /**
- * Let user select a directory to save the backup file
- */
-export async function selectBackupSaveLocation(filename: string): Promise<{ success: boolean; filePath?: string; error?: string }> {
-  try {
-    // For iOS and Android, we'll use the sharing API to let user choose save location
-    // Create a temporary file first
-    const tempFilePath = FileSystem.documentDirectory + filename;
-    
-    return { success: true, filePath: tempFilePath };
-  } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to select save location' 
-    };
-  }
-}
-
-/**
  * Export and save backup file with user-selected location
  */
 export async function exportAndSaveBackup(

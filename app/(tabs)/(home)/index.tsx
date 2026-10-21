@@ -1,5 +1,5 @@
 import { Link, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FlatList,
@@ -21,7 +21,6 @@ import { parseDbDate } from "../../../utils/dateUtils";
 import {
   getReadingStreak,
   getTodayReadingMinutes,
-  initializeReadingSessions,
 } from "../../../utils/readingProgress";
 
 type UserPreferences = {
@@ -53,11 +52,6 @@ export default function HomeScreen() {
   const [readingStreak, setReadingStreak] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Load data on mount and when screen comes into focus
-  useEffect(() => {
-    initializeApp();
-  }, []);
-
   // Refresh data when screen comes into focus (e.g., when returning from books tab)
   useFocusEffect(
     useCallback(() => {
@@ -65,10 +59,6 @@ export default function HomeScreen() {
     }, []),
   );
 
-  const initializeApp = async () => {
-    await initializeReadingSessions();
-    loadData();
-  };
 
   const loadData = async () => {
     setLoading(true);

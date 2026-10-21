@@ -24,35 +24,6 @@ export const getTodayDateString = (): string => {
   return dateToLocalDateString(new Date());
 };
 
-/**
- * Converts locale string from toLocaleDateString() to YYYY-MM-DD format
- * Handles different locale formats safely
- */
-export const localeStringToDateString = (localeString: string): string => {
-  // Try to parse the locale string by creating a Date object
-  // This handles different locale formats automatically
-  try {
-    const date = new Date(localeString);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid date');
-    }
-    return dateToLocalDateString(date);
-  } catch (error) {
-    // Fallback: try manual parsing for MM/DD/YYYY format
-    console.warn('Failed to parse locale string, trying manual parsing:', localeString);
-    const parts = localeString.split('/');
-    if (parts.length === 3) {
-      const [month, day, year] = parts;
-      const mm = month.padStart(2, '0');
-      const dd = day.padStart(2, '0');
-      return `${year}-${mm}-${dd}`;
-    }
-    // Last resort: return today's date
-    console.error('Failed to parse date string:', localeString);
-    return getTodayDateString();
-  }
-};
-
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const SQLITE_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/;
 

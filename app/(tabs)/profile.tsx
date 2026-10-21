@@ -6,25 +6,23 @@ import {
   Alert,
   Keyboard,
   ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { getUserPreferences, updateProfile } from "../../db/repos/preferences";
 import type { UserPreferences } from "../../types/models";
 import { COLORS } from "../../themes/colors";
-import { SPACING } from "../../themes/spacing";
-import { TYPE } from "../../themes/typography";
 import {
   computeGrowthGoalFields,
   validateGrowthGoals,
 } from "../../utils/goalSettings";
 import { formatDate } from "../../utils/format";
-import { genreLabel, GENRE_KEYS, parseGenres } from "../../utils/genres";
+import { genreLabel, parseGenres } from "../../utils/genres";
 import { useFocusRefresh } from "../../hooks/useFocusRefresh";
 import { showToast } from "../../utils/toast";
+import ProfileEditForm from "../../components/profile/ProfileEditForm";
+import { profileStyles } from "../../components/profile/profileStyles";
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -41,7 +39,6 @@ export default function ProfileScreen() {
 
   const [loading, setLoading] = useState(false);
 
-  const genres = GENRE_KEYS;
 
   // Background reloads (focus, data-change events) must not overwrite what
   // the user is typing; edit fields are only refreshed when not editing
@@ -454,153 +451,25 @@ export default function ProfileScreen() {
   );
 
   const renderEditMode = () => (
-    <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={cancelEdit}
-        disabled={loading}
-      >
-        <Ionicons name="close" size={25} color={COLORS.neutral[700]} />
-      </TouchableOpacity>
-      <View style={styles.editHeader}>
-        <Text style={styles.editTitle}>{t("profile.edit")}</Text>
-
-        <Text style={styles.editSubtitle}>{t("profile.subtitle")}</Text>
-      </View>
-
-      {/* Basic Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {t("profile.sections.personal")}
-        </Text>
-        <View style={styles.card}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              <Ionicons name="person" size={16} color={COLORS.primary} />{" "}
-              {t("profile.fields.username")}
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={editedUsername}
-              onChangeText={setEditedUsername}
-              placeholder={t("profile.placeholders.username")}
-              editable={!loading}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              <Ionicons name="library" size={16} color={COLORS.primary} />{" "}
-              {t("profile.fields.yearlyGoal")}
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={editedYearlyGoal}
-              onChangeText={setEditedYearlyGoal}
-              placeholder={t("profile.placeholders.yearlyGoal")}
-              keyboardType="numeric"
-              editable={!loading}
-            />
-          </View>
-        </View>
-      </View>
-
-      {/* Reading Time Goals */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("profile.sections.goals")}</Text>
-        <View style={styles.card}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              <Ionicons name="time" size={16} color={COLORS.success} />{" "}
-              {t("profile.fields.currentDailyGoal")}
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={editedDailyGoal}
-              onChangeText={setEditedDailyGoal}
-              placeholder={t("profile.placeholders.dailyGoal")}
-              keyboardType="numeric"
-              editable={!loading}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              <Ionicons name="trending-up" size={16} color={COLORS.warning} />{" "}
-              {t("profile.fields.targetDailyGoal")}
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={editedTargetGoal}
-              onChangeText={setEditedTargetGoal}
-              placeholder={t("profile.placeholders.targetGoal")}
-              keyboardType="numeric"
-              editable={!loading}
-            />
-          </View>
-        </View>
-      </View>
-
-      {/* Preferred Genres */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {t("profile.sections.preferredGenres")}
-        </Text>
-        <View style={styles.card}>
-          <View style={styles.genresGrid}>
-            {genres.map((genre) => (
-              <TouchableOpacity
-                key={genre}
-                style={[
-                  styles.genreChip,
-                  editedGenres.includes(genre) && styles.genreChipSelected,
-                ]}
-                onPress={() => toggleGenre(genre)}
-                disabled={loading}
-              >
-                <Text
-                  style={[
-                    styles.genreChipText,
-                    editedGenres.includes(genre) &&
-                      styles.genreChipTextSelected,
-                  ]}
-                >
-                  {genreLabel(genre)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={styles.editActions}>
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={cancelEdit}
-          disabled={loading}
-        >
-          <Ionicons name="close" size={18} color={COLORS.neutral[500]} />
-          <Text style={styles.cancelButtonText}>
-            {t("profile.buttons.cancel")}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={savePreferences}
-          disabled={loading}
-        >
-          <Ionicons name="checkmark" size={18} color={COLORS.white} />
-          <Text style={styles.saveButtonText}>
-            {loading
-              ? t("profile.buttons.saving")
-              : t("profile.buttons.saveChanges")}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.bottomSpacer} />
-    </ScrollView>
+    <ProfileEditForm
+      values={{
+        username: editedUsername,
+        yearlyGoal: editedYearlyGoal,
+        dailyGoal: editedDailyGoal,
+        targetGoal: editedTargetGoal,
+        genres: editedGenres,
+      }}
+      onChange={{
+        username: setEditedUsername,
+        yearlyGoal: setEditedYearlyGoal,
+        dailyGoal: setEditedDailyGoal,
+        targetGoal: setEditedTargetGoal,
+      }}
+      onToggleGenre={toggleGenre}
+      onCancel={cancelEdit}
+      onSave={savePreferences}
+      loading={loading}
+    />
   );
 
   return (
@@ -614,295 +483,4 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface.page,
-  },
-  header: {
-    backgroundColor: COLORS.surface.page,
-    elevation: 0,
-    shadowOpacity: 0,
-    borderBottomWidth: 0,
-  },
-  backButton: {
-    position: "absolute",
-    top: 16,
-    left: 5,
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
-  },
-  headerSpacer: {
-    height: 40,
-    width: 40,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: SPACING[4],
-  },
-  profileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.surface.raised,
-    padding: SPACING[4],
-    borderRadius: 16,
-    marginTop: SPACING[4],
-    marginBottom: SPACING[5],
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  avatarText: {
-    color: COLORS.white,
-    fontSize: 28,
-    fontWeight: "bold",
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: COLORS.text.primary,
-    marginBottom: 4,
-  },
-  profileSubtitle: {
-    ...TYPE.meta,
-    fontWeight: "500",
-  },
-  editButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.neutral[100],
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 4,
-  },
-  editButtonText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  section: {
-    marginBottom: SPACING[4],
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.text.secondary,
-    marginBottom: SPACING[2],
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-  },
-  card: {
-    backgroundColor: COLORS.surface.raised,
-    borderRadius: 16,
-    padding: SPACING[4],
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  infoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.neutral[50],
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: COLORS.text.secondary,
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: 15,
-    color: COLORS.text.primary,
-    fontWeight: "600",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.neutral[200],
-    marginHorizontal: -SPACING[4],
-  },
-  growthJourneyButton: {
-    marginTop: SPACING[2],
-    backgroundColor: COLORS.surface.raised,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.neutral[200],
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  growthJourneyIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: COLORS.state.primarySoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  growthJourneyTextWrap: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  growthJourneyTitle: {
-    fontSize: 14,
-    color: COLORS.text.primary,
-    fontWeight: "600",
-  },
-  growthJourneySubtitle: {
-    fontSize: 12,
-    color: COLORS.text.secondary,
-    marginTop: 2,
-  },
-  genresDisplay: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  genreTag: {
-    backgroundColor: COLORS.accent.soft,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  genreTagText: {
-    color: COLORS.accent.strong,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  noGenresText: {
-    color: COLORS.neutral[400],
-    fontStyle: "italic",
-  },
-  editHeader: {
-    alignItems: "center",
-    paddingVertical: 20,
-  },
-  editTitle: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: COLORS.text.primary,
-    marginBottom: 4,
-  },
-  editSubtitle: {
-    ...TYPE.body,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.text.secondary,
-    marginBottom: 8,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  input: {
-    height: 48,
-    borderColor: COLORS.neutral[200],
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.surface.raised,
-    fontSize: 16,
-    color: COLORS.text.primary,
-  },
-  genresGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  genreChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: COLORS.surface.muted,
-    borderWidth: 1,
-    borderColor: COLORS.neutral[200],
-  },
-  genreChipSelected: {
-    backgroundColor: COLORS.accent.soft,
-    borderColor: COLORS.accent.primary,
-  },
-  genreChipText: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-  },
-  genreChipTextSelected: {
-    color: COLORS.accent.strong,
-    fontWeight: "600",
-  },
-  editActions: {
-    flexDirection: "row",
-    gap: SPACING[2],
-    paddingHorizontal: SPACING[4],
-    paddingVertical: SPACING[4],
-  },
-  cancelButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.neutral[100],
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 6,
-  },
-  cancelButtonText: {
-    color: COLORS.neutral[500],
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  saveButton: {
-    flex: 2,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.accent.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 6,
-  },
-  saveButtonText: {
-    color: COLORS.white,
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  bottomSpacer: {
-    height: 40,
-  },
-});
+const styles = profileStyles;

@@ -63,7 +63,10 @@ const calculateWeeksUntilTarget = (targetDateIso: string) => {
   const now = new Date();
   const targetDate = new Date(targetDateIso);
   const diffMs = targetDate.getTime() - now.getTime();
-  const diffWeeks = Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 7));
+  // Full weeks only: growth applies one step per full elapsed week
+  // (applyWeeklyGoalGrowth), so dividing by a rounded-up count would leave the
+  // plan short of the target on the goal date
+  const diffWeeks = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7));
   return Math.max(1, diffWeeks);
 };
 

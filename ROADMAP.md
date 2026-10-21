@@ -118,9 +118,9 @@ Things users can feel are wrong today.
 - [x] Before shipping, test against DB copies from old builds.
 
 ## Phase 6: Decompose (no behavior change)
-- [ ] Split NotificationService: prefs repo, a stateless scheduler, an app-usage repo. Move dev/test methods out.
-- [ ] Extract `EditSessionModal` (readinglogs, 1.3k lines), the intro steps (1.2k), and the profile goal form.
-- [ ] Optional: move reading-growth into a Stack under profile, for a native back gesture.
+- [x] Split NotificationService: prefs repo, a stateless scheduler, an app-usage repo. Move dev/test methods out.
+- [x] Extract `EditSessionModal` (readinglogs, 1.3k lines), the intro steps (1.2k), and the profile goal form.
+- [ ] Optional (deferred, visible behavior change): move reading-growth into a Stack under profile, for a native back gesture.
 
 ## Phase 7: Product & reach
 - [ ] Streak freeze / grace day (builds on fair streaks).

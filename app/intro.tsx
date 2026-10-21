@@ -1,4 +1,3 @@
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,23 +8,25 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import DataImportModal from "../components/DataImportModal";
+import { introStyles } from "../components/intro/introStyles";
+import TargetGoalStep from "../components/intro/TargetGoalStep";
 import {
   getUserPreferences,
   saveOnboardingPreferences,
 } from "../db/repos/preferences";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
-import { formatDate } from "../utils/format";
 import { GENRE_KEYS, genreLabel } from "../utils/genres";
-import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
+import {
+  applyWeeklyGoalGrowth,
+  computeGrowthGoalFields,
+} from "../utils/goalSettings";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -43,7 +44,6 @@ export default function IntroScreen() {
     date.setMonth(date.getMonth() + 3);
     return date;
   });
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -236,40 +236,22 @@ export default function IntroScreen() {
         return;
       }
 
-      // Use user's input values
-      const initialReadingRateMinutesPerDay = currentGoalNum;
-      const endReadingRateGoalMinutesPerDay = targetGoalNum;
-
-      // Calculate weekly increase needed based on the selected date
-      const timeDifferenceMs = goalDate.getTime() - new Date().getTime();
-      const weeks = Math.max(
-        1,
-        Math.ceil(timeDifferenceMs / (1000 * 60 * 60 * 24 * 7)),
-      );
-
-      const totalIncreaseNeeded =
-        endReadingRateGoalMinutesPerDay - initialReadingRateMinutesPerDay;
-      const weeklyReadingRateIncreaseMinutes =
-        totalIncreaseNeeded > 0 ? Math.ceil(totalIncreaseNeeded / weeks) : 0;
-      const weeklyReadingRateIncreasePercentage =
-        initialReadingRateMinutesPerDay > 0
-          ? (weeklyReadingRateIncreaseMinutes /
-              initialReadingRateMinutesPerDay) *
-            100
-          : 0;
-
-      // Use the selected goal date instead of end of year
-      const endGoalDate = goalDate.toISOString();
+      // Same plan model as the preview, Profile and Growth Journey
+      const plan = computeGrowthGoalFields({
+        currentDailyGoal: currentGoalNum,
+        targetDailyGoal: targetGoalNum,
+        targetDate: goalDate.toISOString(),
+      });
 
       await saveOnboardingPreferences({
         username: username.trim(),
         yearlyBookGoal: Number(yearlyGoal),
         preferredGenres,
-        initialRate: initialReadingRateMinutesPerDay,
-        targetRate: endReadingRateGoalMinutesPerDay,
-        targetDate: endGoalDate,
-        weeklyIncreaseMinutes: weeklyReadingRateIncreaseMinutes,
-        weeklyIncreasePercentage: weeklyReadingRateIncreasePercentage,
+        initialRate: plan.initialReadingRate,
+        targetRate: plan.targetReadingRate,
+        targetDate: plan.endGoalDate,
+        weeklyIncreaseMinutes: plan.weeklyIncreaseMinutes,
+        weeklyIncreasePercentage: plan.weeklyIncreasePercentage,
       });
 
       // Reminders: ask for permission now, with context, and only if the
@@ -540,197 +522,18 @@ export default function IntroScreen() {
   );
 
   const renderStep5 = () => (
-    <View
-      style={{
-        flex: 1,
-        gap: 0,
-        width: "100%",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <View style={styles.stepHeader}>
-        <Text style={styles.stepEmoji}>🚀</Text>
-        <Text style={styles.stepTitle}>{t("intro.targetGoal.title")}</Text>
-        <Text style={styles.stepSubtitle}>
-          {t("intro.targetGoal.subtitle")}
-        </Text>
-      </View>
-
-      <View style={styles.goalContainer}>
-        <TextInput
-          style={styles.goalInput}
-          placeholder={t("intro.targetGoal.placeholder")}
-          placeholderTextColor={COLORS.neutral[400]}
-          value={targetDailyGoal}
-          onChangeText={(text) => {
-            // Only allow numbers
-            const numericText = text.replace(/[^0-9]/g, "");
-            if (numericText.length <= 4) {
-              // Max 9999 minutes
-              setTargetDailyGoal(numericText);
-              if (
-                error &&
-                numericText &&
-                Number(numericText) > 0 &&
-                Number(numericText) <= 480 &&
-                Number(numericText) >= Number(dailyReadingGoal)
-              ) {
-                setError(null);
-              }
-            }
-          }}
-          editable={!loading}
-          keyboardType="numeric"
-          returnKeyType="done"
-          autoFocus
-          maxLength={4}
-        />
-        <Text style={styles.goalLabel}>{t("intro.targetGoal.label")}</Text>
-      </View>
-
-      <View style={styles.stepHeader}>
-        <Text style={styles.stepEmoji}></Text>
-        <Text style={styles.stepTitle}>{t("intro.targetGoal.dateLabel")}</Text>
-      </View>
-
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        {Platform.OS === "ios" ? (
-          // iOS: Show inline date picker that's always visible
-          <View style={styles.iosDatePickerContainer}>
-            <Text style={styles.dateSelectionTitle}>
-              {t("intro.targetGoal.selectDate")}
-            </Text>
-            <DateTimePicker
-              value={goalDate}
-              mode="date"
-              display="compact"
-              minimumDate={new Date()}
-              maximumDate={
-                new Date(new Date().setFullYear(new Date().getFullYear() + 5))
-              }
-              onChange={(event, date) => {
-                if (date && event.type !== "dismissed") {
-                  setGoalDate(date);
-                  // Clear error if date is valid
-                  if (
-                    error &&
-                    date >= new Date(new Date().setHours(0, 0, 0, 0))
-                  ) {
-                    setError(null);
-                  }
-                }
-              }}
-              style={styles.iosDatePicker}
-            />
-            <Text style={styles.selectedDateText}>
-              {t("intro.targetGoal.selectedDate")}:{" "}
-              {formatDate(goalDate, {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </Text>
-          </View>
-        ) : (
-          // Android: Show button that opens modal date picker
-          <View style={styles.androidDatePickerContainer}>
-            <Text style={styles.dateSelectionTitle}>
-              {t("intro.targetGoal.selectDate")}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.datePickerButton,
-                !goalDate && styles.datePickerButtonUnselected,
-              ]}
-              onPress={() => setShowDatePicker(true)}
-              disabled={loading}
-            >
-              <Text
-                style={[
-                  styles.datePickerButtonText,
-                  !goalDate && styles.datePickerButtonTextUnselected,
-                ]}
-              >
-                📅{" "}
-                {goalDate
-                  ? formatDate(goalDate, {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
-                  : t("intro.targetGoal.tapToSelectDate")}
-              </Text>
-            </TouchableOpacity>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={goalDate || new Date()}
-                mode="date"
-                display="default"
-                minimumDate={new Date()}
-                maximumDate={
-                  new Date(new Date().setFullYear(new Date().getFullYear() + 5))
-                }
-                onChange={(event, date) => {
-                  // Always hide picker on Android
-                  setShowDatePicker(false);
-
-                  // Only update date if user didn't cancel
-                  if (date && event.type !== "dismissed") {
-                    setGoalDate(date);
-                    // Clear error if date is valid
-                    if (
-                      error &&
-                      date >= new Date(new Date().setHours(0, 0, 0, 0))
-                    ) {
-                      setError(null);
-                    }
-                  }
-                }}
-              />
-            )}
-          </View>
-        )}
-
-        <Text style={styles.weeklyIncreaseText}>
-          {t("intro.targetGoal.currentWeeklyIncrease", {
-            minutes: calculateWeeklyIncreaseMinutes(),
-            classification: classifyPercentageIncrease(
-              Number(dailyReadingGoal) > 0
-                ? (calculateWeeklyIncreaseMinutes() /
-                    Number(dailyReadingGoal)) *
-                    100
-                : 0,
-            ),
-          })}
-        </Text>
-      </View>
-
-      <Text style={styles.goalHint}>🎯 {t("intro.targetGoal.hint")}</Text>
-
-      <View style={styles.reminderCard}>
-        <View style={styles.reminderTextBlock}>
-          <Text style={styles.reminderTitle}>
-            🔔 {t("intro.reminder.title")}
-          </Text>
-          <Text style={styles.reminderSubtitle}>
-            {t("intro.reminder.subtitle")}
-          </Text>
-        </View>
-        <Switch
-          value={wantsReminders}
-          onValueChange={setWantsReminders}
-          trackColor={{
-            false: COLORS.neutral[200],
-            true: COLORS.state.primarySoft,
-          }}
-          thumbColor={wantsReminders ? COLORS.primary : COLORS.neutral[400]}
-        />
-      </View>
-    </View>
+    <TargetGoalStep
+      dailyReadingGoal={dailyReadingGoal}
+      targetDailyGoal={targetDailyGoal}
+      onChangeTargetDailyGoal={setTargetDailyGoal}
+      goalDate={goalDate}
+      onChangeGoalDate={setGoalDate}
+      wantsReminders={wantsReminders}
+      onChangeWantsReminders={setWantsReminders}
+      error={error}
+      onClearError={() => setError(null)}
+      loading={loading}
+    />
   );
 
   const renderButtons = () => (
@@ -791,29 +594,6 @@ export default function IntroScreen() {
       </TouchableOpacity>
     </View>
   );
-  // Same linear model the app applies (and saves): +N minutes per week
-  const calculateWeeklyIncreaseMinutes = () => {
-    const initial = Number(dailyReadingGoal);
-    const target = Number(targetDailyGoal);
-    if (!(initial > 0) || !(target > initial)) return 0;
-    const weeks = Math.max(
-      1,
-      Math.ceil((goalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 7)),
-    );
-    return Math.ceil((target - initial) / weeks);
-  };
-
-  const classifyPercentageIncrease = (percentage: number) => {
-    // Classify the percentage increase into categories
-    if (percentage <= 5) return t("intro.percentageClassification.minimal");
-    if (percentage <= 15) return t("intro.percentageClassification.easy");
-    if (percentage <= 40) return t("intro.percentageClassification.moderate");
-    if (percentage <= 80)
-      return t("intro.percentageClassification.challenging");
-    if (percentage <= 150)
-      return t("intro.percentageClassification.veryDifficult");
-    return t("intro.percentageClassification.nearlyImpossible");
-  };
 
   return (
     <>
@@ -902,391 +682,4 @@ export default function IntroScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.neutral[50],
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
-  headerContainer: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  welcomeLogo: {
-    width: 100,
-    height: 100,
-    marginBottom: 20,
-  },
-  welcomeEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  welcomeTitle: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: COLORS.neutral[500],
-    textAlign: "center",
-    lineHeight: 24,
-    paddingHorizontal: 20,
-  },
-  progressContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 32,
-    paddingHorizontal: 20,
-  },
-  progressBarContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  progressDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.neutral[200],
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
-  },
-  progressDotActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  progressDotCurrent: {
-    backgroundColor: COLORS.white,
-    borderColor: COLORS.primary,
-    transform: [{ scale: 1.2 }],
-  },
-  progressLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: COLORS.neutral[200],
-    marginHorizontal: 8,
-  },
-  progressLineActive: {
-    backgroundColor: COLORS.primary,
-  },
-  card: {
-    backgroundColor: COLORS.white,
-    padding: 15,
-    borderRadius: 24,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 8,
-    marginBottom: 24,
-    minHeight: 300,
-  },
-  stepContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  stepHeader: {
-    alignItems: "center",
-    marginBottom: 5,
-  },
-  stepEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  stepTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: COLORS.neutral[800],
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  stepSubtitle: {
-    fontSize: 16,
-    color: COLORS.neutral[500],
-    textAlign: "center",
-    lineHeight: 24,
-    paddingHorizontal: 20,
-  },
-  inputContainer: {
-    width: "100%",
-    alignItems: "center",
-  },
-  restoreLink: {
-    marginTop: 20,
-    alignSelf: "center",
-    padding: 8,
-  },
-  restoreLinkText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.primary,
-    textAlign: "center",
-  },
-  input: {
-    width: "100%",
-    height: 56,
-    borderColor: COLORS.neutral[200],
-    borderWidth: 2,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    backgroundColor: COLORS.white,
-    fontSize: 18,
-    color: COLORS.neutral[800],
-    textAlign: "center",
-    fontWeight: "500",
-  },
-  goalContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 2,
-  },
-  goalInput: {
-    width: "auto",
-    height: 56,
-    borderColor: COLORS.neutral[200],
-    borderWidth: 2,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.white,
-    fontSize: 24,
-    color: COLORS.neutral[800],
-    textAlign: "center",
-    fontWeight: "bold",
-    marginRight: 16,
-  },
-  goalLabel: {
-    fontSize: 18,
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-  },
-  goalHint: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
-    textAlign: "center",
-    fontStyle: "italic",
-    marginTop: 2,
-  },
-  reminderCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 20,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: COLORS.white,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
-  },
-  reminderTextBlock: {
-    flex: 1,
-  },
-  reminderTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
-  },
-  reminderSubtitle: {
-    fontSize: 13,
-    color: COLORS.neutral[500],
-    marginTop: 4,
-    lineHeight: 18,
-  },
-  genresContainer: {
-    maxHeight: 200,
-    width: "100%",
-  },
-  genresGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 12,
-  },
-  genreChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: COLORS.neutral[100],
-    borderWidth: 1.5,
-    borderColor: COLORS.neutral[200],
-    margin: 4,
-  },
-  genreChipSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  genreChipText: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-  },
-  genreChipTextSelected: {
-    color: COLORS.white,
-    fontWeight: "600",
-  },
-  error: {
-    color: COLORS.danger,
-    textAlign: "center",
-    marginTop: 16,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 10,
-    gap: 16,
-  },
-  backButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    backgroundColor: COLORS.neutral[50],
-    borderWidth: 1.5,
-    borderColor: COLORS.neutral[200],
-    flex: 1,
-  },
-  backButtonText: {
-    color: COLORS.neutral[500],
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  nextButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-    flex: 2,
-  },
-  nextButtonDisabled: {
-    backgroundColor: COLORS.neutral[300],
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  nextButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  featuresContainer: {
-    alignItems: "center",
-  },
-  featuresTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.neutral[500],
-    marginBottom: 16,
-  },
-  featuresList: {
-    gap: 12,
-  },
-  featureItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  featureEmoji: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  featureText: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-  },
-  datePickerButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    alignItems: "center",
-    marginBottom: 16,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-    minHeight: 60,
-    justifyContent: "center",
-  },
-  datePickerButtonText: {
-    fontSize: 16,
-    color: COLORS.neutral[800],
-    fontWeight: "600",
-    textAlign: "center",
-    lineHeight: 24,
-  },
-  iosDatePickerContainer: {
-    width: "100%",
-    alignItems: "center",
-    marginVertical: 20,
-  },
-  androidDatePickerContainer: {
-    width: "100%",
-    alignItems: "center",
-    marginVertical: 20,
-  },
-  dateSelectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.neutral[800],
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  iosDatePicker: {
-    width: "100%",
-    marginVertical: 10,
-  },
-  selectedDateText: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
-    textAlign: "center",
-    marginTop: 10,
-    fontWeight: "500",
-  },
-  datePickerButtonUnselected: {
-    backgroundColor: COLORS.neutral[50],
-    borderColor: COLORS.neutral[300],
-    borderStyle: "dashed",
-    shadowOpacity: 0.05,
-  },
-  datePickerButtonTextUnselected: {
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-    fontStyle: "italic",
-  },
-  weeklyIncreaseText: {
-    textAlign: "center",
-    marginTop: 10,
-    fontSize: 16,
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-  },
-});
+const styles = introStyles;

@@ -45,16 +45,20 @@ app/
     profile.tsx          Edit name / yearly goal / daily + target goal / genres
     reading-growth.tsx   Growth Journey chart (hidden tab, opened from profile)
     settings.tsx         Language, notifications, backup/restore, logout (wipes all data)
-components/              Screens' building blocks
+components/              Screens' building blocks (intro/ and profile/ hold those screens' parts + styles)
 db/db.tsx                SQLite handle, queryAll/queryFirst/execute, schema init
 db/repos/                Data layer. Screens/components use ONLY these (lint-enforced):
   books.ts               addBook, listBooksWithStats, getBook, setPageCount, updateBookStatus, ...
   sessions.ts            logSession, updateSession, deleteSession, listSessionsWithBooks, daily totals
-  preferences.ts         getUserPreferences, getDailyGoal, saveOnboardingPreferences, updateProfileBasics
+  preferences.ts         getUserPreferences, getDailyGoal, saveOnboardingPreferences, updateProfile
+  notificationPrefs.ts   Reminder settings row (read / ensure / write)
+  appUsage.ts            App open/close tracking (times the "after I leave" reminder)
 hooks/useFocusRefresh.ts Load on focus + on data-change events (+ optional deps)
 types/models.ts          Row types (EnhancedBook, ReadingSession, UserPreferences, ...)
 services/
-  notificationService.ts Singleton. Schedules ONE local reminder N hours after app is backgrounded
+  notificationService.ts Reminder entry point (facade): permissions, prefs, app-state lifecycle
+  reminderScheduler.ts   Stateless scheduling (quiet hours, after-last-open, daily-time x7 days, message text)
+  notificationDevTools.ts Dev-only test notifications/status
   dataBackupService.ts   JSON export/import (replace or merge)
   openLibrary.ts         Search API
 utils/
@@ -153,7 +157,6 @@ tables there and to the backup service. Test migrations against real DB files: s
 - Backup import runs in `db.withExclusiveTransactionAsync`: every statement inside it must use `txn`
   (`runIn(txn, …)`); a global `execute` there fails with "database is locked".
 - Light mode is forced (app.json, Info.plist, Android theme) until real dark mode exists.
-- `NotificationService` is a singleton default export; the class is also exported (lint warns about the name; that's harmless).
 
 ## Working agreement
 
@@ -235,3 +238,7 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   fresh, legacy `books`-only, and a DB created by the original app code (commit 2162355) with data, each
   migrated twice, plus a concurrent run (double init + app-state transaction during the migration), which
   fails on the old code and passes now. Data intact, schema complete, version 4.
+- **Phase 6: decompose.** NotificationService split into a facade plus scheduler, repos and dev tools (989 → 204
+  lines, stateless); EditSessionModal extracted (readinglogs 1347 → 670); onboarding's final step and styles
+  extracted, and onboarding now uses `computeGrowthGoalFields` like Profile and Growth (intro 1292 → 689);
+  Profile's edit form and styles extracted (908 → 486). Lint: 5 exhaustive-deps warnings remain.

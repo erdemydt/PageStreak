@@ -1,0 +1,154 @@
+# PageStreak
+
+A reading-habit tracker (React Native + Expo) that is live on the App Store. Users log
+reading sessions against books, build a daily-minutes streak, and grow their daily goal
+week by week toward a target. All data is local (SQLite); the only network call is Open
+Library book search. UI is bilingual: English and Turkish.
+
+Most of this codebase was written by earlier models (Sonnet 3.5 / Opus 4). We are on a
+multi-session journey to make it genuinely good, not only working. Keep this file current:
+update the **Journey log** and **Known issues** at the end of every session that changes
+something meaningful.
+
+## Commands
+
+```bash
+npm start            # expo start (dev client; expo-dev-client is installed)
+npm run ios          # expo run:ios (native build)
+npm run android
+npm run lint         # expo lint (eslint-config-expo). Keep it at 0 errors
+npx tsc --noEmit     # typecheck (strict). Keep it clean
+```
+
+There is **no test framework**. Verify with `tsc` + `lint`. For pure logic (dates, streaks,
+goal math), transpile the module with `typescript.transpileModule`, stub `db/db`, and run it
+under several `TZ=` values (at least America/Los_Angeles, Europe/Istanbul, Pacific/Auckland).
+Adding Jest for `utils/` is on the roadmap.
+
+Stack: Expo SDK 54, React Native 0.81 (new architecture), React 19, expo-router 6 (typed
+routes), expo-sqlite 16, i18next, Hermes.
+
+## Map
+
+```
+app/
+  _layout.tsx            Root stack + LanguageProvider; forwards AppState to NotificationService
+  index.tsx              Boot: init DB → notification prefs → grow daily goal → route to intro/home
+  intro.tsx              5-step onboarding; writes user_preferences row id=1
+  (tabs)/
+    (home)/index.tsx     Dashboard: current book, daily progress, streak, yearly goal
+    (home)/readinglogs.tsx  Week view of sessions, edit/delete sessions, WeeklyStatsView toggle
+    (books)/index.tsx    Library preview (10 books, status filter), manual add form
+    (books)/my-books.tsx Full library: search/sort/filter
+    (books)/search.tsx   Open Library search → add book with status
+    (books)/[id].tsx     Book detail: status, progress, page-count edit
+    profile.tsx          Edit name / yearly goal / daily + target goal / genres
+    reading-growth.tsx   Growth Journey chart (hidden tab, opened from profile)
+    settings.tsx         Language, notifications, backup/restore, logout (wipes all data)
+components/              Screens' building blocks (see "Dead code" below)
+db/db.tsx                SQLite handle, queryAll/queryFirst/execute, schema init
+services/
+  notificationService.ts Singleton. Schedules ONE local reminder N hours after app is backgrounded
+  dataBackupService.ts   JSON export/import (replace or merge)
+  openLibrary.ts         Search API
+utils/
+  dateUtils.ts           Local-date helpers + parseDbDate (use these, see Gotchas)
+  readingProgress.ts     Session aggregates, streaks, page-progress sync
+  bookStatus.ts          Status colors/labels + updateBookStatus / deleteBookWithSessions
+  goalSettings.ts        Growth-goal validation and derived fields
+i18n/index.ts            ALL strings, `en` and `tr` in one file
+themes/                  COLORS / SPACING / TYPE tokens (use them; no raw hex in screens)
+```
+
+## Data model (SQLite, `pagestreak.db`)
+
+- `user_preferences`: single row, `id = 1`. Its existence means "user is onboarded".
+  Goal fields: `initial_` / `current_` / `end_reading_rate_*_minutes_per_day`,
+  `end_reading_rate_goal_date`, `weekly_reading_rate_increase_minutes`,
+  `current_reading_rate_last_updated`. **`current_reading_rate_minutes_per_day` is the daily goal.**
+- `enhanced_books`: `reading_status` ∈ `want_to_read | currently_reading | read`.
+  `page` can be 0 when Open Library has no page count (user can fix it on the detail screen).
+- `reading_sessions`: `book_id`, `minutes_read`, optional `pages_read`, `date` (local `YYYY-MM-DD`).
+- `notification_preferences` (row id=1), `app_usage_tracking`, `database_version`.
+- `weekly_progress`: **vestigial**. Nothing reads it any more; it's kept only for backup-format compatibility.
+- No FK constraints: deleting a book must delete its sessions (`deleteBookWithSessions`).
+
+Schema changes are additive: add the column to the `requiredColumns` list in the matching
+`createOrUpdate*Table` in `db/db.tsx`; it is `ALTER TABLE ADD COLUMN`ed on next launch.
+(`initializeDatabase` runs fully on every cold start; the version check is effectively a no-op.)
+`utils/migration.ts#logoutUser` drops and recreates every table, so **keep its CREATE
+statements in sync** when adding columns, and add new tables to the backup service.
+
+## Domain rules
+
+- **Daily goal growth** (`app/index.tsx#initiateWeeklyProgressLogic`): linear,
+  `+weekly_reading_rate_increase_minutes` per full week since `current_reading_rate_last_updated`,
+  capped at the target, stops after the goal date. `reading-growth.tsx` projects the same line.
+- **Streak** (`utils/readingProgress.ts#calculateStreaks`): consecutive local days with
+  minutes ≥ the current daily goal. It stays alive through today (counts from yesterday until today's goal is met).
+- **Page progress**: `current_page` is a cache of `SUM(pages_read)` over the book's sessions,
+  capped at `page`; finished books are pinned to `page`. After any session insert, edit or delete,
+  call `syncBookCurrentPageFromSessions(bookId)`.
+- **Status changes** go through `updateBookStatus` (keeps `date_started` / `date_finished` consistent).
+- **Yearly goal** counts books with status `read` whose `date_finished` is in the current year.
+- **Notifications**: no reminder if today's goal is met; reminders are pushed out of quiet
+  hours (22:00–09:00); text comes from i18n (`settings.notificationMessages.*`), not the DB columns.
+
+## Gotchas (read before touching dates, i18n, or data)
+
+- **Never `new Date('YYYY-MM-DD')`**: it parses as UTC and shifts a day for users west of UTC.
+  Use `parseLocalDateString` / `addDaysToDateString`, and `dateToLocalDateString` to format.
+- **SQLite `CURRENT_TIMESTAMP` is UTC without a `Z`** (`YYYY-MM-DD HH:MM:SS`). Hermes may not
+  parse it, and other engines read it as local time. Read any DB date with `parseDbDate`. Write new
+  timestamps from JS with `toISOString()`.
+- **i18n parity**: every key must exist in both `en` and `tr`. No hard-coded user-facing
+  strings, including `Alert.alert` titles and buttons. Avoid i18next `_one`/`_other` plurals
+  (Hermes `Intl.PluralRules` support is not guaranteed); use explicit keys like `bookCountOne` / `bookCountOther`.
+- Tabs stay mounted: load screen data in `useFocusEffect`, not only `useEffect([])`.
+- Don't define components inside render (e.g. `const Header = () => …; <Header/>`); it remounts every render.
+- Backup **merge** never writes by primary key; it remaps book ids and dedupes sessions.
+- `utils/devMode.ts#ENABLE_DEV_FEATURES` gates dev tools (NotificationTester, random data). Keep it `false` in commits.
+- `NotificationService` is a singleton default export; the class is also exported (lint warns about the name; that's harmless).
+
+## Working agreement
+
+- Fix root causes; prefer shared helpers over copy-pasted SQL (status-change SQL used to be copy-pasted across three screens).
+- Match surrounding style: functional components, `StyleSheet.create` at the bottom, theme tokens, `t()` for text.
+- User data is precious (real App Store users): never change behavior in a way that loses or
+  rewrites existing rows without an explicit migration and a note here.
+- Don't commit unless asked. Leave `tsc` and `lint` (0 errors) clean.
+
+## Known issues / roadmap (ranked)
+
+1. **Dead code** (~1.9k lines, imported nowhere): `components/BookDetailModal.tsx`, `BookSearchModal.tsx`,
+   `ReadingCalendar.tsx`, `ReadingStats.tsx`; `utils/migration#runMigration`/`resetDatabase`/`getMigrationStatus`.
+   Redundant: `initializeReadingSessions` (re-creates a table `db.tsx` already made), and the
+   notification-table "repair" paths, which run on every boot.
+   Stale docs in the root (`DATABASE_INIT.md`, `PAGE*_*.md`, `*_TRANSLATION_*.md`), `api-test.js`,
+   `scripts/test-*.ts` (not runnable), and two personal backup JSONs committed at the root.
+2. **No tests**. Add Jest for `utils/` (dates, streaks, goal math) and the backup merge.
+3. **Screens are huge** (700–1300 lines), with copy-pasted modal/animation code and inline queries.
+   Extract a data layer (repositories/hooks) and shared modal primitives.
+4. Remaining hard-coded English: dev-only `NotificationTester`, readinglogs random-data alerts,
+   `BookSearchModal` (dead), `DataImportModal` validation details, Open Library error messages, home "Reading" label fallback.
+   Dates use `toLocaleDateString()` (device locale), not the app language.
+5. Notification permission is requested on first launch before onboarding (`app/index.tsx`), not at a contextual moment.
+6. Merge-import skips sessions whose book isn't in the backup file (e.g. a sessions-only export).
+7. Growth goal: `goalSettings.validateGrowthGoals` error `target_before_current` shows a generic message;
+   profile save recomputes the weekly increase from the old goal date even when it has passed.
+8. `initializeDatabase` version gating doesn't actually gate; schema init runs on every cold start.
+
+## Journey log
+
+- **2026-10-21: Session 1, bug sweep.** High-level read of the whole app, then fixed:
+  streaks broken west of UTC and dropping to 0 every morning; WeeklyStatsView longest-streak
+  ignoring gaps, UTC time-of-day buckets, and off-by-one week labels; daily goal growing past
+  its target forever (+1/week) and growing even when target == current (now linear and capped,
+  matching the chart, with catch-up for missed weeks, and applied before the home screen loads);
+  Books tab filter only searching the first 10 books; deleting from Books tab orphaning sessions;
+  progress not dropping when a session's pages were cleared or deleted; reading logger able to log
+  against a just-finished book; books added with 0 pages being stuck (page count is now editable);
+  backup merge overwriting unrelated books by id; profile save resetting the growth plan on a
+  name change; settings not refreshing; home header remounting every render; yearly goal counting
+  all-time books; notifications English-only and able to fire at night (quiet hours added);
+  many hard-coded English strings; missing TR key; 3 lint errors.

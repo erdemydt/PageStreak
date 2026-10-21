@@ -16,14 +16,16 @@ import BookCard from "../../../components/BookCard";
 import BookStatusModal, {
   BookStatus,
 } from "../../../components/BookStatusModal";
-import { EnhancedBook, execute, queryAll } from "../../../db/db";
+import { EnhancedBook, queryAll } from "../../../db/db";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
 import {
-  getBookReadingTime,
-  initializeReadingSessions,
-} from "../../../utils/readingProgress";
+  deleteBookWithSessions,
+  getStatusText,
+  updateBookStatus,
+} from "../../../utils/bookStatus";
+import { getBookReadingTime } from "../../../utils/readingProgress";
 
 type SortOption =
   | "date_added"
@@ -56,9 +58,7 @@ export default function MyBooksScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      initializeReadingSessions().then(() => {
-        loadBooks();
-      });
+      loadBooks();
     }, []),
   );
 
@@ -87,7 +87,7 @@ export default function MyBooksScreen() {
       setBooks(booksWithReadingTime);
       setFilteredBooks(booksWithReadingTime);
     } catch (e) {
-      setError("Failed to load books");
+      setError(t("booksPage.failedToLoad"));
       console.error("Load books error:", e);
     } finally {
       setLoading(false);
@@ -96,27 +96,20 @@ export default function MyBooksScreen() {
 
   const deleteBook = async (bookId: number, bookTitle: string) => {
     Alert.alert(
-      "Delete Book",
-      `Are you sure you want to delete "${bookTitle}"? This will also remove all reading session data for this book.`,
+      t("booksPage.alert.deleteTitle"),
+      t("booksPage.alert.deleteWithSessionsMessage", { title: bookTitle }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("booksPage.alert.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("booksPage.alert.delete"),
           style: "destructive",
           onPress: async () => {
             setLoading(true);
             try {
-              // Delete reading sessions first (foreign key constraint)
-              await execute("DELETE FROM reading_sessions WHERE book_id = ?", [
-                bookId,
-              ]);
-              // Delete the book
-              await execute("DELETE FROM enhanced_books WHERE id = ?", [
-                bookId,
-              ]);
+              await deleteBookWithSessions(bookId);
               await loadBooks();
             } catch (e) {
-              setError("Failed to delete book");
+              setError(t("booksPage.alert.failedDelete"));
               console.error("Delete book error:", e);
             } finally {
               setLoading(false);
@@ -133,48 +126,19 @@ export default function MyBooksScreen() {
     setError(null);
 
     try {
-      let dateField = "";
-      let dateValue = null;
-
-      // Set appropriate date fields based on status
-      if (newStatus === "currently_reading") {
-        dateField = ", date_started = ?";
-        dateValue = new Date().toISOString();
-      } else if (newStatus === "read") {
-        dateField = ", date_finished = ?";
-        dateValue = new Date().toISOString();
-      }
-
-      const query = `UPDATE enhanced_books SET reading_status = ?${dateField} WHERE id = ?`;
-      const params = dateValue
-        ? [newStatus, dateValue, selectedBook.id]
-        : [newStatus, selectedBook.id];
-      // remove finished date if switching back to currently_reading or want_to_read
-      if (newStatus !== "read") {
-        await execute(
-          "UPDATE enhanced_books SET date_finished = NULL WHERE id = ?",
-          [selectedBook.id],
-        );
-      }
-      await execute(query, params);
+      await updateBookStatus(selectedBook.id, newStatus);
       await loadBooks();
 
-      // Show success message
-      const statusText =
-        newStatus === "want_to_read"
-          ? "Want to Read"
-          : newStatus === "currently_reading"
-            ? "Currently Reading"
-            : "Read";
-
       Alert.alert(
-        "Status Updated",
-        `"${selectedBook.name}" has been marked as ${statusText}.`,
+        t("booksPage.alert.statusUpdated"),
+        t("booksPage.alert.bookStatusUpdated", {
+          statusText: getStatusText(t, newStatus),
+        }),
       );
     } catch (e) {
-      setError("Failed to update book status");
+      setError(t("booksPage.alert.failedUpdate"));
       console.error("Update status error:", e);
-      Alert.alert("Error", "Failed to update book status. Please try again.");
+      Alert.alert(t("error"), t("booksPage.alert.failedUpdate"));
     } finally {
       setLoading(false);
     }
@@ -491,9 +455,15 @@ export default function MyBooksScreen() {
       <View style={styles.listContainer}>
         <View style={styles.listHeader}>
           <Text style={styles.resultsText}>
-            {filteredBooks.length}{" "}
-            {filteredBooks.length === 1 ? "book" : "books"}
-            {searchQuery ? ` matching "${searchQuery}"` : ""}
+            {t(
+              filteredBooks.length === 1
+                ? "booksPage.empty.bookCountOne"
+                : "booksPage.empty.bookCountOther",
+              { count: filteredBooks.length },
+            )}
+            {searchQuery
+              ? ` ${t("booksPage.empty.matching", { query: searchQuery })}`
+              : ""}
           </Text>
         </View>
 
@@ -510,12 +480,14 @@ export default function MyBooksScreen() {
                 style={styles.emptyIconGlyph}
               />
               <Text style={styles.emptyTitle}>
-                {searchQuery ? "No matching books found" : "No books yet"}
+                {searchQuery
+                  ? t("booksPage.empty.noMatchingBooks")
+                  : t("booksPage.empty.noBooks")}
               </Text>
               <Text style={styles.emptySubtitle}>
                 {searchQuery
-                  ? "Try adjusting your search or filters"
-                  : "Start building your library by adding some books!"}
+                  ? t("booksPage.empty.tryAdjustingSearch")
+                  : t("booksPage.empty.startBuildingLibrary")}
               </Text>
             </View>
           }

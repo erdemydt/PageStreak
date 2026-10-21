@@ -6,6 +6,7 @@ import { EnhancedBook } from "../db/db";
 import { COLORS } from "../themes/colors";
 import { SPACING } from "../themes/spacing";
 import { getStatusColor, getStatusText } from "../utils/bookStatus";
+import { parseDbDate } from "../utils/dateUtils";
 import { getEnhancedBookProgress } from "../utils/readingProgress";
 
 interface BookCardProps {
@@ -86,8 +87,7 @@ export default function BookCard({
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return null;
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    return parseDbDate(dateString)?.toLocaleDateString() ?? dateString;
   };
 
   const getReadingProgress = () => {

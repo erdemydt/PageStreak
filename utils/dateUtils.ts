@@ -53,6 +53,65 @@ export const localeStringToDateString = (localeString: string): string => {
   }
 };
 
+const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const SQLITE_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/;
+
+/**
+ * Parses a YYYY-MM-DD string as local midnight.
+ * new Date('YYYY-MM-DD') parses as UTC midnight, which is the previous
+ * calendar day for anyone west of UTC.
+ */
+export const parseLocalDateString = (dateString: string): Date => {
+  const match = dateString.match(DATE_ONLY_PATTERN);
+  if (!match) {
+    return new Date(dateString);
+  }
+  const [, year, month, day] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day));
+};
+
+/**
+ * Parses any date value stored in the database:
+ * - 'YYYY-MM-DD' (session dates, some date_finished values) -> local midnight
+ * - 'YYYY-MM-DD HH:MM:SS' (SQLite CURRENT_TIMESTAMP / datetime('now')) -> UTC
+ * - ISO 8601 strings (written via toISOString()) -> as-is
+ * Returns null for empty or unparseable values.
+ */
+export const parseDbDate = (value?: string | null): Date | null => {
+  if (!value) return null;
+
+  if (DATE_ONLY_PATTERN.test(value)) {
+    return parseLocalDateString(value);
+  }
+
+  const sqliteMatch = value.match(SQLITE_TIMESTAMP_PATTERN);
+  if (sqliteMatch) {
+    const [, year, month, day, hours, minutes, seconds] = sqliteMatch;
+    return new Date(
+      Date.UTC(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hours),
+        Number(minutes),
+        Number(seconds),
+      ),
+    );
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+/**
+ * Returns the YYYY-MM-DD string `days` days away from the given YYYY-MM-DD string
+ */
+export const addDaysToDateString = (dateString: string, days: number): string => {
+  const date = parseLocalDateString(dateString);
+  date.setDate(date.getDate() + days);
+  return dateToLocalDateString(date);
+};
+
 /**
  * Checks if a date string (YYYY-MM-DD) represents today
  */

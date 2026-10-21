@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -19,10 +20,16 @@ import { EnhancedBook, execute, queryFirst } from "../../../db/db";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
-import { getStatusColor, getStatusText } from "../../../utils/bookStatus";
+import {
+  getStatusColor,
+  getStatusText,
+  updateBookStatus,
+} from "../../../utils/bookStatus";
+import { parseDbDate } from "../../../utils/dateUtils";
 import {
   getBookReadingTime,
   getEnhancedBookProgress,
+  syncBookCurrentPageFromSessions,
 } from "../../../utils/readingProgress";
 
 export default function BookDetailsScreen() {
@@ -35,6 +42,8 @@ export default function BookDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [isEditingPages, setIsEditingPages] = useState(false);
+  const [pagesInput, setPagesInput] = useState("");
   const [progressData, setProgressData] = useState<{
     pagesRead: number;
     percentage: number;
@@ -59,7 +68,7 @@ export default function BookDetailsScreen() {
       );
 
       if (!foundBook) {
-        setError("Book not found");
+        setError(t("components.bookDetailModal.bookNotFound"));
         setBook(null);
         return;
       }
@@ -91,8 +100,7 @@ export default function BookDetailsScreen() {
   );
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    return parseDbDate(dateString)?.toLocaleDateString() ?? dateString;
   };
 
   const formatReadingTime = (minutes: number) => {
@@ -155,47 +163,51 @@ export default function BookDetailsScreen() {
     if (!book) return;
 
     try {
-      let dateField = "";
-      let dateValue = null;
-
-      if (status === "currently_reading") {
-        dateField = ", date_started = ?";
-        dateValue = new Date().toISOString();
-      } else if (status === "read") {
-        dateField = ", date_finished = ?";
-        dateValue = new Date().toISOString();
-      }
-
-      const query = `UPDATE enhanced_books SET reading_status = ?${dateField} WHERE id = ?`;
-      const params = dateValue
-        ? [status, dateValue, book.id]
-        : [status, book.id];
-
-      if (status !== "read") {
-        await execute(
-          "UPDATE enhanced_books SET date_finished = NULL WHERE id = ?",
-          [book.id],
-        );
-      }
-
-      await execute(query, params);
+      await updateBookStatus(book.id, status);
       closeStatusModal();
       await loadData();
 
       Alert.alert(
         t("booksPage.alert.statusUpdated"),
         t("booksPage.alert.bookStatusUpdated", {
-          statusText:
-            status === "want_to_read"
-              ? t("components.bookCard.wantToRead")
-              : status === "currently_reading"
-                ? t("components.bookCard.currentlyReading")
-                : t("components.bookCard.read"),
+          statusText: getStatusText(t, status),
         }),
       );
     } catch (e) {
       console.error("Failed to update status:", e);
       Alert.alert(t("error"), t("booksPage.alert.failedUpdate"));
+    }
+  };
+
+  const startEditingPages = () => {
+    setPagesInput(book && book.page > 0 ? String(book.page) : "");
+    setIsEditingPages(true);
+  };
+
+  const savePageCount = async () => {
+    if (!book) return;
+
+    const newPageCount = Number(pagesInput);
+    if (!Number.isInteger(newPageCount) || newPageCount <= 0) {
+      Alert.alert(
+        t("error"),
+        t("components.bookDetailModal.invalidPageCount"),
+      );
+      return;
+    }
+
+    try {
+      await execute("UPDATE enhanced_books SET page = ? WHERE id = ?", [
+        newPageCount,
+        book.id,
+      ]);
+      // Re-derive current_page so it's capped by the new total
+      await syncBookCurrentPageFromSessions(book.id);
+      setIsEditingPages(false);
+      await loadData();
+    } catch (e) {
+      console.error("Failed to update page count:", e);
+      Alert.alert(t("error"), t("booksPage.failedToSave"));
     }
   };
 
@@ -210,7 +222,9 @@ export default function BookDetailsScreen() {
   if (!book) {
     return (
       <View style={styles.centerState}>
-        <Text style={styles.centerStateText}>{error || "Book not found"}</Text>
+        <Text style={styles.centerStateText}>
+          {error || t("components.bookDetailModal.bookNotFound")}
+        </Text>
       </View>
     );
   }
@@ -253,7 +267,9 @@ export default function BookDetailsScreen() {
                 <Text style={styles.statusText}>
                   {getStatusText(t, book.reading_status)}
                 </Text>
-                <Text style={styles.statusEdit}>Edit</Text>
+                <Text style={styles.statusEdit}>
+                  {t("components.bookDetailModal.edit")}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -284,14 +300,18 @@ export default function BookDetailsScreen() {
             style={styles.quickActionButton}
             onPress={() => router.push("/readinglogs")}
           >
-            <Text style={styles.quickActionText}>Logs</Text>
+            <Text style={styles.quickActionText}>
+              {t("components.bookDetailModal.logs")}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => router.push("/my-books")}
           >
-            <Text style={styles.quickActionText}>Library</Text>
+            <Text style={styles.quickActionText}>
+              {t("components.bookDetailModal.library")}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -304,7 +324,10 @@ export default function BookDetailsScreen() {
               <View style={styles.progressTopRow}>
                 <Text style={styles.progressValue}>{progress}%</Text>
                 <Text style={styles.progressSummary}>
-                  {progressData.pagesRead} / {book.page} pages
+                  {t("components.bookDetailModal.pagesOf", {
+                    pagesRead: progressData.pagesRead,
+                    totalPages: book.page,
+                  })}
                 </Text>
               </View>
               <View style={styles.progressTrack}>
@@ -322,10 +345,50 @@ export default function BookDetailsScreen() {
           </Text>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{book.page}</Text>
-              <Text style={styles.statLabel}>
-                {t("components.bookDetailModal.totalPages")}
-              </Text>
+              {isEditingPages ? (
+                <>
+                  <TextInput
+                    style={styles.pagesInput}
+                    value={pagesInput}
+                    onChangeText={setPagesInput}
+                    keyboardType="number-pad"
+                    placeholder={t(
+                      "components.bookDetailModal.pageCountPlaceholder",
+                    )}
+                    placeholderTextColor={COLORS.neutral[400]}
+                    autoFocus
+                    onSubmitEditing={savePageCount}
+                  />
+                  <View style={styles.pagesEditActions}>
+                    <TouchableOpacity onPress={() => setIsEditingPages(false)}>
+                      <Text style={styles.pagesEditCancel}>
+                        {t("components.bookDetailModal.cancel")}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={savePageCount}>
+                      <Text style={styles.pagesEditLink}>
+                        {t("components.bookDetailModal.save")}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.pagesValueRow}>
+                    <Text style={styles.statValue}>{book.page}</Text>
+                    <TouchableOpacity onPress={startEditingPages}>
+                      <Text style={styles.pagesEditLink}>
+                        {t("components.bookDetailModal.editPageCount")}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.statLabel}>
+                    {book.page > 0
+                      ? t("components.bookDetailModal.totalPages")
+                      : t("components.bookDetailModal.pageCountUnknown")}
+                  </Text>
+                </>
+              )}
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
@@ -614,6 +677,35 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     ...TYPE.meta,
+    color: COLORS.text.secondary,
+  },
+  pagesValueRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+  },
+  pagesInput: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.neutral[200],
+    paddingVertical: 2,
+    marginBottom: 6,
+  },
+  pagesEditActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: SPACING[3],
+  },
+  pagesEditLink: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.accent.strong,
+  },
+  pagesEditCancel: {
+    fontSize: 12,
+    fontWeight: "600",
     color: COLORS.text.secondary,
   },
   infoCard: {

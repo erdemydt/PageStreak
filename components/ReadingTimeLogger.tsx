@@ -87,10 +87,13 @@ export default function ReadingTimeLogger({
       );
       setCurrentlyReadingBooks(books);
 
-      // Auto-select the first book if there's only one
-      if (books.length === 1) {
-        setSelectedBook(books[0]);
-      }
+      // Refresh the selection from the fresh list: auto-select when there's only
+      // one book, and drop a selection that is no longer being read (e.g. a book
+      // finished in the previous session) so we never log time against it.
+      setSelectedBook((previous) => {
+        if (books.length === 1) return books[0];
+        return books.find((book) => book.id === previous?.id) ?? null;
+      });
     } catch (error) {
       console.error("Error loading currently reading books:", error);
     }
@@ -187,10 +190,19 @@ export default function ReadingTimeLogger({
       onClose();
 
       const successMessage = finishBook
-        ? `Successfully finished "${selectedBook.name}"! 🎉`
+        ? t("components.readingTimeLogger.finishedBook", {
+            bookName: selectedBook.name,
+          })
         : pagesRead
-          ? `Successfully logged ${minutes} minutes and ${pagesRead} pages for "${selectedBook.name}"!`
-          : `Successfully logged ${minutes} minutes for "${selectedBook.name}"!`;
+          ? t("components.readingTimeLogger.loggedMinutesAndPages", {
+              minutes,
+              pages: pagesRead,
+              bookName: selectedBook.name,
+            })
+          : t("components.readingTimeLogger.loggedMinutes", {
+              minutes,
+              bookName: selectedBook.name,
+            });
 
       Alert.alert(t("components.readingTimeLogger.success"), successMessage);
     } catch (error) {

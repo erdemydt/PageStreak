@@ -1,5 +1,5 @@
 import { Link, Stack, useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -21,6 +21,11 @@ import { EnhancedBook, execute, queryAll } from "../../../db/db";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
+import {
+  deleteBookWithSessions,
+  getStatusText,
+  updateBookStatus,
+} from "../../../utils/bookStatus";
 import { getBookReadingTime } from "../../../utils/readingProgress";
 type BooksearchProps = {
   name: string;
@@ -213,18 +218,8 @@ export default function HomeScreen() {
     useState<BookStatus>("currently_reading");
   const [filterStatus, setFilterStatus] = useState<BookStatus | "all">("all");
 
-  useEffect(() => {
-    // Database is already initialized by the main app entry point
-    loadBooks();
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadBooks();
-    }, []),
-  );
   const { t } = useTranslation();
-  const loadBooks = async () => {
+  const loadBooks = useCallback(async () => {
     setLoading(true);
     try {
       // Get total counts first
@@ -252,17 +247,25 @@ export default function HomeScreen() {
       });
       setStatusCounts(counts);
 
-      // Get books with default sorting (currently reading -> want to read -> read)
-      const res = await queryAll<EnhancedBook>(`
-        SELECT * FROM enhanced_books 
-        ORDER BY 
-          CASE WHEN reading_status = 'currently_reading' THEN 1 
-               WHEN reading_status = 'want_to_read' THEN 2 
-               WHEN reading_status = 'read' THEN 3 
+      // Get a preview of books for the active filter, with default sorting
+      // (currently reading -> want to read -> read). Filtering happens in SQL so
+      // the preview isn't limited to whichever statuses made the first 10 rows.
+      const whereClause =
+        filterStatus === "all" ? "" : "WHERE reading_status = ?";
+      const res = await queryAll<EnhancedBook>(
+        `
+        SELECT * FROM enhanced_books
+        ${whereClause}
+        ORDER BY
+          CASE WHEN reading_status = 'currently_reading' THEN 1
+               WHEN reading_status = 'want_to_read' THEN 2
+               WHEN reading_status = 'read' THEN 3
                ELSE 4 END,
           date_added DESC
         LIMIT 10
-      `);
+      `,
+        filterStatus === "all" ? [] : [filterStatus],
+      );
 
       // Fetch reading time for each book (only for preview)
       const booksWithReadingTime = await Promise.all(
@@ -279,14 +282,13 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus, t]);
 
-  const getFilteredBooks = () => {
-    if (filterStatus === "all") {
-      return books;
-    }
-    return books.filter((book) => book.reading_status === filterStatus);
-  };
+  useFocusEffect(
+    useCallback(() => {
+      loadBooks();
+    }, [loadBooks]),
+  );
 
   const getStatusCount = (status: BookStatus) => {
     return statusCounts[status] || 0;
@@ -346,7 +348,7 @@ export default function HomeScreen() {
   const deleteBook = async (bookId: number, bookTitle: string) => {
     Alert.alert(
       t("booksPage.alert.deleteTitle"),
-      t("booksPage.alert.deleteMessage", { title: bookTitle }),
+      t("booksPage.alert.deleteWithSessionsMessage", { title: bookTitle }),
       [
         { text: t("booksPage.alert.cancel"), style: "cancel" },
         {
@@ -356,12 +358,10 @@ export default function HomeScreen() {
             setLoading(true);
             setError(null);
             try {
-              await execute("DELETE FROM enhanced_books WHERE id = ?", [
-                bookId,
-              ]);
+              await deleteBookWithSessions(bookId);
               await loadBooks();
             } catch (e) {
-              setError("Failed to delete book");
+              setError(t("booksPage.alert.failedDelete"));
               console.error("Delete book error:", e);
             } finally {
               setLoading(false);
@@ -454,48 +454,19 @@ export default function HomeScreen() {
     setError(null);
 
     try {
-      let dateField = "";
-      let dateValue = null;
-
-      // Set appropriate date fields based on status
-      if (newStatus === "currently_reading") {
-        dateField = ", date_started = ?";
-        dateValue = new Date().toISOString();
-      } else if (newStatus === "read") {
-        dateField = ", date_finished = ?";
-        dateValue = new Date().toISOString();
-      }
-
-      const query = `UPDATE enhanced_books SET reading_status = ?${dateField} WHERE id = ?`;
-      const params = dateValue
-        ? [newStatus, dateValue, selectedBook.id]
-        : [newStatus, selectedBook.id];
-      // remove finished date if switching back to currently_reading or want_to_read
-      if (newStatus !== "read") {
-        await execute(
-          "UPDATE enhanced_books SET date_finished = NULL WHERE id = ?",
-          [selectedBook.id],
-        );
-      }
-      await execute(query, params);
+      await updateBookStatus(selectedBook.id, newStatus);
       await loadBooks();
 
-      // Show success message
-      const statusText =
-        newStatus === "want_to_read"
-          ? "Want to Read"
-          : newStatus === "currently_reading"
-            ? "Currently Reading"
-            : "Read";
-
       Alert.alert(
-        "Status Updated",
-        `"${selectedBook.name}" has been marked as ${statusText}.`,
+        t("booksPage.alert.statusUpdated"),
+        t("booksPage.alert.bookStatusUpdated", {
+          statusText: getStatusText(t, newStatus),
+        }),
       );
     } catch (e) {
-      setError("Failed to update book status");
+      setError(t("booksPage.alert.failedUpdate"));
       console.error("Update status error:", e);
-      Alert.alert("Error", "Failed to update book status. Please try again.");
+      Alert.alert(t("error"), t("booksPage.alert.failedUpdate"));
     } finally {
       setLoading(false);
     }
@@ -523,7 +494,7 @@ export default function HomeScreen() {
     />
   );
 
-  const filteredBooks = getFilteredBooks();
+  const filteredBooks = books;
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
@@ -703,7 +674,7 @@ export default function HomeScreen() {
                     {filterStatus === "all"
                       ? t("booksPage.empty.noBooks")
                       : t("booksPage.empty.noFilteredBooks", {
-                          status: filterStatus.replace("_", " "),
+                          status: getStatusText(t, filterStatus),
                         })}
                   </Text>
                   <Text style={styles.emptySubtitle}>

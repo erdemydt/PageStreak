@@ -21,6 +21,7 @@ const resources = {
         noBooksYet: "No books yet",
         startDiscovering: "Start by discovering and adding books!",
         discoverBooks: "🔍 Discover Books",
+        streakShort: "{{count}}d streak",
       },
 
       components: {
@@ -101,6 +102,9 @@ const resources = {
           success: "Success! 🎉",
           loggedMinutes:
             'Logged {{minutes}} minutes of reading for "{{bookName}}"',
+          loggedMinutesAndPages:
+            'Logged {{minutes}} minutes and {{pages}} pages for "{{bookName}}"',
+          finishedBook: 'Finished "{{bookName}}"! 🎉',
           error: "Error",
           failedToLog: "Failed to log reading time. Please try again.",
         },
@@ -224,6 +228,10 @@ const resources = {
           totalSessions: "Total Sessions",
           topBookThisWeek: "Top Book This Week",
           readingTimeDistribution: "Reading Time by Hour",
+          timeMorning: "Morning (6-12)",
+          timeAfternoon: "Afternoon (12-17)",
+          timeEvening: "Evening (17-21)",
+          timeNight: "Night (21-6)",
           insights: "Weekly Insights",
           weeklyGoalAchieved:
             "🎉 Congratulations! You achieved your weekly reading goal!",
@@ -296,6 +304,17 @@ const resources = {
           minute: "minute",
           hours: "hours",
           hour: "hour",
+          edit: "Edit",
+          logs: "Logs",
+          library: "Library",
+          bookNotFound: "Book not found",
+          editPageCount: "Edit",
+          pageCountUnknown: "Page count unknown. Tap Edit to set it.",
+          pageCountPlaceholder: "Total pages",
+          save: "Save",
+          cancel: "Cancel",
+          invalidPageCount: "Please enter a valid page count.",
+          pagesOf: "{{pagesRead}} / {{totalPages}} pages",
         },
       },
 
@@ -327,6 +346,12 @@ const resources = {
           searchOrAdd: "Search for books online or add them manually!",
           noFilteredBooks: "No books matching the filter",
           tryChangingFilter: "Try changing the filter or add some books!",
+          bookCountOne: "{{count}} book",
+          bookCountOther: "{{count}} books",
+          matching: 'matching "{{query}}"',
+          noMatchingBooks: "No matching books found",
+          tryAdjustingSearch: "Try adjusting your search or filters",
+          startBuildingLibrary: "Start building your library by adding some books!",
         },
         sort: {
           dateAdded: "Date Added",
@@ -393,6 +418,9 @@ const resources = {
           statusUpdated: "Status Updated",
           bookStatusUpdated: "Book status has been updated to {{statusText}}.",
           failedUpdate: "Failed to update book status. Please try again.",
+          deleteWithSessionsMessage:
+            'Are you sure you want to delete "{{title}}"? This will also remove all reading session data for this book.',
+          failedDelete: "Failed to delete book",
         },
       },
       error: "Error",
@@ -411,6 +439,9 @@ const resources = {
         account: "Account",
         logout: "Log Out",
         logoutDescription: "Clear all data and start fresh",
+        logoutConfirmMessage:
+          "Are you sure you want to log out? This will delete all your books and reading progress. This action cannot be undone.",
+        logoutFailed: "Failed to log out. Please try again.",
         madeWithLove: "Made with ❤️ for book lovers",
         notifications: "Notifications",
         notificationSettings: "Notification Settings",
@@ -472,6 +503,11 @@ const resources = {
           defaultTitle: "Time to read! 📚",
           defaultMessage:
             "You haven't reached your daily reading goal yet. Keep your streak going!",
+          timeMinute: "{{count}} minute",
+          timeMinutes: "{{count}} minutes",
+          timeHour: "{{count}} hour",
+          timeHours: "{{count}} hours",
+          timeHoursMinutes: "{{hours}}h {{minutes}}m",
         },
         error: "Error",
         failedToUpdateNotificationSettings:
@@ -737,6 +773,13 @@ const resources = {
             "Target goal must be higher than your current reading time",
           dateInPast: "Target date cannot be in the past",
           saveFailed: "Failed to save your preferences. Please try again.",
+          dateTooFar: "Target date cannot be more than 5 years in the future",
+        },
+        allSet: {
+          title: "You're all set to:",
+          trackProgress: "Track your reading progress",
+          achieveGoal: "Achieve your yearly goal",
+          viewStats: "View detailed statistics",
         },
         percentageClassification: {
           minimal: "Minimal",
@@ -907,6 +950,7 @@ const resources = {
         noBooksYet: "Henüz kitap yok",
         startDiscovering: "Kitap keşfetmeye ve eklemeye başlayın!",
         discoverBooks: "🔍 Kitap Keşfet",
+        streakShort: "{{count}} gün seri",
       },
 
       components: {
@@ -986,6 +1030,9 @@ const resources = {
           success: "Başarılı! 🎉",
           loggedMinutes:
             '"{{bookName}}" için {{minutes}} dakika okuma süresi kaydedildi',
+          loggedMinutesAndPages:
+            '"{{bookName}}" için {{minutes}} dakika ve {{pages}} sayfa kaydedildi',
+          finishedBook: '"{{bookName}}" bitirildi! 🎉',
           error: "Hata",
           failedToLog: "Okuma süresi kaydedilemedi. Lütfen tekrar deneyin.",
         },
@@ -1111,6 +1158,10 @@ const resources = {
           totalSessions: "Toplam Seans",
           topBookThisWeek: "Bu Haftanın En Çok Okunan Kitabı",
           readingTimeDistribution: "Saate Göre Okuma Dağılımı",
+          timeMorning: "Sabah (6-12)",
+          timeAfternoon: "Öğleden Sonra (12-17)",
+          timeEvening: "Akşam (17-21)",
+          timeNight: "Gece (21-6)",
           insights: "Haftalık İçgörüler",
           weeklyGoalAchieved:
             "🎉 Tebrikler! Haftalık okuma hedefinizi başardınız!",
@@ -1183,6 +1234,17 @@ const resources = {
           minute: "dakika",
           hours: "saat",
           hour: "saat",
+          edit: "Düzenle",
+          logs: "Kayıtlar",
+          library: "Kütüphane",
+          bookNotFound: "Kitap bulunamadı",
+          editPageCount: "Düzenle",
+          pageCountUnknown: "Sayfa sayısı bilinmiyor. Ayarlamak için Düzenle'ye dokunun.",
+          pageCountPlaceholder: "Toplam sayfa",
+          save: "Kaydet",
+          cancel: "İptal",
+          invalidPageCount: "Lütfen geçerli bir sayfa sayısı girin.",
+          pagesOf: "{{pagesRead}} / {{totalPages}} sayfa",
         },
       },
 
@@ -1214,6 +1276,12 @@ const resources = {
           searchOrAdd: "Kitapları çevrimiçi arayın veya manuel olarak ekleyin!",
           noFilteredBooks: "Filtreye uyan kitap yok",
           tryChangingFilter: "Filtreyi değiştirin veya bazı kitaplar ekleyin!",
+          bookCountOne: "{{count}} kitap",
+          bookCountOther: "{{count}} kitap",
+          matching: '"{{query}}" ile eşleşen',
+          noMatchingBooks: "Eşleşen kitap bulunamadı",
+          tryAdjustingSearch: "Aramanızı veya filtrelerinizi değiştirmeyi deneyin",
+          startBuildingLibrary: "Kitap ekleyerek kütüphanenizi oluşturmaya başlayın!",
         },
         sort: {
           dateAdded: "Eklenme Tarihi",
@@ -1233,6 +1301,7 @@ const resources = {
           title: "Başlık",
           author: "Yazar",
           searchBtn: "Ara",
+          noResults: "Sonuç Bulunamadı",
           searching: "Aranıyor...",
           searchTitle: "🔍 Yeni Kitaplar Keşfedin",
           searchSubtitle: "Open Library'den milyonlarca kitabı arayın",
@@ -1281,6 +1350,9 @@ const resources = {
           statusUpdated: "Durum Güncellendi",
           bookStatusUpdated: "Kitap durumu {{statusText}} olarak güncellendi.",
           failedUpdate: "Kitap durumu güncellenemedi. Lütfen tekrar deneyin.",
+          deleteWithSessionsMessage:
+            '"{{title}}" kitabını silmek istediğinizden emin misiniz? Bu kitaba ait tüm okuma seansları da silinecek.',
+          failedDelete: "Kitap silinemedi",
         },
       },
       error: "Hata",
@@ -1299,6 +1371,9 @@ const resources = {
         account: "Hesap",
         logout: "Çıkış Yap",
         logoutDescription: "Tüm verileri sil ve sıfırdan başla",
+        logoutConfirmMessage:
+          "Çıkış yapmak istediğinizden emin misiniz? Tüm kitaplarınız ve okuma ilerlemeniz silinecek. Bu işlem geri alınamaz.",
+        logoutFailed: "Çıkış yapılamadı. Lütfen tekrar deneyin.",
         madeWithLove: "Kitap severler için ❤️ ile yapıldı",
         notifications: "Bildirimler",
         notificationSettings: "Bildirim Ayarları",
@@ -1360,6 +1435,11 @@ const resources = {
           defaultTitle: "Okuma zamanı! 📚",
           defaultMessage:
             "Henüz günlük okuma hedefinize ulaşamadınız. Serinizi sürdürün!",
+          timeMinute: "{{count}} dakika",
+          timeMinutes: "{{count}} dakika",
+          timeHour: "{{count}} saat",
+          timeHours: "{{count}} saat",
+          timeHoursMinutes: "{{hours}} sa {{minutes}} dk",
         },
         error: "Hata",
         failedToUpdateNotificationSettings: "Bildirim ayarları güncellenemedi",
@@ -1621,6 +1701,13 @@ const resources = {
           targetGoalTooLow: "Hedef, mevcut okuma sürenizden yüksek olmalıdır",
           dateInPast: "Hedef tarih geçmişte olamaz",
           saveFailed: "Tercihleriniz kaydedilemedi. Lütfen tekrar deneyin.",
+          dateTooFar: "Hedef tarih 5 yıldan daha ileri olamaz",
+        },
+        allSet: {
+          title: "Artık hazırsınız:",
+          trackProgress: "Okuma ilerlemenizi takip edin",
+          achieveGoal: "Yıllık hedefinize ulaşın",
+          viewStats: "Ayrıntılı istatistikleri görün",
         },
         percentageClassification: {
           minimal: "Minimal",

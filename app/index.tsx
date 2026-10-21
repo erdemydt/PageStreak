@@ -10,6 +10,9 @@ import {
 } from "../db/db";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
+import { parseDbDate } from "../utils/dateUtils";
+
+const MS_PER_WEEK = 1000 * 60 * 60 * 24 * 7;
 
 type UserPreferences = {
   id: number;
@@ -21,9 +24,9 @@ type UserPreferences = {
   weekly_reading_goal?: number;
   initial_reading_rate_minutes_per_day?: number;
   end_reading_rate_goal_minutes_per_day?: number;
-  end_reading_rate_goal_date?: Date;
+  end_reading_rate_goal_date?: string;
   current_reading_rate_minutes_per_day?: number;
-  current_reading_rate_last_updated?: Date;
+  current_reading_rate_last_updated?: string;
   weekly_reading_rate_increase_minutes?: number;
   weekly_reading_rate_increase_minutes_percentage?: number;
 };
@@ -83,11 +86,12 @@ export default function Index() {
         );
       }
 
+      // Grow the daily goal before navigating, so the home screen shows the
+      // up-to-date goal on first render
+      await initiateWeeklyProgressLogic();
+
       // Then check user setup and handle navigation
       await checkUserSetup();
-
-      // Initialize weekly progress logic after database is ready
-      await initiateWeeklyProgressLogic();
     } catch (error) {
       console.error("❌ Failed to initialize app database:", error);
       // If database initialization fails, still try to show intro
@@ -97,70 +101,59 @@ export default function Index() {
     }
   };
 
+  /**
+   * Grows the daily reading goal toward the target, linearly by
+   * weekly_reading_rate_increase_minutes per elapsed week (the same model the
+   * Growth Journey chart projects). Catches up if several weeks passed since
+   * the last launch and never overshoots the target.
+   */
   const initiateWeeklyProgressLogic = async () => {
     try {
       const info = await getUserGoalInformation();
       if (!info) return;
 
-      const dateToCheck = info?.current_reading_rate_last_updated
-        ? new Date(info.current_reading_rate_last_updated)
-        : new Date();
-      const weeksPassed = getWeeksPassed(dateToCheck);
+      const lastUpdated = parseDbDate(info.current_reading_rate_last_updated);
+      if (!lastUpdated) {
+        // No usable baseline yet; start counting weeks from now
+        await execute(
+          "UPDATE user_preferences SET current_reading_rate_last_updated = ? WHERE id = 1",
+          [new Date().toISOString()],
+        );
+        return;
+      }
+
+      const weeksPassed = getWeeksPassed(lastUpdated);
+      const goalDate = parseDbDate(info.end_reading_rate_goal_date);
+      const currentRate = info.current_reading_rate_minutes_per_day;
+      const targetRate = info.end_reading_rate_goal_minutes_per_day;
+      const weeklyIncrease = info.weekly_reading_rate_increase_minutes;
 
       if (
-        weeksPassed > 0 &&
-        info.end_reading_rate_goal_date &&
-        new Date(info.end_reading_rate_goal_date) > new Date()
+        weeksPassed <= 0 ||
+        !goalDate ||
+        goalDate <= new Date() ||
+        weeklyIncrease <= 0 ||
+        currentRate >= targetRate
       ) {
-        const lastProgress = await getLastWeeklyProgress();
-
-        if (lastProgress) {
-          // Update reading rate using percentage increase
-          let newReadingRate =
-            info.current_reading_rate_minutes_per_day *
-            (1 + info.weekly_reading_rate_increase_minutes_percentage / 100);
-          newReadingRate = Math.min(
-            newReadingRate,
-            info.end_reading_rate_goal_minutes_per_day,
-          );
-          newReadingRate = Math.max(
-            newReadingRate,
-            info.current_reading_rate_minutes_per_day + 1,
-          ); // Ensure it doesn't drop below initial + 1
-          const newReadingRateInteger = Math.round(newReadingRate);
-
-          await execute(
-            "UPDATE user_preferences SET current_reading_rate_minutes_per_day = ?, current_reading_rate_last_updated = ? WHERE id = 1",
-            [newReadingRateInteger, new Date().toISOString()],
-          );
-          console.log("✅ Updated reading rate based on percentage increase");
-
-          // Update weekly progress with new achieved reading minutes
-          const newAchivedMinutes = newReadingRate;
-          await execute(
-            "UPDATE weekly_progress SET weeks_passed = ?, achived_reading_minutes = ? WHERE id = ?",
-            [weeksPassed, newAchivedMinutes, lastProgress.id],
-          );
-          console.log("✅ Weekly progress updated");
-        } else {
-          // No previous record, insert a full new one using info
-          const initialReadingRate = info.initial_reading_rate_minutes_per_day;
-          const achivedReadingMinutes = initialReadingRate;
-
-          await execute(
-            `
-            INSERT INTO weekly_progress (weeks_passed, target_reading_minutes, achived_reading_minutes)
-            VALUES (?, ?, ?)
-          `,
-            [
-              0,
-              info.end_reading_rate_goal_minutes_per_day,
-              Math.round(achivedReadingMinutes),
-            ],
-          );
-          console.log("✅ Weekly progress initialized");
-        }
+        return;
       }
+
+      const newRate = Math.min(
+        targetRate,
+        Math.round(currentRate + weeklyIncrease * weeksPassed),
+      );
+      // Advance the baseline by whole weeks so a partial week isn't lost
+      const newLastUpdated = new Date(
+        lastUpdated.getTime() + weeksPassed * MS_PER_WEEK,
+      );
+
+      await execute(
+        "UPDATE user_preferences SET current_reading_rate_minutes_per_day = ?, current_reading_rate_last_updated = ? WHERE id = 1",
+        [newRate, newLastUpdated.toISOString()],
+      );
+      console.log(
+        `✅ Daily goal grew from ${currentRate} to ${newRate} minutes (${weeksPassed} week(s) passed)`,
+      );
     } catch (error) {
       console.error("❌ Failed to initialize weekly progress logic:", error);
     }
@@ -190,21 +183,8 @@ export default function Index() {
   };
 
   const getWeeksPassed = (startDate: Date) => {
-    const now = new Date();
-    const diffInMs = now.getTime() - startDate.getTime();
-    return Math.floor(diffInMs / (1000 * 60 * 60 * 24 * 7));
-  };
-
-  const getLastWeeklyProgress = async () => {
-    try {
-      const progress = await queryFirst(
-        "SELECT * FROM weekly_progress ORDER BY weeks_passed DESC LIMIT 1",
-      );
-      return progress || null;
-    } catch (error) {
-      console.error("❌ Error fetching last weekly progress:", error);
-      return null;
-    }
+    const diffInMs = Date.now() - startDate.getTime();
+    return Math.floor(diffInMs / MS_PER_WEEK);
   };
 
   const getUserGoalInformation = async () => {
@@ -225,10 +205,9 @@ export default function Index() {
           user.current_reading_rate_minutes_per_day || 30,
         current_reading_rate_last_updated:
           user.current_reading_rate_last_updated || null,
+        // 0 is meaningful here (target == current): don't replace it with a default
         weekly_reading_rate_increase_minutes:
-          user.weekly_reading_rate_increase_minutes || 1,
-        weekly_reading_rate_increase_minutes_percentage:
-          user.weekly_reading_rate_increase_minutes_percentage || 3.33,
+          user.weekly_reading_rate_increase_minutes ?? 0,
       };
     } catch (error) {
       console.error("❌ Error fetching user goal information:", error);

@@ -196,34 +196,30 @@ export default function IntroScreen() {
     try {
       // Final validation before saving
       if (!targetDailyGoal.trim()) {
-        setError("Please enter your target daily reading goal");
+        setError(t("intro.validation.targetGoalRequired"));
         return;
       }
       if (isNaN(Number(targetDailyGoal))) {
-        setError("Please enter a valid number of minutes");
+        setError(t("intro.validation.targetGoalInvalid"));
         return;
       }
       const targetGoalNum = Number(targetDailyGoal);
       if (targetGoalNum <= 0) {
-        setError("Target daily goal must be greater than 0 minutes");
+        setError(t("intro.validation.targetGoalInvalid"));
         return;
       }
       if (targetGoalNum > 1440) {
-        setError("Target daily goal cannot exceed 24 hours (1440 minutes)");
+        setError(t("intro.validation.targetGoalTooHigh"));
         return;
       }
       if (targetGoalNum > 480) {
-        setError(
-          "Target goal seems unrealistic. Please enter a goal less than 8 hours.",
-        );
+        setError(t("intro.validation.targetGoalUnrealistic"));
         return;
       }
 
       const currentGoalNum = Number(dailyReadingGoal);
       if (targetGoalNum < currentGoalNum) {
-        setError(
-          "Your target goal should be equal to or greater than your current reading time",
-        );
+        setError(t("intro.validation.targetGoalTooLow"));
         return;
       }
 
@@ -234,7 +230,7 @@ export default function IntroScreen() {
       selectedDate.setHours(0, 0, 0, 0);
 
       if (selectedDate < today) {
-        setError("Goal date cannot be in the past");
+        setError(t("intro.validation.dateInPast"));
         return;
       }
 
@@ -243,7 +239,7 @@ export default function IntroScreen() {
       fiveYearsFromNow.setFullYear(fiveYearsFromNow.getFullYear() + 5);
 
       if (selectedDate > fiveYearsFromNow) {
-        setError("Goal date cannot be more than 5 years in the future");
+        setError(t("intro.validation.dateTooFar"));
         return;
       }
 
@@ -283,7 +279,7 @@ export default function IntroScreen() {
           end_reading_rate_goal_date, current_reading_rate_minutes_per_day,
           current_reading_rate_last_updated, weekly_reading_rate_increase_minutes,
           weekly_reading_rate_increase_minutes_percentage
-        ) VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
+        ) VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           username.trim(),
           Number(yearlyGoal),
@@ -293,6 +289,7 @@ export default function IntroScreen() {
           endReadingRateGoalMinutesPerDay,
           endGoalDate,
           initialReadingRateMinutesPerDay, // current rate starts at initial rate
+          new Date().toISOString(), // current_reading_rate_last_updated
           weeklyReadingRateIncreaseMinutes,
           weeklyReadingRateIncreasePercentage,
         ],
@@ -311,11 +308,7 @@ export default function IntroScreen() {
       router.replace("/(tabs)/(home)");
     } catch (e) {
       console.error("Error saving preferences:", e);
-      if (e instanceof Error) {
-        setError(`Failed to save preferences: ${e.message}`);
-      } else {
-        setError("Failed to save your preferences. Please try again.");
-      }
+      setError(t("intro.validation.saveFailed"));
     } finally {
       setLoading(false);
     }
@@ -855,24 +848,26 @@ export default function IntroScreen() {
 
           {currentStep === 5 && (
             <View style={styles.featuresContainer}>
-              <Text style={styles.featuresTitle}>You're all set to:</Text>
+              <Text style={styles.featuresTitle}>
+                {t("intro.allSet.title")}
+              </Text>
               <View style={styles.featuresList}>
                 <View style={styles.featureItem}>
                   <Text style={styles.featureEmoji}>📖</Text>
                   <Text style={styles.featureText}>
-                    Track your reading progress
+                    {t("intro.allSet.trackProgress")}
                   </Text>
                 </View>
                 <View style={styles.featureItem}>
                   <Text style={styles.featureEmoji}>🎯</Text>
                   <Text style={styles.featureText}>
-                    Achieve your yearly goal
+                    {t("intro.allSet.achieveGoal")}
                   </Text>
                 </View>
                 <View style={styles.featureItem}>
                   <Text style={styles.featureEmoji}>📊</Text>
                   <Text style={styles.featureText}>
-                    View detailed statistics
+                    {t("intro.allSet.viewStats")}
                   </Text>
                 </View>
               </View>

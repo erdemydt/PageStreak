@@ -2,8 +2,29 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { AppUsageTracking, checkNotificationDatabaseIntegrity, execute, NotificationPreferences, queryFirst, repairNotificationDatabase } from '../db/db';
+import i18n from '../i18n';
 import { dateToLocalDateString, getTodayDateString } from '../utils/dateUtils';
 import { isDevModeEnabled } from '../utils/devMode';
+
+// Reminders never fire during quiet hours; they're pushed to QUIET_HOURS_END instead
+const QUIET_HOURS_START = 22;
+const QUIET_HOURS_END = 9;
+
+/**
+ * Moves a trigger time that falls in quiet hours to the next QUIET_HOURS_END
+ */
+const adjustForQuietHours = (triggerTime: Date): Date => {
+  const hour = triggerTime.getHours();
+  if (hour >= QUIET_HOURS_END && hour < QUIET_HOURS_START) {
+    return triggerTime;
+  }
+  const adjusted = new Date(triggerTime);
+  if (hour >= QUIET_HOURS_START) {
+    adjusted.setDate(adjusted.getDate() + 1);
+  }
+  adjusted.setHours(QUIET_HOURS_END, 0, 0, 0);
+  return adjusted;
+};
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -342,17 +363,20 @@ export class NotificationService {
         triggerTime.setMinutes(triggerTime.getMinutes() + 1);
         console.log(`🔧 [DEV MODE] Scheduling notification in 1 minute for testing`);
       } else {
-        // In production: use hours from preferences
-        triggerSeconds = prefs.daily_reminder_hours_after_last_open * 3600;
+        // In production: use hours from preferences, outside quiet hours
         triggerTime.setHours(triggerTime.getHours() + prefs.daily_reminder_hours_after_last_open);
+        triggerTime = adjustForQuietHours(triggerTime);
+        triggerSeconds = Math.max(60, Math.round((triggerTime.getTime() - Date.now()) / 1000));
       }
 
       // Schedule the notification
-      const enhancedMessage = await this.generateNotificationMessage(prefs.daily_reminder_body);
-      
+      const enhancedMessage = await this.generateNotificationMessage(
+        dateToLocalDateString(triggerTime) === getTodayDateString()
+      );
+
       this.notificationIdentifier = await Notifications.scheduleNotificationAsync({
         content: {
-          title: prefs.daily_reminder_title,
+          title: i18n.t('settings.notificationMessages.defaultTitle'),
           body: enhancedMessage,
           sound: 'default',
           data: {
@@ -500,18 +524,22 @@ export class NotificationService {
         } else {
           // Not enough time has passed, schedule for remaining time
           const remainingHours = targetHours - hoursSinceLastOpen;
-          triggerSeconds = remainingHours * 3600;
-          triggerTime.setHours(triggerTime.getHours() + remainingHours);
+          triggerTime = new Date(Date.now() + remainingHours * 3600 * 1000);
           console.log(`📱 ${hoursSinceLastOpen.toFixed(2)} hours have passed since last open. Scheduling notification in ${remainingHours.toFixed(2)} more hours.`);
         }
+
+        triggerTime = adjustForQuietHours(triggerTime);
+        triggerSeconds = Math.max(60, Math.round((triggerTime.getTime() - Date.now()) / 1000));
       }
 
       // Schedule the notification
-      const enhancedMessage = await this.generateNotificationMessage(prefs.daily_reminder_body);
-      
+      const enhancedMessage = await this.generateNotificationMessage(
+        dateToLocalDateString(triggerTime) === getTodayDateString()
+      );
+
       this.notificationIdentifier = await Notifications.scheduleNotificationAsync({
         content: {
-          title: prefs.daily_reminder_title,
+          title: i18n.t('settings.notificationMessages.defaultTitle'),
           body: enhancedMessage,
           sound: 'default',
           data: {
@@ -660,27 +688,11 @@ export class NotificationService {
       const minutesRead = todayStats?.total_minutes || 0;
       const remainingMinutes = Math.max(0, dailyGoal - minutesRead);
 
-      // Format remaining time
-      let formattedTime = '';
-      if (remainingMinutes === 0) {
-        formattedTime = '0 minutes';
-      } else if (remainingMinutes < 60) {
-        formattedTime = `${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`;
-      } else {
-        const hours = Math.floor(remainingMinutes / 60);
-        const minutes = remainingMinutes % 60;
-        if (minutes === 0) {
-          formattedTime = `${hours} hour${hours !== 1 ? 's' : ''}`;
-        } else {
-          formattedTime = `${hours}h ${minutes}m`;
-        }
-      }
-
       return {
         remainingMinutes,
         dailyGoal,
         minutesRead,
-        formattedTime
+        formattedTime: this.formatDuration(remainingMinutes)
       };
     } catch (error) {
       console.error('❌ Error getting remaining time to goal:', error);
@@ -688,23 +700,48 @@ export class NotificationService {
         remainingMinutes: 30,
         dailyGoal: 30,
         minutesRead: 0,
-        formattedTime: '30 minutes'
+        formattedTime: this.formatDuration(30)
       };
     }
   }
 
   /**
-   * Generate notification message with remaining time to goal
+   * Localized duration, e.g. "45 minutes" or "1h 30m"
    */
-  async generateNotificationMessage(baseMessage: string): Promise<string> {
+  private formatDuration(totalMinutes: number): string {
+    const key = 'settings.notificationMessages';
+    if (totalMinutes < 60) {
+      return i18n.t(totalMinutes === 1 ? `${key}.timeMinute` : `${key}.timeMinutes`, { count: totalMinutes });
+    }
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (minutes === 0) {
+      return i18n.t(hours === 1 ? `${key}.timeHour` : `${key}.timeHours`, { count: hours });
+    }
+    return i18n.t(`${key}.timeHoursMinutes`, { hours, minutes });
+  }
+
+  /**
+   * Generate a localized notification message with remaining time to goal.
+   * When the reminder fires on a later day (pushed past quiet hours), that
+   * day's goal is untouched, so the full goal is what remains.
+   */
+  async generateNotificationMessage(firesToday: boolean = true): Promise<string> {
+    const key = 'settings.notificationMessages';
+    const baseMessage = i18n.t(`${key}.defaultMessage`);
     try {
       const goalStatus = await this.getRemainingTimeToGoal();
-      
-      if (goalStatus.remainingMinutes === 0) {
-        return 'Congratulations! You\'ve already reached your daily reading goal! 🎉';
+      const remainingMinutes = firesToday ? goalStatus.remainingMinutes : goalStatus.dailyGoal;
+
+      if (remainingMinutes === 0) {
+        return i18n.t(`${key}.goalCompleted`);
       }
-      
-      return `${baseMessage} You have ${goalStatus.formattedTime} left to reach your daily goal of ${goalStatus.dailyGoal} minutes.`;
+
+      return i18n.t(`${key}.goalRemaining`, {
+        baseMessage,
+        remainingTime: this.formatDuration(remainingMinutes),
+        dailyGoal: goalStatus.dailyGoal,
+      });
     } catch (error) {
       console.error('❌ Error generating notification message:', error);
       return baseMessage;

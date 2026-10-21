@@ -17,6 +17,7 @@ import { execute, queryFirst } from "../../db/db";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import { TYPE } from "../../themes/typography";
+import { parseDbDate } from "../../utils/dateUtils";
 import {
   computeGrowthGoalFields,
   validateGrowthGoals,
@@ -182,6 +183,29 @@ export default function ProfileScreen() {
 
     setLoading(true);
     try {
+      const goalsChanged =
+        currentDailyGoal !==
+          userPreferences?.current_reading_rate_minutes_per_day ||
+        targetDailyGoal !== userPreferences?.end_reading_rate_goal_minutes_per_day;
+
+      if (!goalsChanged) {
+        // Don't reset the growth plan (initial rate, last-updated date, weekly
+        // increase) when only the name, yearly goal or genres changed
+        await execute(
+          `UPDATE user_preferences SET
+            username = ?,
+            yearly_book_goal = ?,
+            preferred_genres = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = 1`,
+          [editedUsername.trim(), yearlyGoal, editedGenres.join(",")],
+        );
+        await loadUserPreferences();
+        setIsEditing(false);
+        Alert.alert(t("profile.success.title"), t("profile.success.message"));
+        return;
+      }
+
       const computedGoals = computeGrowthGoalFields({
         currentDailyGoal,
         targetDailyGoal,
@@ -240,7 +264,7 @@ export default function ProfileScreen() {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
     try {
-      return new Date(dateString).toLocaleDateString();
+      return parseDbDate(dateString)?.toLocaleDateString() ?? dateString;
     } catch {
       return "Invalid date";
     }

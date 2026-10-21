@@ -656,10 +656,9 @@ export default function ReadingLogs() {
         [minutes, notes || null, pages || null, sessionId],
       );
 
-      // If pages were updated, sync the book's current page from all sessions
-      if (pages !== undefined) {
-        await syncBookCurrentPageFromSessions(session.book_id);
-      }
+      // Re-derive the book's current page from all sessions. Always do this:
+      // clearing the pages field (pages === undefined) must lower progress too.
+      await syncBookCurrentPageFromSessions(session.book_id);
 
       loadWeekData();
       Alert.alert(
@@ -689,10 +688,8 @@ export default function ReadingLogs() {
       // Delete the session
       await execute(`DELETE FROM reading_sessions WHERE id = ?`, [sessionId]);
 
-      // If the session had pages, sync the book's current page from remaining sessions
-      if (session.pages_read) {
-        await syncBookCurrentPageFromSessions(session.book_id);
-      }
+      // Re-derive the book's current page from the remaining sessions
+      await syncBookCurrentPageFromSessions(session.book_id);
 
       loadWeekData();
       Alert.alert(
@@ -949,7 +946,7 @@ export default function ReadingLogs() {
                       </Text>
                       {session.notes && (
                         <Text style={styles.sessionNotes} numberOfLines={2}>
-                          "{session.notes}"
+                          &ldquo;{session.notes}&rdquo;
                         </Text>
                       )}
                     </TouchableOpacity>

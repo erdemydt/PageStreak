@@ -2,8 +2,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { AppUsageTracking, EnhancedBook, NotificationPreferences, ReadingSession } from '../db/db';
-import { execute, initializeDatabase, queryAll } from '../db/db';
+import { execute, initializeDatabase, queryAll, queryFirst } from '../db/db';
 import type { UserPreferences } from '../types/database';
+import { syncBookCurrentPageFromSessions } from '../utils/readingProgress';
 
 // Current app schema version - increment when making breaking changes to backup format
 const BACKUP_SCHEMA_VERSION = 1;
@@ -361,6 +362,24 @@ export async function validateBackupFile(fileUri: string): Promise<BackupValidat
 }
 
 /**
+ * Find a local book that is the same book as a backup entry: same Open Library
+ * key when available, otherwise same title and author (case-insensitive)
+ */
+async function findMatchingBook(book: EnhancedBook): Promise<{ id: number } | null> {
+  if (book.open_library_key) {
+    const byKey = await queryFirst<{ id: number }>(
+      'SELECT id FROM enhanced_books WHERE open_library_key = ?',
+      [book.open_library_key]
+    );
+    if (byKey) return byKey;
+  }
+  return queryFirst<{ id: number }>(
+    'SELECT id FROM enhanced_books WHERE LOWER(name) = LOWER(?) AND LOWER(author) = LOWER(?)',
+    [book.name, book.author]
+  );
+}
+
+/**
  * Import data from a validated backup file
  */
 export async function importDataFromBackup(
@@ -399,6 +418,11 @@ export async function importDataFromBackup(
 
     try {
       let progress = 20;
+      // Merge mode bookkeeping: backup book id -> local book id
+      const bookIdMap = new Map<number, number>();
+      const touchedBookIds = new Set<number>();
+      let importedBooks = 0;
+      let importedSessions = 0;
 
       // Import based on mode
       if (options.mode === 'replace') {
@@ -490,23 +514,34 @@ export async function importDataFromBackup(
               book.current_page, book.reading_status, book.notes
             ]);
           } else {
-            // Merge mode - use INSERT OR REPLACE
-            await execute(`
-              INSERT OR REPLACE INTO enhanced_books (
-                id, name, author, page, isbn, cover_id, cover_url, first_publish_year,
+            // Merge mode: never overwrite by id (ids are per-device, so the
+            // same id is usually a different book). Reuse a matching existing
+            // book, otherwise insert with a fresh id, and remember the mapping.
+            const existing = await findMatchingBook(book);
+            if (existing) {
+              bookIdMap.set(book.id, existing.id);
+              continue;
+            }
+
+            const insertResult = await execute(`
+              INSERT INTO enhanced_books (
+                name, author, page, isbn, cover_id, cover_url, first_publish_year,
                 publisher, language, description, subjects, open_library_key, author_key,
                 rating, date_added, date_started, date_finished, current_page, reading_status, notes
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
-              book.id, book.name, book.author, book.page, book.isbn, book.cover_id,
+              book.name, book.author, book.page, book.isbn, book.cover_id,
               book.cover_url, book.first_publish_year, book.publisher, book.language,
               book.description, book.subjects, book.open_library_key, book.author_key,
               book.rating, book.date_added, book.date_started, book.date_finished,
               book.current_page, book.reading_status, book.notes
             ]);
+            bookIdMap.set(book.id, insertResult.lastInsertRowId);
+            importedBooks++;
           }
         }
-        importResult.imported.books = backupData.tables.enhanced_books.length;
+        importResult.imported.books =
+          options.mode === 'replace' ? backupData.tables.enhanced_books.length : importedBooks;
         progress += 20;
       }
 
@@ -523,22 +558,42 @@ export async function importDataFromBackup(
               session.date, session.created_at, session.notes
             ]);
           } else {
-            // Merge mode - use INSERT OR REPLACE
+            // Merge mode: point the session at the merged book id; skip sessions
+            // whose book wasn't imported and sessions that already exist
+            const bookId = bookIdMap.get(session.book_id);
+            if (bookId === undefined) {
+              continue;
+            }
+
+            const duplicate = await queryFirst(
+              `SELECT id FROM reading_sessions
+               WHERE book_id = ? AND date = ? AND minutes_read = ? AND created_at IS ?`,
+              [bookId, session.date, session.minutes_read, session.created_at ?? null]
+            );
+            if (duplicate) {
+              continue;
+            }
+
             await execute(`
-              INSERT OR REPLACE INTO reading_sessions (id, book_id, minutes_read, pages_read, date, created_at, notes)
-              VALUES (?, ?, ?, ?, ?, ?, ?)
+              INSERT INTO reading_sessions (book_id, minutes_read, pages_read, date, created_at, notes)
+              VALUES (?, ?, ?, ?, ?, ?)
             `, [
-              session.id, session.book_id, session.minutes_read, session.pages_read,
+              bookId, session.minutes_read, session.pages_read,
               session.date, session.created_at, session.notes
             ]);
+            importedSessions++;
+            touchedBookIds.add(bookId);
           }
         }
-        importResult.imported.sessions = backupData.tables.reading_sessions.length;
+        importResult.imported.sessions =
+          options.mode === 'replace' ? backupData.tables.reading_sessions.length : importedSessions;
         progress += 20;
       }
 
-      // Import other tables...
-      if (backupData.tables.weekly_progress?.length) {
+      // weekly_progress and app_usage_tracking are device-local bookkeeping keyed
+      // by id; merging them by id would overwrite unrelated local rows, so they
+      // are only restored in replace mode.
+      if (options.mode === 'replace' && backupData.tables.weekly_progress?.length) {
         onProgress?.(progress, 'Importing weekly progress...');
         for (const weeklyProg of backupData.tables.weekly_progress) {
           const insertQuery = options.mode === 'replace' 
@@ -577,7 +632,7 @@ export async function importDataFromBackup(
         progress += 5;
       }
 
-      if (backupData.tables.app_usage_tracking?.length) {
+      if (options.mode === 'replace' && backupData.tables.app_usage_tracking?.length) {
         onProgress?.(progress, 'Importing app usage data...');
         for (const usage of backupData.tables.app_usage_tracking) {
           const insertQuery = options.mode === 'replace' 
@@ -591,6 +646,11 @@ export async function importDataFromBackup(
             usage.id, usage.last_opened_at, usage.last_closed_at, usage.session_count_today, usage.date
           ]);
         }
+      }
+
+      // Keep merged books' current_page consistent with their combined sessions
+      for (const bookId of touchedBookIds) {
+        await syncBookCurrentPageFromSessions(bookId);
       }
 
       // Commit transaction

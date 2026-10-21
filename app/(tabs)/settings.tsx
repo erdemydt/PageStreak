@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -39,9 +39,12 @@ export default function SettingsScreen() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
 
-  useEffect(() => {
-    loadUserPreferences();
-  }, []);
+  // Tabs stay mounted, so refresh on focus to pick up profile edits
+  useFocusEffect(
+    useCallback(() => {
+      loadUserPreferences();
+    }, []),
+  );
 
   const loadUserPreferences = async () => {
     try {
@@ -63,10 +66,10 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     Alert.alert(
       t("settings.logout"),
-      "Are you sure you want to log out? This will delete all your books and reading progress. This action cannot be undone.",
+      t("settings.logoutConfirmMessage"),
       [
         {
-          text: "Cancel",
+          text: t("settings.cancel"),
           style: "cancel",
         },
         {
@@ -81,7 +84,7 @@ export default function SettingsScreen() {
               router.replace("/intro");
             } catch (error) {
               console.error("Logout failed:", error);
-              Alert.alert("Error", "Failed to log out. Please try again.");
+              Alert.alert(t("settings.error"), t("settings.logoutFailed"));
             } finally {
               setLoading(false);
             }

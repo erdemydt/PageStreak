@@ -11,7 +11,12 @@ import {
 } from "react-native";
 import { queryAll, queryFirst } from "../db/db";
 import { COLORS } from "../themes/colors";
-import { dateToLocalDateString, getTodayDateString } from "../utils/dateUtils";
+import {
+    dateToLocalDateString,
+    parseDbDate,
+    parseLocalDateString,
+} from "../utils/dateUtils";
+import { calculateStreaks } from "../utils/readingProgress";
 
 interface WeeklyStats {
   weekStart: string;
@@ -183,7 +188,9 @@ export default function WeeklyStatsView({
     } finally {
       setLoading(false);
     }
-  }, [weekStart]);
+    // weekStart is a fresh Date object on every parent render; key on its value
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart.getTime()]);
 
   useEffect(() => {
     loadWeeklyStats();
@@ -238,40 +245,18 @@ export default function WeeklyStatsView({
       [endDate],
     );
 
-    let currentStreak = 0;
-    let longestStreak = 0;
-    let tempStreak = 0;
-    let streakThisWeek = 0;
+    const { currentStreak, longestStreak } = calculateStreaks(
+      dailyTotals,
+      goalMinutes,
+    );
 
-    // Calculate current streak (from today backwards)
-    const today = getTodayDateString();
-    let checkDate = today;
-
-    for (const day of dailyTotals) {
-      if (day.date === checkDate && day.total_minutes >= goalMinutes) {
-        currentStreak++;
-        const checkDateObj = new Date(checkDate);
-        checkDateObj.setDate(checkDateObj.getDate() - 1);
-        checkDate = dateToLocalDateString(checkDateObj);
-      } else {
-        break;
-      }
-    }
-
-    // Calculate longest streak and streak this week
-    for (const day of dailyTotals) {
-      if (day.total_minutes >= goalMinutes) {
-        tempStreak++;
-        longestStreak = Math.max(longestStreak, tempStreak);
-
-        // Count streak days within this week
-        if (day.date >= startDate && day.date <= endDate) {
-          streakThisWeek++;
-        }
-      } else {
-        tempStreak = 0;
-      }
-    }
+    // Days within this week that met the goal
+    const streakThisWeek = dailyTotals.filter(
+      (day) =>
+        day.total_minutes >= goalMinutes &&
+        day.date >= startDate &&
+        day.date <= endDate,
+    ).length;
 
     return {
       currentStreak,
@@ -310,23 +295,27 @@ export default function WeeklyStatsView({
   };
 
   const getTimeDistribution = (sessions: any[]): TimeDistribution[] => {
-    const ranges = {
-      "Morning (6-12)": 0,
-      "Afternoon (12-17)": 0,
-      "Evening (17-21)": 0,
-      "Night (21-6)": 0,
+    const ranges: Record<string, number> = {
+      [t("components.weeklyStats.timeMorning")]: 0,
+      [t("components.weeklyStats.timeAfternoon")]: 0,
+      [t("components.weeklyStats.timeEvening")]: 0,
+      [t("components.weeklyStats.timeNight")]: 0,
     };
+    const [morning, afternoon, evening, night] = Object.keys(ranges);
 
     sessions.forEach((session) => {
-      const hour = new Date(session.created_at).getHours();
+      // created_at is a UTC SQLite timestamp; parse it as UTC to get the local hour
+      const createdAt = parseDbDate(session.created_at);
+      if (!createdAt) return;
+      const hour = createdAt.getHours();
       if (hour >= 6 && hour < 12) {
-        ranges["Morning (6-12)"] += session.minutes_read;
+        ranges[morning] += session.minutes_read;
       } else if (hour >= 12 && hour < 17) {
-        ranges["Afternoon (12-17)"] += session.minutes_read;
+        ranges[afternoon] += session.minutes_read;
       } else if (hour >= 17 && hour < 21) {
-        ranges["Evening (17-21)"] += session.minutes_read;
+        ranges[evening] += session.minutes_read;
       } else {
-        ranges["Night (21-6)"] += session.minutes_read;
+        ranges[night] += session.minutes_read;
       }
     });
 
@@ -347,7 +336,7 @@ export default function WeeklyStatsView({
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = parseLocalDateString(dateString);
     const month = t(
       `components.readingLogs.months.${date.toLocaleString("en", { month: "long" }).toLowerCase()}`,
     );

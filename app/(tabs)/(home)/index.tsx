@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import {
   FlatList,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,6 +17,7 @@ import { EnhancedBook, queryAll, queryFirst } from "../../../db/db";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
+import { parseDbDate } from "../../../utils/dateUtils";
 import {
   getReadingStreak,
   getTodayReadingMinutes,
@@ -171,9 +171,12 @@ export default function HomeScreen() {
     }
   };
 
-  // Calculate reading progress - only count 'read' books
+  // Yearly goal progress: only count books finished this calendar year
+  const currentYear = new Date().getFullYear();
   const booksRead = books.filter(
-    (book) => book.reading_status === "read",
+    (book) =>
+      book.reading_status === "read" &&
+      parseDbDate(book.date_finished)?.getFullYear() === currentYear,
   ).length;
   const currentlyReading = books.filter(
     (book) => book.reading_status === "currently_reading",
@@ -201,8 +204,10 @@ export default function HomeScreen() {
     // Increment refresh trigger to force BookCard re-renders
     setRefreshTrigger((prev) => prev + 1);
   };
-  const topPart = () => (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+  // Rendered as an element (not a component type defined during render), so the
+  // header isn't unmounted and remounted on every state change
+  const listHeader = (
+    <View>
       <View style={styles.header}>
         <Text style={styles.title}>{t("home.title")}</Text>
         {userPreferences && (
@@ -216,7 +221,9 @@ export default function HomeScreen() {
       <View style={styles.heroCard}>
         <View style={styles.heroTopRow}>
           <Text style={styles.heroEyebrow}>{t("home.reading")}</Text>
-          <Text style={styles.heroStreakText}>{readingStreak}d streak</Text>
+          <Text style={styles.heroStreakText}>
+            {t("home.streakShort", { count: readingStreak })}
+          </Text>
         </View>
 
         {currentBook ? (
@@ -352,9 +359,8 @@ export default function HomeScreen() {
           </Link>
         </View>
       </View>
-    </ScrollView>
+    </View>
   );
-  const TopPart = topPart;
 
   return (
     <View style={styles.container}>
@@ -363,7 +369,7 @@ export default function HomeScreen() {
         data={books.slice(0, 4)} // Show only recent 4 books
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderBook}
-        ListHeaderComponent={<TopPart />}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📚</Text>

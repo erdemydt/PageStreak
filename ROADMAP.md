@@ -30,6 +30,8 @@ Kept for the owner's release notes; clear it when a release ships.
 - Success pop-ups are now brief toasts; deleting a session can be undone. Search stays open after
   adding a book and warns about duplicates.
 - Turkish: remaining English text translated, consistently formal tone. Genres survive language switches.
+- Reminders: no permission prompt at first launch; onboarding asks with an explanation. One
+  switch in Settings, plus a new "at a set time (if goal not met)" option.
 - Faster library lists; covers are cached on disk. The app stays in light mode until dark mode exists.
 
 ---
@@ -93,16 +95,20 @@ Things users can feel are wrong today.
   goals, and only Growth Journey edits the date. Deferred because it's a design choice, not a fix.
 
 ## Phase 4: Native cleanup (Release B, needs rebuild + `pod install` + device QA)
-- [ ] Uninstall unused packages: `notifee`, `@notifee/react-native`, `@expo/ngrok`, `react-native-permissions`,
+- [x] Uninstall unused packages: `notifee`, `@notifee/react-native`, `@expo/ngrok`, `react-native-permissions`,
   `react-native-localize`, `i18next-resources-to-backend`, `expo-symbols`, `react-native-webview`, `expo-blur`,
   `expo-web-browser` (also remove it from the app.json plugins).
-- [ ] `npx expo install --fix` (expo 54.0.7 → 54.0.x, RN 0.81.5, router, notifications, sqlite patch drift).
-- [ ] Android: drop the READ/WRITE_EXTERNAL_STORAGE and SYSTEM_ALERT_WINDOW permissions; add a notification icon and color.
-- [ ] **Notification permission & reminders redesign:**
+- [x] `npx expo install --fix` (expo 54.0.7 → 54.0.x, RN 0.81.5, router, notifications, sqlite patch drift).
+- [x] Android: drop the READ/WRITE_EXTERNAL_STORAGE and SYSTEM_ALERT_WINDOW permissions.
+- [ ] **Owner:** Android notification icon/color needs a monochrome icon asset (bare project:
+  add `notification_icon` drawables plus manifest meta-data, or regenerate via the expo-notifications plugin).
+- [x] **Notification permission & reminders redesign:**
   - Ask in onboarding with a pre-prompt (not at first launch).
   - Merge the two toggles into one.
   - Add an "at HH:MM if goal not met" option.
-- [ ] Decide on a single build path (Xcode Cloud vs EAS) and document it.
+- [ ] **Owner:** decide on a single build path (Xcode Cloud vs EAS) and document it.
+- [ ] **Before releasing Phase 4:** run `cd ios && pod install` (CocoaPods wasn't available to Claude),
+  commit the updated Podfile.lock, then do full device QA (notifications in both modes, import/export, onboarding).
 
 ## Phase 5: Real migrations (ship alone; highest data risk)
 - [ ] `PRAGMA user_version` with an ordered migrations list in one transaction. Seed from `database_version` (3).

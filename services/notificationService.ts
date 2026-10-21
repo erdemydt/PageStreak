@@ -14,6 +14,8 @@ import { log } from '../utils/logger';
 // replaces the old one and cancelling never touches other notifications
 const REMINDER_ID = 'daily-reminder';
 const ANDROID_CHANNEL_ID = 'default';
+// How many days of "set time" reminders are queued ahead
+const DAILY_TIME_DAYS = 7;
 
 // Reminders never fire during quiet hours; they're pushed to QUIET_HOURS_END instead
 const QUIET_HOURS_START = 22;
@@ -285,6 +287,8 @@ export class NotificationService {
           daily_reminder_hours_after_last_open INTEGER DEFAULT 5,
           daily_reminder_title TEXT DEFAULT 'Time to read! 📚',
           daily_reminder_body TEXT DEFAULT 'You haven''t reached your daily reading goal yet. Keep your streak going!',
+          reminder_mode TEXT DEFAULT 'after_close',
+          reminder_time TEXT DEFAULT '20:00',
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -294,35 +298,15 @@ export class NotificationService {
       const existingPrefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
       const isFirstInstall = !existingPrefs;
       
-      // On first install, try to request notification permissions
-      let notificationsEnabled = true; // Default to true
-      let dailyRemindersEnabled = true; // Default to true
-      
-      if (isFirstInstall) {
-        log('🔔 First app installation detected, requesting notification permissions...');
-        
-        try {
-          const hasPermission = await this.requestPermissions();
-          if (hasPermission) {
-            log('✅ Notification permissions granted on first install');
-            notificationsEnabled = true;
-            dailyRemindersEnabled = true;
-          } else {
-            log('❌ Notification permissions denied on first install');
-            notificationsEnabled = false;
-            dailyRemindersEnabled = false;
-          }
-        } catch (permissionError) {
-          console.error('⚠️ Error requesting permissions on first install:', permissionError);
-          // Default to enabled in database, but they'll need to enable in system settings
-          notificationsEnabled = true;
-          dailyRemindersEnabled = true;
-        }
-      }
+      // Never prompt here: this runs at app start, before the user knows why.
+      // Onboarding asks with context (and records the answer); until then the
+      // reminder is "on" in the DB but only schedules once permission exists.
+      const notificationsEnabled = true;
+      const dailyRemindersEnabled = true;
       
       // Insert or replace default values with permission-based settings
       await execute(`
-        INSERT OR REPLACE INTO notification_preferences (
+        INSERT OR IGNORE INTO notification_preferences (
           id, notifications_enabled, daily_reminder_enabled, daily_reminder_hours_after_last_open,
           daily_reminder_title, daily_reminder_body, created_at, updated_at
         ) VALUES (1, ?, ?, 5, 'Time to read! 📚', 
@@ -598,11 +582,76 @@ export class NotificationService {
   }
 
   /**
+   * "At a set time" mode: remind at HH:MM today if today's goal isn't met
+   * yet, otherwise at HH:MM tomorrow (when that day's goal is still open).
+   * The user picked the time, so quiet hours don't apply.
+   */
+  async scheduleAtDailyTime(time: string, isGoalMetToday: boolean): Promise<void> {
+    try {
+      // Never prompt here: this runs while the app is going to background
+      if (!(await this.checkCurrentPermissions())) {
+        log('📵 No notification permission, skipping daily-time reminder');
+        return;
+      }
+
+      const [hours, minutes] = time.split(':').map(Number);
+      const first = new Date();
+      first.setHours(hours || 0, minutes || 0, 0, 0);
+      if (isGoalMetToday || first.getTime() <= Date.now()) {
+        // Today is done or its slot has passed: start tomorrow
+        first.setDate(first.getDate() + 1);
+      } else if (first.getTime() - Date.now() < 60 * 1000) {
+        // The slot is moments away: still remind today, just a minute later
+        first.setTime(Date.now() + 60 * 1000);
+      }
+
+      await this.ensureAndroidChannel();
+      // A "set time" reminder should repeat even if the app isn't opened, so
+      // queue the next DAILY_TIME_DAYS days (each later day's goal is untouched,
+      // so its message uses the full goal). Opening the app cancels them and
+      // leaving it reschedules, so a met goal still suppresses today's.
+      for (let day = 0; day < DAILY_TIME_DAYS; day++) {
+        const trigger = new Date(first);
+        if (day > 0) {
+          trigger.setDate(first.getDate() + day);
+          trigger.setHours(hours || 0, minutes || 0, 0, 0);
+        }
+        const firesToday = dateToLocalDateString(trigger) === getTodayDateString();
+        await Notifications.scheduleNotificationAsync({
+          identifier: day === 0 ? REMINDER_ID : `${REMINDER_ID}-${day}`,
+          content: {
+            title: i18n.t('settings.notificationMessages.defaultTitle'),
+            body: await this.generateNotificationMessage(firesToday),
+            sound: 'default',
+            data: { type: 'daily_reminder_at_time', scheduledFor: trigger.toISOString() },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: trigger,
+            channelId: ANDROID_CHANNEL_ID,
+          },
+        });
+      }
+      log(`✅ Scheduled ${DAILY_TIME_DAYS} daily-time reminders from ${first.toLocaleString()}`);
+    } catch (error) {
+      console.error('❌ Error scheduling daily-time reminder:', error);
+    }
+  }
+
+
+  /**
    * Cancel the currently scheduled notification
    */
   async cancelScheduledNotification(): Promise<void> {
     try {
-      await Notifications.cancelScheduledNotificationAsync(REMINDER_ID);
+      // The reminder plus the queued "set time" days (see scheduleAtDailyTime)
+      await Promise.all(
+        Array.from({ length: DAILY_TIME_DAYS }, (_, day) =>
+          Notifications.cancelScheduledNotificationAsync(
+            day === 0 ? REMINDER_ID : `${REMINDER_ID}-${day}`
+          )
+        )
+      );
     } catch (error) {
       console.error('❌ Error cancelling notification:', error);
     }
@@ -708,6 +757,15 @@ export class NotificationService {
       }
 
       const isGoalMet = await this.isDailyGoalMet();
+
+      const prefs = await queryFirst<NotificationPreferences>(
+        'SELECT * FROM notification_preferences WHERE id = 1'
+      );
+      if (prefs?.reminder_mode === 'daily_time') {
+        await this.scheduleAtDailyTime(prefs.reminder_time ?? '20:00', isGoalMet);
+        return;
+      }
+
       if (isGoalMet) {
         log('🎯 Daily goal already met, no notification needed');
         await this.cancelScheduledNotification();

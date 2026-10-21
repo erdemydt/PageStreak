@@ -59,6 +59,10 @@ export type NotificationPreferences = {
   daily_reminder_hours_after_last_open: number;
   daily_reminder_title: string;
   daily_reminder_body: string;
+  /** "after_close" (N hours after leaving the app) or "daily_time" (at reminder_time) */
+  reminder_mode?: "after_close" | "daily_time";
+  /** HH:MM, used when reminder_mode is "daily_time" */
+  reminder_time?: string;
   created_at: string;
   updated_at: string;
 };

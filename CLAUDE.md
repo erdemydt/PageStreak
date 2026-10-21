@@ -114,7 +114,9 @@ statements in sync** when adding columns, and add new tables to the backup servi
 - **Yearly goal** counts books with status `read` whose `date_finished` is in the current year.
 - **Notifications**: a single reminder with the fixed identifier `daily-reminder`, scheduled only on
   `'background'` (never `'inactive'`) through a serialized queue. Schedule paths never prompt for
-  permission. No reminder if today's goal is met; reminders are pushed out of quiet
+  permission. Two modes (`reminder_mode`): 'after_close' (N hours after leaving, outside quiet hours) or
+  'daily_time' (DATE trigger at `reminder_time`, today if the goal is still open, else tomorrow). Permission is
+  requested only in onboarding (opt-in switch) or from Settings, never at launch. No reminder if today's goal is met; reminders are pushed out of quiet
   hours (22:00–09:00); text comes from i18n (`settings.notificationMessages.*`), not the DB columns.
 
 ## Gotchas (read before touching dates, i18n, or data)
@@ -212,3 +214,6 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   the logger's empty state can start a book; "Erase All Data" with export-first; restore a backup during
   onboarding; onboarding goal preview and validation; all remaining hard-coded English localized; 84
   unused keys removed; genres stored as keys; toasts plus undo replace success alerts; duplicate-add warning.
+- **Phase 4: native cleanup.** 10 unused packages removed, Expo SDK 54 patch versions aligned (separate
+  commits; **needs `pod install` + device QA before release**), Android storage/overlay permissions dropped,
+  notification redesign (onboarding opt-in, one switch, "at a set time" mode).

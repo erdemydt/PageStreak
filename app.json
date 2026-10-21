@@ -21,6 +21,11 @@
         "backgroundColor": "#D8F0F0"
       },
       "edgeToEdgeEnabled": true,
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "package": "com.erdemydt.PageStreak"
     },
     "web": {

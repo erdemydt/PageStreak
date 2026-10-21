@@ -86,6 +86,8 @@ export const logoutUser = async () => {
         daily_reminder_hours_after_last_open INTEGER DEFAULT 5,
         daily_reminder_title TEXT DEFAULT 'Time to read! 📚',
         daily_reminder_body TEXT DEFAULT 'You haven''t reached your daily reading goal yet. Keep your streak going!',
+        reminder_mode TEXT DEFAULT 'after_close',
+        reminder_time TEXT DEFAULT '20:00',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )

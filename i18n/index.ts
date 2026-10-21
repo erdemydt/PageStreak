@@ -388,15 +388,17 @@ const resources = {
           "This permanently deletes all your books, reading sessions and settings. Export a backup first if you might want them back.",
         logoutFailed: "Failed to erase data. Please try again.",
         exportFirst: "Export first",
+        reminderModeAfterClose: "After I leave the app",
+        reminderModeAtTime: "At a set time",
+        reminderTimeLabel: "Reminder time",
+        reminderAtTimeDescription:
+          "Remind me at {{time}} if I haven't reached my daily goal",
         madeWithLove: "Made with ❤️ for book lovers",
         notifications: "Notifications",
         notificationPermissionDenied:
           "Notifications are disabled in your device settings. Please enable them to receive reading reminders.",
-        pushNotifications: "Push Notifications",
-        pushNotificationsDescription:
-          "Get reminders to keep your reading streak",
         dailyReadingReminders: "Daily Reading Reminders",
-        dailyReadingRemindersDescription: "Remind me if I haven't read yet",
+        dailyReadingRemindersDescription: "Remind me if I haven't reached my daily goal",
         reminderTiming: "Reminder Timing",
         reminderTimingDescription:
           "Send reminder {{hours}} hours after I close the app",
@@ -723,6 +725,11 @@ const resources = {
           dateInPast: "Target date cannot be in the past",
           saveFailed: "Failed to save your preferences. Please try again.",
           dateTooFar: "Target date cannot be more than 5 years in the future",
+        },
+        reminder: {
+          title: "Remind me to read",
+          subtitle:
+            "One gentle reminder a day if you haven't reached your goal. You can choose when in Settings.",
         },
         allSet: {
           title: "You're all set to:",
@@ -1252,15 +1259,17 @@ const resources = {
           "Bu işlem tüm kitaplarınızı, okuma seanslarınızı ve ayarlarınızı kalıcı olarak siler. Geri isteyebilecekseniz önce bir yedek alın.",
         logoutFailed: "Veriler silinemedi. Lütfen tekrar deneyin.",
         exportFirst: "Önce yedekle",
+        reminderModeAfterClose: "Uygulamadan çıktıktan sonra",
+        reminderModeAtTime: "Belirli bir saatte",
+        reminderTimeLabel: "Hatırlatma saati",
+        reminderAtTimeDescription:
+          "Günlük hedefime ulaşmadıysam şu saatte hatırlat: {{time}}",
         madeWithLove: "Kitap severler için ❤️ ile yapıldı",
         notifications: "Bildirimler",
         notificationPermissionDenied:
           "Cihaz ayarlarınızda bildirimler devre dışı. Okuma hatırlatıcıları almak için lütfen etkinleştirin.",
-        pushNotifications: "Anlık Bildirimler",
-        pushNotificationsDescription:
-          "Okuma serinizi sürdürmeniz için hatırlatıcı alın",
         dailyReadingReminders: "Günlük Okuma Hatırlatıcıları",
-        dailyReadingRemindersDescription: "Henüz okumadıysam beni hatırlat",
+        dailyReadingRemindersDescription: "Günlük hedefime ulaşmadıysam bana hatırlat",
         reminderTiming: "Hatırlatıcı Zamanlaması",
         reminderTimingDescription:
           "Uygulamayı kapattıktan {{hours}} saat sonra hatırlatıcı gönder",
@@ -1583,6 +1592,11 @@ const resources = {
           dateInPast: "Hedef tarih geçmişte olamaz",
           saveFailed: "Tercihleriniz kaydedilemedi. Lütfen tekrar deneyin.",
           dateTooFar: "Hedef tarih 5 yıldan daha ileri olamaz",
+        },
+        reminder: {
+          title: "Okumamı hatırlat",
+          subtitle:
+            "Hedefinize ulaşmadıysanız günde bir nazik hatırlatma. Zamanını Ayarlar'dan seçebilirsiniz.",
         },
         allSet: {
           title: "Artık hazırsınız:",

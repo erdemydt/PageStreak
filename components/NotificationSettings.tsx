@@ -1,22 +1,24 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useState } from "react";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Alert,
-    AppState,
-    Linking,
-    Platform,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  AppState,
+  Linking,
+  Platform,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { NotificationPreferences } from "../db/db";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import { isDevModeEnabled } from "../utils/devMode";
+import { getAppLocale } from "../utils/format";
 import { log, warn } from "../utils/logger";
 
 export default function NotificationSettings() {
@@ -26,6 +28,9 @@ export default function NotificationSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasSystemPermission, setHasSystemPermission] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const timeSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedReminderTime = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     loadPreferences();
@@ -48,21 +53,21 @@ export default function NotificationSettings() {
     return () => subscription?.remove();
   }, []);
 
+  // Runs on mount and on every return to the app (e.g. from OS settings).
+  // Revoked permission turns the reminder off in the DB; a newly granted one
+  // is picked up when the user flips the switch on.
   const checkSystemPermissions = useCallback(async () => {
     try {
       const hasPermission = await NotificationService.checkCurrentPermissions();
       setHasSystemPermission(hasPermission);
-
-      // If system permissions changed, sync with database
-      if (preferences && hasPermission !== preferences.notifications_enabled) {
-        log("🔄 System permissions changed, syncing with database");
+      if (!hasPermission) {
         await NotificationService.syncPermissionsWithDatabase();
-        await loadPreferences(); // Reload preferences to reflect changes
+        await loadPreferences();
       }
     } catch (error) {
       console.error("❌ Error checking system permissions:", error);
     }
-  }, [preferences]);
+  }, []);
 
   const loadPreferences = async () => {
     try {
@@ -79,6 +84,7 @@ export default function NotificationSettings() {
         };
         log("🔔 Normalized preferences:", normalizedPrefs);
         setPreferences(normalizedPrefs);
+        savedReminderTime.current = normalizedPrefs.reminder_time;
       } else {
         log("⚠️ No preferences returned from service");
         setPreferences(null);
@@ -171,8 +177,12 @@ export default function NotificationSettings() {
       }
     }
 
-    log("📱 Updating main notification preference to:", enabled);
-    await updatePreferences({ notifications_enabled: enabled });
+    log("📱 Updating reminder preference to:", enabled);
+    // One switch for the one reminder: keep both legacy flags in step
+    await updatePreferences({
+      notifications_enabled: enabled,
+      daily_reminder_enabled: enabled,
+    });
   };
 
   const handleTestNotification = async () => {
@@ -234,9 +244,7 @@ export default function NotificationSettings() {
   };
 
   if (loading || !preferences) {
-    log(
-      "🔄 Loading notification settings or preferences not available",
-    );
+    log("🔄 Loading notification settings or preferences not available");
     return (
       <View style={styles.loadingContainer}>
         <View style={styles.loadingContent}>
@@ -258,6 +266,40 @@ export default function NotificationSettings() {
   });
 
   // Show system permission warning if needed
+  const remindersOn =
+    preferences.notifications_enabled &&
+    preferences.daily_reminder_enabled &&
+    hasSystemPermission;
+  const reminderMode = preferences.reminder_mode ?? "after_close";
+  const reminderTime = preferences.reminder_time ?? "20:00";
+  const [reminderHours, reminderMinutes] = reminderTime.split(":").map(Number);
+  const reminderTimeAsDate = new Date();
+  reminderTimeAsDate.setHours(reminderHours || 0, reminderMinutes || 0, 0, 0);
+
+  // Shown in the user's clock style ("8:00 PM" / "20:00"), stored as HH:MM
+  const reminderTimeLabel = reminderTimeAsDate.toLocaleTimeString(
+    getAppLocale(),
+    { hour: "numeric", minute: "2-digit" },
+  );
+
+  const saveReminderTime = (date: Date) => {
+    const time = `${String(date.getHours()).padStart(2, "0")}:${String(
+      date.getMinutes(),
+    ).padStart(2, "0")}`;
+    // The iOS compact picker reports every wheel tick: show the value right
+    // away, but only write it once the wheel settles
+    setPreferences((current) => current && { ...current, reminder_time: time });
+    if (timeSaveTimer.current) clearTimeout(timeSaveTimer.current);
+    timeSaveTimer.current = setTimeout(() => {
+      if (time !== savedReminderTime.current) {
+        savedReminderTime.current = time;
+        NotificationService.updateNotificationPreferences({
+          reminder_time: time,
+        });
+      }
+    }, 600);
+  };
+
   const showPermissionWarning =
     preferences.notifications_enabled && !hasSystemPermission;
 
@@ -308,70 +350,112 @@ export default function NotificationSettings() {
           </View>
           <View style={styles.toggleInfo}>
             <Text style={styles.toggleTitle}>
-              {t("settings.pushNotifications")}
+              {t("settings.dailyReadingReminders")}
             </Text>
             <Text style={styles.toggleSubtitle}>
-              {t("settings.pushNotificationsDescription")}
+              {t("settings.dailyReadingRemindersDescription")}
             </Text>
           </View>
           <Switch
-            value={preferences.notifications_enabled && hasSystemPermission}
+            value={remindersOn}
             onValueChange={handleNotificationToggle}
             trackColor={{
               false: COLORS.neutral[200],
               true: COLORS.state.primarySoft,
             }}
-            thumbColor={
-              preferences.notifications_enabled && hasSystemPermission
-                ? COLORS.primary
-                : COLORS.neutral[400]
-            }
+            thumbColor={remindersOn ? COLORS.primary : COLORS.neutral[400]}
             disabled={saving}
             style={styles.toggle}
           />
         </View>
       </View>
 
-      {/* Daily Reminders Section - Only show when notifications are enabled */}
-      {preferences.notifications_enabled && hasSystemPermission && (
+      {/* Reminder timing - only when the reminder is on */}
+      {remindersOn && (
         <View style={styles.dailyRemindersContainer}>
-          <View style={styles.subToggleContainer}>
-            <View style={styles.subToggleHeader}>
-              <View style={styles.subIconContainer}>
-                <Ionicons name="alarm" size={20} color={COLORS.success} />
-              </View>
-              <View style={styles.subToggleInfo}>
-                <Text style={styles.subToggleTitle}>
-                  {t("settings.dailyReadingReminders")}
-                </Text>
-                <Text style={styles.subToggleSubtitle}>
-                  {t("settings.dailyReadingRemindersDescription")}
-                </Text>
-              </View>
-              <Switch
-                value={preferences.daily_reminder_enabled}
-                onValueChange={(enabled) => {
-                  log("⏰ Daily reminder toggle changed to:", enabled);
+          <View style={styles.modeRow}>
+            {(["after_close", "daily_time"] as const).map((mode) => (
+              <TouchableOpacity
+                key={mode}
+                style={[
+                  styles.modeChip,
+                  reminderMode === mode && styles.modeChipSelected,
+                ]}
+                onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  updatePreferences({ daily_reminder_enabled: enabled });
+                  updatePreferences({ reminder_mode: mode });
                 }}
-                trackColor={{
-                  false: COLORS.neutral[200],
-                  true: COLORS.state.successBorder,
-                }}
-                thumbColor={
-                  preferences.daily_reminder_enabled
-                    ? COLORS.success
-                    : COLORS.neutral[400]
-                }
                 disabled={saving}
-                style={styles.subToggle}
-              />
-            </View>
+                accessibilityRole="button"
+                accessibilityState={{ selected: reminderMode === mode }}
+              >
+                <Text
+                  style={[
+                    styles.modeChipText,
+                    reminderMode === mode && styles.modeChipTextSelected,
+                  ]}
+                >
+                  {mode === "after_close"
+                    ? t("settings.reminderModeAfterClose")
+                    : t("settings.reminderModeAtTime")}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
-          {/* Hours Setting - Only show when daily reminders are enabled */}
-          {preferences.daily_reminder_enabled && (
+          {reminderMode === "daily_time" && (
+            <View style={styles.hourSettingContainer}>
+              <View style={styles.hourSettingHeader}>
+                <Ionicons
+                  name="time-outline"
+                  size={20}
+                  color={COLORS.warning}
+                />
+                <Text style={styles.hourSettingTitle}>
+                  {t("settings.reminderTimeLabel")}
+                </Text>
+              </View>
+              {Platform.OS === "ios" ? (
+                <DateTimePicker
+                  value={reminderTimeAsDate}
+                  mode="time"
+                  display="compact"
+                  onChange={(_, date) => date && saveReminderTime(date)}
+                  style={styles.timePicker}
+                />
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.timeButton}
+                    onPress={() => setShowTimePicker(true)}
+                  >
+                    <Text style={styles.timeButtonText}>
+                      {reminderTimeLabel}
+                    </Text>
+                  </TouchableOpacity>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={reminderTimeAsDate}
+                      mode="time"
+                      onChange={(event, date) => {
+                        setShowTimePicker(false);
+                        if (date && event.type !== "dismissed") {
+                          saveReminderTime(date);
+                        }
+                      }}
+                    />
+                  )}
+                </>
+              )}
+              <Text style={styles.hourSettingDescription}>
+                {t("settings.reminderAtTimeDescription", {
+                  time: reminderTimeLabel,
+                })}
+              </Text>
+            </View>
+          )}
+
+          {reminderMode === "after_close" && (
             <View style={styles.settingsContainer}>
               <View style={styles.hourSettingContainer}>
                 <View style={styles.hourSettingHeader}>
@@ -481,6 +565,52 @@ export default function NotificationSettings() {
 }
 
 const styles = StyleSheet.create({
+  modeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  modeChip: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.neutral[200],
+    backgroundColor: COLORS.white,
+    alignItems: "center",
+  },
+  modeChipSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
+  },
+  modeChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.neutral[500],
+    textAlign: "center",
+  },
+  modeChipTextSelected: {
+    color: COLORS.white,
+  },
+  timePicker: {
+    alignSelf: "flex-start",
+    marginVertical: 8,
+  },
+  timeButton: {
+    alignSelf: "flex-start",
+    marginVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  timeButtonText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
   container: {
     backgroundColor: COLORS.white,
     borderRadius: 16,

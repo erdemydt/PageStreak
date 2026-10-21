@@ -372,6 +372,8 @@ async function createOrUpdateNotificationPreferencesTable(): Promise<void> {
       daily_reminder_hours_after_last_open INTEGER DEFAULT 5,
       daily_reminder_title TEXT DEFAULT 'Time to read! 📚',
       daily_reminder_body TEXT DEFAULT 'You haven''t reached your daily reading goal yet. Keep your streak going!',
+      reminder_mode TEXT DEFAULT 'after_close',
+      reminder_time TEXT DEFAULT '20:00',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -385,7 +387,10 @@ async function createOrUpdateNotificationPreferencesTable(): Promise<void> {
     { name: 'daily_reminder_title', type: 'TEXT', default: "'Time to read! 📚'" },
     { name: 'daily_reminder_body', type: 'TEXT', default: "'You haven''t reached your daily reading goal yet. Keep your streak going!'" },
     { name: 'created_at', type: 'DATETIME', default: 'CURRENT_TIMESTAMP' },
-    { name: 'updated_at', type: 'DATETIME', default: 'CURRENT_TIMESTAMP' }
+    { name: 'updated_at', type: 'DATETIME', default: 'CURRENT_TIMESTAMP' },
+    // 'after_close': N hours after leaving the app; 'daily_time': at reminder_time (HH:MM)
+    { name: 'reminder_mode', type: 'TEXT', default: "'after_close'" },
+    { name: 'reminder_time', type: 'TEXT', default: "'20:00'" }
   ];
 
   // Add missing columns

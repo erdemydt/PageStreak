@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -25,7 +26,6 @@ import { COLORS } from "../themes/colors";
 import { formatDate } from "../utils/format";
 import { GENRE_KEYS, genreLabel } from "../utils/genres";
 import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
-import { log } from "../utils/logger";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -47,6 +47,7 @@ export default function IntroScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [wantsReminders, setWantsReminders] = useState(true);
   const slideAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(1)).current;
 
@@ -271,11 +272,27 @@ export default function IntroScreen() {
         weeklyIncreasePercentage: weeklyReadingRateIncreasePercentage,
       });
 
-      // Initialize notification preferences for new user
-      const notificationPrefs =
-        await NotificationService.getNotificationPreferences();
-      if (!notificationPrefs) {
-        log("🔔 Initializing notification preferences for new user");
+      // Reminders: ask for permission now, with context, and only if the
+      // user wants them (never at first launch). Failures here must not block
+      // finishing onboarding.
+      try {
+        await NotificationService.getNotificationPreferences(); // ensure the row exists
+        // Record the choice first, so an interruption during the system prompt
+        // can't leave reminders off when the user wanted them (boot sync turns
+        // them off again if permission ends up missing)
+        await NotificationService.updateNotificationPreferences({
+          notifications_enabled: wantsReminders,
+          daily_reminder_enabled: wantsReminders,
+        });
+        const granted = wantsReminders
+          ? await NotificationService.requestPermissions()
+          : false;
+        await NotificationService.updateNotificationPreferences({
+          notifications_enabled: granted,
+          daily_reminder_enabled: granted,
+        });
+      } catch (notificationError) {
+        console.error("Error setting up reminders:", notificationError);
       }
 
       Keyboard.dismiss();
@@ -362,6 +379,22 @@ export default function IntroScreen() {
     try {
       // The restored plan may be weeks old: catch up its goal before Home loads
       await applyWeeklyGoalGrowth();
+      // The restored settings may have reminders on, but this install never
+      // asked for permission (the reminder step is skipped): ask now
+      const notificationPrefs =
+        await NotificationService.getNotificationPreferences();
+      if (
+        notificationPrefs?.notifications_enabled &&
+        notificationPrefs?.daily_reminder_enabled
+      ) {
+        const granted = await NotificationService.requestPermissions();
+        if (!granted) {
+          await NotificationService.updateNotificationPreferences({
+            notifications_enabled: false,
+            daily_reminder_enabled: false,
+          });
+        }
+      }
       // A backup with a profile makes onboarding unnecessary
       if (await getUserPreferences()) {
         // Let the import sheet finish dismissing before replacing this screen
@@ -677,6 +710,26 @@ export default function IntroScreen() {
       </View>
 
       <Text style={styles.goalHint}>🎯 {t("intro.targetGoal.hint")}</Text>
+
+      <View style={styles.reminderCard}>
+        <View style={styles.reminderTextBlock}>
+          <Text style={styles.reminderTitle}>
+            🔔 {t("intro.reminder.title")}
+          </Text>
+          <Text style={styles.reminderSubtitle}>
+            {t("intro.reminder.subtitle")}
+          </Text>
+        </View>
+        <Switch
+          value={wantsReminders}
+          onValueChange={setWantsReminders}
+          trackColor={{
+            false: COLORS.neutral[200],
+            true: COLORS.state.primarySoft,
+          }}
+          thumbColor={wantsReminders ? COLORS.primary : COLORS.neutral[400]}
+        />
+      </View>
     </View>
   );
 
@@ -1022,6 +1075,31 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontStyle: "italic",
     marginTop: 2,
+  },
+  reminderCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: COLORS.neutral[200],
+  },
+  reminderTextBlock: {
+    flex: 1,
+  },
+  reminderTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.neutral[800],
+  },
+  reminderSubtitle: {
+    fontSize: 13,
+    color: COLORS.neutral[500],
+    marginTop: 4,
+    lineHeight: 18,
   },
   genresContainer: {
     maxHeight: 200,

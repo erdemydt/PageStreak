@@ -626,12 +626,15 @@ export async function importDataFromBackup(
           await runIn(txn, `
             ${insertQuery} (
               id, notifications_enabled, daily_reminder_enabled, daily_reminder_hours_after_last_open,
-              daily_reminder_title, daily_reminder_body, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              daily_reminder_title, daily_reminder_body, created_at, updated_at,
+              reminder_mode, reminder_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             notifPref.id, notifPref.notifications_enabled, notifPref.daily_reminder_enabled,
             notifPref.daily_reminder_hours_after_last_open, notifPref.daily_reminder_title,
-            notifPref.daily_reminder_body, notifPref.created_at, notifPref.updated_at
+            notifPref.daily_reminder_body, notifPref.created_at, notifPref.updated_at,
+            // Older backups lack these columns
+            notifPref.reminder_mode ?? 'after_close', notifPref.reminder_time ?? '20:00'
           ]);
         }
         progress += 5;

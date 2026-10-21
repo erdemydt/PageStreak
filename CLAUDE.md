@@ -249,3 +249,7 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   minutes per day), streak-at-risk reminder text. Remaining Phase 7 features await owner decisions (see ROADMAP).
 - **Phase 7 (part 2), owner decisions applied:** no streak freezes; goals edited only in Growth Journey; a reading
   timer on the Home card; dark mode deferred to its own phase.
+  Review fixes: the timer is cleared on erase/restore, never credits a different book, stops under 30s are
+  discarded, stops over 4h ask first, and sessions are dated to the timer's start day. The finish estimate uses
+  per-book recent minutes, averaged over the days actually read. Profile asks before discarding edits.
+  Next: dark mode as its own phase (owner's call), then tests (separate track).

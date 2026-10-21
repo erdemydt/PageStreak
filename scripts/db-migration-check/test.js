@@ -1,3 +1,4 @@
+/* global __dirname */ // Node script (run by run.sh), not app code
 // Usage: node test.js <scenario>; each scenario runs in a fresh process (module-level db handle)
 const Module = require('module'); const path = require('path'); const fs = require('fs'); const assert = require('assert');
 const origResolve = Module._resolveFilename;

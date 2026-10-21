@@ -117,8 +117,18 @@ statements in sync** when adding columns, and add new tables to the backup servi
 - User data is precious (real App Store users): never change behavior in a way that loses or
   rewrites existing rows without an explicit migration and a note here.
 - Don't commit unless asked. Leave `tsc` and `lint` (0 errors) clean.
+- **Shipping is the owner's call.** Never bump versions, prepare releases or submit builds unless
+  explicitly asked. The owner tests on device when they decide to.
+- Work proceeds **phase by phase** through ROADMAP.md. Claude implements each phase directly.
+  Subagents are used only for isolated parallel chunks (in worktrees) and as a fresh-eyes reviewer
+  of each phase's diff. Commit at the end of each phase.
 
 ## Known issues / roadmap (ranked)
+
+The full phased plan lives in **ROADMAP.md**; work from it and tick items off there. Must-knows
+from the audit: never run `expo prebuild --clean` (iOS builds from committed `ios/` via Xcode
+Cloud), every change ships via an App Store release (no OTA), and bump the version in
+`ios/PageStreak/Info.plist` directly (app.json `version` is ignored).
 
 1. **Unverified unused i18n keys** (~70, e.g. `profile.stats.*`, `settings.hourOptions.*`,
    several `settings.*` notification labels). Some may be built dynamically; check before deleting.

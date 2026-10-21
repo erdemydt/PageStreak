@@ -1,4 +1,5 @@
 import db, { execute, queryFirst } from "../db/db";
+import { emitDataChange } from "./dataEvents";
 import { parseDbDate } from "./dateUtils";
 import { recordGoalChange } from "./goalHistory";
 
@@ -152,6 +153,7 @@ export const updateGrowthGoals = async (input: GrowthGoalsInput) => {
     );
     await recordGoalChange(computed.currentReadingRate);
   });
+  emitDataChange("preferences");
 };
 
 const MS_PER_WEEK = 1000 * 60 * 60 * 24 * 7;
@@ -228,6 +230,7 @@ export const applyWeeklyGoalGrowth = async (): Promise<void> => {
       );
       await recordGoalChange(newRate);
     });
+    emitDataChange("preferences");
   } catch (error) {
     console.error("❌ Failed to apply weekly goal growth:", error);
   }

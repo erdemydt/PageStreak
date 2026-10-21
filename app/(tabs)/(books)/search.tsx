@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   FlatList,
   Keyboard,
   StyleSheet,
@@ -41,8 +40,6 @@ export default function BookSearchScreen() {
   const [selectedBook, setSelectedBook] = useState<SearchBookResult | null>(
     null,
   );
-  const [statusModalFadeAnim] = useState(new Animated.Value(0));
-  const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
   const [clickedSearch, setClickedSearch] = useState(false);
 
   const searchTypeLabels = {
@@ -110,37 +107,11 @@ export default function BookSearchScreen() {
 
   const openStatusModal = () => {
     setStatusModalVisible(true);
-    Animated.parallel([
-      Animated.timing(statusModalFadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(statusModalScaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const closeStatusModal = () => {
-    Animated.parallel([
-      Animated.timing(statusModalFadeAnim, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(statusModalScaleAnim, {
-        toValue: 0.8,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setStatusModalVisible(false);
-      setSelectedBook(null);
-    });
+    setStatusModalVisible(false);
+    setSelectedBook(null);
   };
 
   const handleStatusChange = async (status: BookStatus) => {
@@ -459,8 +430,6 @@ export default function BookSearchScreen() {
           currentStatus="currently_reading"
           onStatusChange={handleStatusChange}
           onClose={closeStatusModal}
-          fadeAnim={statusModalFadeAnim}
-          scaleAnim={statusModalScaleAnim}
         />
       </View>
     </TouchableWithoutFeedback>

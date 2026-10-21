@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -13,35 +12,22 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import db, { execute, queryFirst } from "../../db/db";
+import { getUserPreferences, updateProfile } from "../../db/repos/preferences";
+import type { UserPreferences } from "../../types/models";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import { TYPE } from "../../themes/typography";
-import { parseDbDate } from "../../utils/dateUtils";
-import { recordGoalChange } from "../../utils/goalHistory";
 import {
   computeGrowthGoalFields,
   validateGrowthGoals,
 } from "../../utils/goalSettings";
-
-type FullUserPreferences = {
-  id: number;
-  username: string;
-  yearly_book_goal: number;
-  preferred_genres?: string;
-  weekly_reading_goal?: number;
-  initial_reading_rate_minutes_per_day?: number;
-  end_reading_rate_goal_minutes_per_day?: number;
-  end_reading_rate_goal_date?: string;
-  current_reading_rate_minutes_per_day?: number;
-  created_at?: string;
-  updated_at?: string;
-};
+import { formatDate } from "../../utils/format";
+import { useFocusRefresh } from "../../hooks/useFocusRefresh";
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const [userPreferences, setUserPreferences] =
-    useState<FullUserPreferences | null>(null);
+    useState<UserPreferences | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
   // Editable fields
@@ -98,31 +84,28 @@ export default function ProfileScreen() {
     const index = genres.indexOf(genre);
     return index !== -1 ? getTranslatedGenres()[index] : genre;
   };
+  // Background reloads (focus, data-change events) must not overwrite what
+  // the user is typing; edit fields are only refreshed when not editing
+  const isEditingRef = useRef(false);
+  isEditingRef.current = isEditing;
+
   const loadUserPreferences = useCallback(async () => {
     try {
-      const user = await queryFirst<FullUserPreferences>(
-        "SELECT * FROM user_preferences WHERE id = 1",
-      );
+      const user = await getUserPreferences();
       if (user) {
         setUserPreferences(user);
-        populateEditFields(user);
+        if (!isEditingRef.current) {
+          populateEditFields(user);
+        }
       }
     } catch (e) {
       console.error("Failed to load user preferences:", e);
     }
   }, []);
 
-  useEffect(() => {
-    loadUserPreferences();
-  }, [loadUserPreferences]);
+  useFocusRefresh(loadUserPreferences, ["preferences"]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadUserPreferences();
-    }, [loadUserPreferences]),
-  );
-
-  const populateEditFields = (user: FullUserPreferences) => {
+  const populateEditFields = (user: UserPreferences) => {
     setEditedUsername(user.username);
     setEditedYearlyGoal(user.yearly_book_goal.toString());
     setEditedDailyGoal(
@@ -190,66 +173,26 @@ export default function ProfileScreen() {
         targetDailyGoal !==
           userPreferences?.end_reading_rate_goal_minutes_per_day;
 
-      if (!goalsChanged) {
-        // Don't reset the growth plan (initial rate, last-updated date, weekly
-        // increase) when only the name, yearly goal or genres changed
-        await execute(
-          `UPDATE user_preferences SET
-            username = ?,
-            yearly_book_goal = ?,
-            preferred_genres = ?,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = 1`,
-          [editedUsername.trim(), yearlyGoal, editedGenres.join(",")],
-        );
-        await loadUserPreferences();
-        setIsEditing(false);
-        Alert.alert(t("profile.success.title"), t("profile.success.message"));
-        return;
-      }
+      // Only re-plan growth when the goals actually changed; otherwise the
+      // initial rate, last-updated date and weekly increase would reset
+      await updateProfile(
+        {
+          username: editedUsername.trim(),
+          yearlyBookGoal: yearlyGoal,
+          preferredGenres: editedGenres,
+        },
+        goalsChanged
+          ? computeGrowthGoalFields({
+              currentDailyGoal,
+              targetDailyGoal,
+              targetDate: userPreferences?.end_reading_rate_goal_date,
+            })
+          : null,
+      );
 
-      const computedGoals = computeGrowthGoalFields({
-        currentDailyGoal,
-        targetDailyGoal,
-        targetDate: userPreferences?.end_reading_rate_goal_date,
-      });
-
-      // Preferences and goal history change together or not at all
-      await db.withTransactionAsync(async () => {
-        await execute(
-          `UPDATE user_preferences SET 
-            username = ?, 
-            yearly_book_goal = ?, 
-            preferred_genres = ?,
-            weekly_reading_goal = ?,
-            initial_reading_rate_minutes_per_day = ?,
-            end_reading_rate_goal_minutes_per_day = ?,
-            end_reading_rate_goal_date = ?,
-            current_reading_rate_minutes_per_day = ?,
-            current_reading_rate_last_updated = ?,
-            weekly_reading_rate_increase_minutes = ?,
-            weekly_reading_rate_increase_minutes_percentage = ?,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = 1`,
-          [
-            editedUsername.trim(),
-            yearlyGoal,
-            editedGenres.join(","),
-            computedGoals.weeklyReadingGoal,
-            computedGoals.initialReadingRate,
-            computedGoals.targetReadingRate,
-            computedGoals.endGoalDate,
-            computedGoals.currentReadingRate,
-            new Date().toISOString(),
-            computedGoals.weeklyIncreaseMinutes,
-            computedGoals.weeklyIncreasePercentage,
-          ],
-        );
-        await recordGoalChange(computedGoals.currentReadingRate);
-      });
-
-      await loadUserPreferences();
+      isEditingRef.current = false;
       setIsEditing(false);
+      await loadUserPreferences();
       Alert.alert(t("profile.success.title"), t("profile.success.message"));
     } catch (e) {
       console.error("Save error:", e);
@@ -267,14 +210,8 @@ export default function ProfileScreen() {
     setIsEditing(false);
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "Not set";
-    try {
-      return parseDbDate(dateString)?.toLocaleDateString() ?? dateString;
-    } catch {
-      return "Invalid date";
-    }
-  };
+  const formatOptionalDate = (dateString?: string) =>
+    dateString ? formatDate(dateString) : "—";
 
   const renderViewMode = () => (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -482,7 +419,9 @@ export default function ProfileScreen() {
                 {t("profile.stats.goalTargetDate")}
               </Text>
               <Text style={styles.infoValue}>
-                {formatDate(userPreferences?.end_reading_rate_goal_date)}
+                {formatOptionalDate(
+                  userPreferences?.end_reading_rate_goal_date,
+                )}
               </Text>
             </View>
           </View>
@@ -533,7 +472,7 @@ export default function ProfileScreen() {
                 {t("profile.account.memberSince")}
               </Text>
               <Text style={styles.infoValue}>
-                {formatDate(userPreferences?.created_at)}
+                {formatOptionalDate(userPreferences?.created_at)}
               </Text>
             </View>
           </View>
@@ -553,7 +492,7 @@ export default function ProfileScreen() {
                 {t("profile.account.lastUpdated")}
               </Text>
               <Text style={styles.infoValue}>
-                {formatDate(userPreferences?.updated_at)}
+                {formatOptionalDate(userPreferences?.updated_at)}
               </Text>
             </View>
           </View>

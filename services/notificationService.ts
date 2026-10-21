@@ -3,6 +3,9 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { AppUsageTracking, checkNotificationDatabaseIntegrity, execute, NotificationPreferences, queryFirst, repairNotificationDatabase } from '../db/db';
 import i18n from '../i18n';
+import { getDailyGoal } from '../db/repos/preferences';
+import { formatDuration } from '../utils/format';
+import { getTodayReadingMinutes } from '../utils/readingProgress';
 import { dateToLocalDateString, getTodayDateString } from '../utils/dateUtils';
 import { isDevModeEnabled } from '../utils/devMode';
 import { log } from '../utils/logger';
@@ -261,7 +264,7 @@ export class NotificationService {
     try {
       const prefs = await queryFirst('SELECT id FROM notification_preferences WHERE id = 1');
       return !prefs;
-    } catch (error) {
+    } catch {
       // If we can't check, assume it's not a first install
       return false;
     }
@@ -610,68 +613,18 @@ export class NotificationService {
    */
   async isDailyGoalMet(): Promise<boolean> {
     try {
-      const today = getTodayDateString();
-      
-      // Get user's current daily reading goal with fallback for missing columns
-      let userPrefs;
-      try {
-        // First try to get the current reading rate if the column exists
-        userPrefs = await queryFirst<{current_reading_rate_minutes_per_day: number}>(
-          'SELECT current_reading_rate_minutes_per_day FROM user_preferences WHERE id = 1'
-        );
-      } catch (columnError) {
-        // If the column doesn't exist, fall back to basic user preferences
-        log('📝 current_reading_rate_minutes_per_day column not found, using default goal');
-        userPrefs = null;
-      }
-      
-      // Determine daily goal with fallbacks
-      let dailyGoal = 30; // Default fallback
-      
-      if (userPrefs?.current_reading_rate_minutes_per_day) {
-        dailyGoal = userPrefs.current_reading_rate_minutes_per_day;
-      } else {
-        // Try to get from other possible columns as fallback
-        try {
-          const basicUserPrefs = await queryFirst<{yearly_book_goal?: number}>(
-            'SELECT yearly_book_goal FROM user_preferences WHERE id = 1'
-          );
-          // If user exists but no current reading rate, use a calculated default
-          if (basicUserPrefs) {
-            dailyGoal = 30; // Conservative default
-          } else {
-            // No user preferences exist yet
-            return false;
-          }
-        } catch (error) {
-          log('📝 No user preferences found, assuming goal not met');
-          return false;
-        }
-      }
-
-      // Get today's total reading minutes
-      let todayStats;
-      try {
-        todayStats = await queryFirst<{total_minutes: number}>(
-          `SELECT SUM(minutes_read) as total_minutes 
-           FROM reading_sessions 
-           WHERE date = ?`,
-          [today]
-        );
-      } catch (sessionError) {
-        // reading_sessions table might not exist yet
-        log('📝 reading_sessions table not found, assuming no reading today');
-        return false;
-      }
-
-      const totalMinutesToday = todayStats?.total_minutes || 0;
-      return totalMinutesToday >= dailyGoal;
-      
+      if (!(await this.isUserLoggedIn())) return false;
+      const [dailyGoal, minutesToday] = await Promise.all([
+        getDailyGoal(),
+        getTodayReadingMinutes(),
+      ]);
+      return minutesToday >= dailyGoal;
     } catch (error) {
       console.error('❌ Error checking daily goal:', error);
       return false;
     }
   }
+
 
   /**
    * Get remaining time to reach daily reading goal
@@ -683,41 +636,15 @@ export class NotificationService {
     formattedTime: string;
   }> {
     try {
-      const today = getTodayDateString();
-      
-      // Get user's daily reading goal
-      let userPrefs;
-      try {
-        userPrefs = await queryFirst<{current_reading_rate_minutes_per_day: number}>(
-          'SELECT current_reading_rate_minutes_per_day FROM user_preferences WHERE id = 1'
-        );
-      } catch (columnError) {
-        userPrefs = null;
-      }
-      
-      const dailyGoal = userPrefs?.current_reading_rate_minutes_per_day || 30;
-
-      // Get today's total reading minutes
-      let todayStats;
-      try {
-        todayStats = await queryFirst<{total_minutes: number}>(
-          `SELECT SUM(minutes_read) as total_minutes 
-           FROM reading_sessions 
-           WHERE date = ?`,
-          [today]
-        );
-      } catch (sessionError) {
-        todayStats = null;
-      }
-
-      const minutesRead = todayStats?.total_minutes || 0;
+      const dailyGoal = await getDailyGoal();
+      const minutesRead = await getTodayReadingMinutes();
       const remainingMinutes = Math.max(0, dailyGoal - minutesRead);
 
       return {
         remainingMinutes,
         dailyGoal,
         minutesRead,
-        formattedTime: this.formatDuration(remainingMinutes)
+        formattedTime: formatDuration(remainingMinutes, 'long')
       };
     } catch (error) {
       console.error('❌ Error getting remaining time to goal:', error);
@@ -725,26 +652,12 @@ export class NotificationService {
         remainingMinutes: 30,
         dailyGoal: 30,
         minutesRead: 0,
-        formattedTime: this.formatDuration(30)
+        formattedTime: formatDuration(30, 'long')
       };
     }
   }
 
-  /**
-   * Localized duration, e.g. "45 minutes" or "1h 30m"
-   */
-  private formatDuration(totalMinutes: number): string {
-    const key = 'settings.notificationMessages';
-    if (totalMinutes < 60) {
-      return i18n.t(totalMinutes === 1 ? `${key}.timeMinute` : `${key}.timeMinutes`, { count: totalMinutes });
-    }
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    if (minutes === 0) {
-      return i18n.t(hours === 1 ? `${key}.timeHour` : `${key}.timeHours`, { count: hours });
-    }
-    return i18n.t(`${key}.timeHoursMinutes`, { hours, minutes });
-  }
+
 
   /**
    * Generate a localized notification message with remaining time to goal.
@@ -764,7 +677,7 @@ export class NotificationService {
 
       return i18n.t(`${key}.goalRemaining`, {
         baseMessage,
-        remainingTime: this.formatDuration(remainingMinutes),
+        remainingTime: formatDuration(remainingMinutes, 'long'),
         dailyGoal: goalStatus.dailyGoal,
       });
     } catch (error) {

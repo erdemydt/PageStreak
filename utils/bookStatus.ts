@@ -1,7 +1,7 @@
 import { TFunction } from "i18next";
 import { COLORS } from "../themes/colors";
 
-export type ReadingStatus = "want_to_read" | "currently_reading" | "read";
+export type { ReadingStatus } from "../types/models";
 
 export function getStatusColor(status?: string): string {
   if (status === "currently_reading") return COLORS.status.currently_reading;

@@ -7,8 +7,8 @@ import { EnhancedBook } from "../db/db";
 import { COLORS } from "../themes/colors";
 import { SPACING } from "../themes/spacing";
 import { getStatusColor, getStatusText } from "../utils/bookStatus";
-import { parseDbDate } from "../utils/dateUtils";
 import { computeBookProgress } from "../utils/readingProgress";
+import { formatDate, formatDuration } from "../utils/format";
 
 interface BookCardProps {
   book: EnhancedBook & { pages_from_sessions?: number };
@@ -39,23 +39,6 @@ export default function BookCard({
   // Progress is derived from the row itself (current_page / session aggregate),
   // so cards don't each run their own query
   const progressData = computeBookProgress(book);
-
-  const formatReadingTime = (minutes: number) => {
-    if (minutes < 60) {
-      return `${minutes} ${t("components.readingTimeLogger.minutesShort")}`;
-    } else {
-      const hours = Math.floor(minutes / 60);
-      const remainingMinutes = minutes % 60;
-      return remainingMinutes > 0
-        ? `${hours} ${t("settings.hours")} ${remainingMinutes} ${t("components.readingTimeLogger.minutesShort")}`
-        : `${hours} ${t("settings.hours")}`;
-    }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return null;
-    return parseDbDate(dateString)?.toLocaleDateString() ?? dateString;
-  };
 
   const getReadingProgress = () => {
     if (
@@ -251,7 +234,7 @@ export default function BookCard({
             <Text style={styles.smallerPages}>{book.page}p</Text>
             {showReadingTime && readingTimeMinutes > 0 && (
               <Text style={styles.smallerReadingTime}>
-                {formatReadingTime(readingTimeMinutes)}
+                {formatDuration(readingTimeMinutes)}
               </Text>
             )}
           </View>
@@ -357,7 +340,7 @@ export default function BookCard({
           {showReadingTime && readingTimeMinutes > 0 && (
             <View style={styles.readingTimeContainer}>
               <Text style={styles.readingTimeText}>
-                {formatReadingTime(readingTimeMinutes)}{" "}
+                {formatDuration(readingTimeMinutes)}{" "}
                 {t("components.bookCard.readingTime")}
               </Text>
             </View>

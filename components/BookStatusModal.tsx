@@ -1,11 +1,12 @@
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Animated,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { COLORS } from "../themes/colors";
 import { getStatusColor } from "../utils/bookStatus";
@@ -18,8 +19,6 @@ interface BookStatusModalProps {
   currentStatus: BookStatus;
   onStatusChange: (status: BookStatus) => void;
   onClose: () => void;
-  fadeAnim: Animated.Value;
-  scaleAnim: Animated.Value;
 }
 
 export default function BookStatusModal({
@@ -28,10 +27,53 @@ export default function BookStatusModal({
   currentStatus,
   onStatusChange,
   onClose,
-  fadeAnim,
-  scaleAnim,
 }: BookStatusModalProps) {
   const { t } = useTranslation();
+
+  // The modal owns its fade/scale animation: parents only toggle `visible`.
+  // It stays rendered until the close animation finishes, showing the last
+  // book it was opened for (the parent may clear its selection meanwhile).
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const [rendered, setRendered] = useState(visible);
+  const shown = useRef({ bookTitle, currentStatus });
+  if (visible) {
+    shown.current = { bookTitle, currentStatus };
+  }
+
+  useEffect(() => {
+    if (visible) {
+      setRendered(true);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) setRendered(false);
+      });
+    }
+  }, [visible, fadeAnim, scaleAnim]);
 
   const statusOptions: Array<{
     value: BookStatus;
@@ -71,7 +113,7 @@ export default function BookStatusModal({
   return (
     <Modal
       transparent
-      visible={visible}
+      visible={rendered}
       animationType="none"
       onRequestClose={onClose}
     >
@@ -95,7 +137,7 @@ export default function BookStatusModal({
           </View>
 
           <Text style={styles.bookTitle} numberOfLines={2}>
-            {bookTitle}
+            {shown.current.bookTitle}
           </Text>
 
           <View style={styles.statusOptions}>
@@ -104,7 +146,8 @@ export default function BookStatusModal({
                 key={option.value}
                 style={[
                   styles.statusOption,
-                  currentStatus === option.value && styles.statusOptionActive,
+                  shown.current.currentStatus === option.value &&
+                    styles.statusOptionActive,
                   { borderColor: option.color },
                 ]}
                 onPress={() => handleStatusSelect(option.value)}
@@ -125,7 +168,7 @@ export default function BookStatusModal({
                     </Text>
                   </View>
                 </View>
-                {currentStatus === option.value && (
+                {shown.current.currentStatus === option.value && (
                   <View
                     style={[
                       styles.selectedIndicator,

@@ -16,8 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import db, { execute } from "../db/db";
-import { recordGoalChange } from "../utils/goalHistory";
+import { saveOnboardingPreferences } from "../db/repos/preferences";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import { log } from "../utils/logger";
@@ -248,8 +247,6 @@ export default function IntroScreen() {
       // Use user's input values
       const initialReadingRateMinutesPerDay = currentGoalNum;
       const endReadingRateGoalMinutesPerDay = targetGoalNum;
-      const weeklyReadingGoal = initialReadingRateMinutesPerDay * 7;
-      const dailyGoal = initialReadingRateMinutesPerDay;
 
       // Calculate weekly increase needed based on the selected date
       const timeDifferenceMs = goalDate.getTime() - new Date().getTime();
@@ -272,34 +269,15 @@ export default function IntroScreen() {
       // Use the selected goal date instead of end of year
       const endGoalDate = goalDate.toISOString();
 
-      // Preferences and goal history are written together or not at all
-      await db.withTransactionAsync(async () => {
-        // Insert or replace the single user preferences record
-        await execute(
-          `INSERT OR REPLACE INTO user_preferences (
-            id, username, yearly_book_goal, preferred_genres, updated_at,
-            weekly_reading_goal, 
-            initial_reading_rate_minutes_per_day, end_reading_rate_goal_minutes_per_day,
-            end_reading_rate_goal_date, current_reading_rate_minutes_per_day,
-            current_reading_rate_last_updated, weekly_reading_rate_increase_minutes,
-            weekly_reading_rate_increase_minutes_percentage
-          ) VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            username.trim(),
-            Number(yearlyGoal),
-            preferredGenres.join(","),
-            weeklyReadingGoal,
-            initialReadingRateMinutesPerDay,
-            endReadingRateGoalMinutesPerDay,
-            endGoalDate,
-            initialReadingRateMinutesPerDay, // current rate starts at initial rate
-            new Date().toISOString(), // current_reading_rate_last_updated
-            weeklyReadingRateIncreaseMinutes,
-            weeklyReadingRateIncreasePercentage,
-          ],
-        );
-
-        await recordGoalChange(initialReadingRateMinutesPerDay);
+      await saveOnboardingPreferences({
+        username: username.trim(),
+        yearlyBookGoal: Number(yearlyGoal),
+        preferredGenres,
+        initialRate: initialReadingRateMinutesPerDay,
+        targetRate: endReadingRateGoalMinutesPerDay,
+        targetDate: endGoalDate,
+        weeklyIncreaseMinutes: weeklyReadingRateIncreaseMinutes,
+        weeklyIncreasePercentage: weeklyReadingRateIncreasePercentage,
       });
 
       // Initialize notification preferences for new user

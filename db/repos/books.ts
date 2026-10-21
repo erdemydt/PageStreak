@@ -1,6 +1,7 @@
 import type { ReadingStatus } from "../../utils/bookStatus";
 import { syncBookCurrentPageFromSessions } from "../../utils/readingProgress";
-import { EnhancedBook, execute, queryAll } from "../db";
+import { emitDataChange } from "../../utils/dataEvents";
+import { EnhancedBook, execute, queryAll, queryFirst } from "../db";
 
 /**
  * All writes to enhanced_books go through this module so that status and
@@ -18,6 +19,12 @@ const STATUS_ORDER = `CASE WHEN b.reading_status = 'currently_reading' THEN 1
        WHEN b.reading_status = 'want_to_read' THEN 2
        WHEN b.reading_status = 'read' THEN 3
        ELSE 4 END,`;
+
+const ORDER_CLAUSES = {
+  status: `${STATUS_ORDER} b.date_added DESC`,
+  recent: "b.date_added DESC",
+  started: "b.date_started DESC, b.date_added DESC",
+} as const;
 
 export type NewBook = {
   name: string;
@@ -69,19 +76,21 @@ export async function addBook(
       status === "read" ? book.page : 0,
     ],
   );
+  emitDataChange("books");
   return result.lastInsertRowId;
 }
 
 /**
  * Books with their session aggregates in a single query (avoids one query
  * per book). order "status" (default): currently reading -> want to read ->
- * read, newest first within each. order "recent": newest first.
+ * read, newest first within each. "recent": newest first. "started": most
+ * recently started first.
  */
 export async function listBooksWithStats(
   options: {
     status?: ReadingStatus;
     limit?: number;
-    order?: "status" | "recent";
+    order?: "status" | "recent" | "started";
   } = {},
 ): Promise<BookWithStats[]> {
   const params: (string | number)[] = [];
@@ -104,7 +113,7 @@ export async function listBooksWithStats(
      LEFT JOIN reading_sessions s ON s.book_id = b.id
      ${where}
      GROUP BY b.id
-     ORDER BY ${options.order === "recent" ? "" : STATUS_ORDER} b.date_added DESC
+     ORDER BY ${ORDER_CLAUSES[options.order ?? "status"]}
      ${limit}`,
     params,
   );
@@ -150,6 +159,7 @@ export async function updateBookStatus(
   // read, otherwise from sessions (a re-read starts from its logged pages,
   // not from the 100% a finished book carries)
   await syncBookCurrentPageFromSessions(bookId);
+  emitDataChange("books");
 }
 
 /**
@@ -158,4 +168,41 @@ export async function updateBookStatus(
 export async function deleteBookWithSessions(bookId: number): Promise<void> {
   await execute("DELETE FROM reading_sessions WHERE book_id = ?", [bookId]);
   await execute("DELETE FROM enhanced_books WHERE id = ?", [bookId]);
+  emitDataChange("books", "sessions");
+}
+
+export async function getBook(bookId: number): Promise<EnhancedBook | null> {
+  return queryFirst<EnhancedBook>("SELECT * FROM enhanced_books WHERE id = ?", [
+    bookId,
+  ]);
+}
+
+/** Set the total page count; current_page is re-capped to it */
+export async function setPageCount(
+  bookId: number,
+  pageCount: number,
+): Promise<void> {
+  await execute("UPDATE enhanced_books SET page = ? WHERE id = ?", [
+    pageCount,
+    bookId,
+  ]);
+  await syncBookCurrentPageFromSessions(bookId);
+  emitDataChange("books");
+}
+
+/** Total number of books and the count per reading status */
+export async function countBooksByStatus(): Promise<
+  { total: number } & Record<ReadingStatus, number>
+> {
+  const rows = await queryAll<{ reading_status: string; count: number }>(
+    "SELECT reading_status, COUNT(*) as count FROM enhanced_books GROUP BY reading_status",
+  );
+  const counts = { total: 0, want_to_read: 0, currently_reading: 0, read: 0 };
+  for (const row of rows) {
+    counts.total += row.count;
+    if (row.reading_status in counts) {
+      counts[row.reading_status as ReadingStatus] = row.count;
+    }
+  }
+  return counts;
 }

@@ -1,5 +1,5 @@
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { router } from "expo-router";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -15,21 +15,14 @@ import LanguageSelector from "../../components/LanguageSelector";
 import NotificationSettings from "../../components/NotificationSettings";
 import NotificationTester from "../../components/NotificationTester";
 import SettingsRow from "../../components/SettingsRow";
-import { queryFirst } from "../../db/db";
+import { getUserPreferences } from "../../db/repos/preferences";
+import type { UserPreferences } from "../../types/models";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import { TYPE } from "../../themes/typography";
 import { isDevModeEnabled } from "../../utils/devMode";
 import { logoutUser } from "../../utils/migration";
-
-type UserPreferences = {
-  id: number;
-  username: string;
-  yearly_book_goal: number;
-  preferred_genres?: string;
-  created_at?: string;
-  updated_at?: string;
-};
+import { useFocusRefresh } from "../../hooks/useFocusRefresh";
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -39,18 +32,9 @@ export default function SettingsScreen() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
 
-  // Tabs stay mounted, so refresh on focus to pick up profile edits
-  useFocusEffect(
-    useCallback(() => {
-      loadUserPreferences();
-    }, []),
-  );
-
   const loadUserPreferences = async () => {
     try {
-      const user = await queryFirst<UserPreferences>(
-        "SELECT * FROM user_preferences WHERE id = 1",
-      );
+      const user = await getUserPreferences();
       if (user) {
         setUserPreferences(user);
       }
@@ -58,40 +42,37 @@ export default function SettingsScreen() {
       console.error("Failed to load user preferences:", e);
     }
   };
+  useFocusRefresh(loadUserPreferences, ["preferences"]);
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      t("settings.logout"),
-      t("settings.logoutConfirmMessage"),
-      [
-        {
-          text: t("settings.cancel"),
-          style: "cancel",
-        },
-        {
-          text: t("settings.logout"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await logoutUser();
+    Alert.alert(t("settings.logout"), t("settings.logoutConfirmMessage"), [
+      {
+        text: t("settings.cancel"),
+        style: "cancel",
+      },
+      {
+        text: t("settings.logout"),
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setLoading(true);
+            await logoutUser();
 
-              // Direct redirect to intro page after logout
-              router.replace("/intro");
-            } catch (error) {
-              console.error("Logout failed:", error);
-              Alert.alert(t("settings.error"), t("settings.logoutFailed"));
-            } finally {
-              setLoading(false);
-            }
-          },
+            // Direct redirect to intro page after logout
+            router.replace("/intro");
+          } catch (error) {
+            console.error("Logout failed:", error);
+            Alert.alert(t("settings.error"), t("settings.logoutFailed"));
+          } finally {
+            setLoading(false);
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleExportSuccess = (filePath: string) => {

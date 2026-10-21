@@ -40,7 +40,7 @@ const NotificationTester: React.FC = () => {
         t("components.notificationTester.immediateTestSent"),
         t("components.notificationTester.checkNotificationPanel"),
       );
-    } catch (error) {
+    } catch {
       Alert.alert(
         t("components.notificationTester.error"),
         t("components.notificationTester.failedToSendImmediateTest"),
@@ -56,7 +56,7 @@ const NotificationTester: React.FC = () => {
         t("components.notificationTester.notificationIn1Minute"),
       );
       await loadNotificationStatus();
-    } catch (error) {
+    } catch {
       Alert.alert(
         t("components.notificationTester.error"),
         t("components.notificationTester.failedToScheduleTest"),
@@ -72,7 +72,7 @@ const NotificationTester: React.FC = () => {
         t("components.notificationTester.notificationIn5Minutes"),
       );
       await loadNotificationStatus();
-    } catch (error) {
+    } catch {
       Alert.alert(
         t("components.notificationTester.error"),
         t("components.notificationTester.failedToScheduleTest"),
@@ -88,7 +88,7 @@ const NotificationTester: React.FC = () => {
         t("components.notificationTester.checkedAndScheduled"),
       );
       await loadNotificationStatus();
-    } catch (error) {
+    } catch {
       Alert.alert(
         t("components.notificationTester.error"),
         t("components.notificationTester.failedToCheckSchedule"),
@@ -104,7 +104,7 @@ const NotificationTester: React.FC = () => {
         t("components.notificationTester.allNotificationsCancelled"),
       );
       await loadNotificationStatus();
-    } catch (error) {
+    } catch {
       Alert.alert(
         t("components.notificationTester.error"),
         t("components.notificationTester.failedToCancelNotifications"),

@@ -1,5 +1,5 @@
-import { Link, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { Link } from "expo-router";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FlatList,
@@ -13,7 +13,8 @@ import { Image } from "expo-image";
 import BookCard from "../../../components/BookCard";
 import DailyProgressCard from "../../../components/DailyProgressCard";
 import ReadingTimeLogger from "../../../components/ReadingTimeLogger";
-import { queryFirst } from "../../../db/db";
+import { getUserPreferences } from "../../../db/repos/preferences";
+import type { UserPreferences } from "../../../types/models";
 import { BookWithStats, listBooksWithStats } from "../../../db/repos/books";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
@@ -23,16 +24,7 @@ import {
   getReadingStreak,
   getTodayReadingMinutes,
 } from "../../../utils/readingProgress";
-
-type UserPreferences = {
-  id: number;
-  username: string;
-  yearly_book_goal: number;
-  preferred_genres?: string;
-  created_at?: string;
-  updated_at?: string;
-  current_reading_rate_minutes_per_day?: number;
-};
+import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -44,20 +36,11 @@ export default function HomeScreen() {
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [readingStreak, setReadingStreak] = useState(0);
 
-  // Refresh data when screen comes into focus (e.g., when returning from books tab)
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, []),
-  );
-
   const loadData = async () => {
     setLoading(true);
     try {
       // Load user preferences
-      const user = await queryFirst<UserPreferences>(
-        "SELECT * FROM user_preferences WHERE id = 1",
-      );
+      const user = await getUserPreferences();
       setUserPreferences(user);
 
       // Load today's reading progress
@@ -73,6 +56,9 @@ export default function HomeScreen() {
       setLoading(false);
     }
   };
+  // Reload on focus, and when books/sessions/preferences change underneath
+  // (e.g. the reading logger modal saving a session)
+  useFocusRefresh(loadData, ["books", "sessions", "preferences"]);
 
   const loadTodayProgress = async () => {
     try {
@@ -118,9 +104,6 @@ export default function HomeScreen() {
     <BookCard book={item} compact={true} />
   );
 
-  const handleReadingLoggerSuccess = () => {
-    loadData();
-  };
   // Rendered as an element (not a component type defined during render), so the
   // header isn't unmounted and remounted on every state change
   const listHeader = (
@@ -311,7 +294,6 @@ export default function HomeScreen() {
       <ReadingTimeLogger
         visible={showReadingLogger}
         onClose={() => setShowReadingLogger(false)}
-        onSuccess={handleReadingLoggerSuccess}
       />
     </View>
   );

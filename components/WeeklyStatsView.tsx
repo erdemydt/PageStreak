@@ -2,22 +2,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { queryAll, queryFirst } from "../db/db";
+import { getDailyGoal } from "../db/repos/preferences";
+import { getDailyTotals, listSessionsWithBooks } from "../db/repos/sessions";
 import { COLORS } from "../themes/colors";
-import {
-    dateToLocalDateString,
-    parseDbDate,
-    parseLocalDateString,
-} from "../utils/dateUtils";
+import { dateToLocalDateString, parseDbDate } from "../utils/dateUtils";
 import { GoalForDate, loadGoalForDate } from "../utils/goalHistory";
 import { calculateStreaks } from "../utils/readingProgress";
+import { formatDate, formatDuration, LONG_DATE } from "../utils/format";
 
 interface WeeklyStats {
   weekStart: string;
@@ -85,13 +83,7 @@ export default function WeeklyStatsView({
     try {
       setLoading(true);
 
-      // Get user's daily goal
-      const userPrefs = await queryFirst<{
-        current_reading_rate_minutes_per_day: number;
-      }>(
-        "SELECT current_reading_rate_minutes_per_day FROM user_preferences WHERE id = 1",
-      );
-      const goalMinutes = userPrefs?.current_reading_rate_minutes_per_day || 30;
+      const goalMinutes = await getDailyGoal();
       setDailyGoal(goalMinutes);
       const goalForDate = await loadGoalForDate();
 
@@ -101,25 +93,9 @@ export default function WeeklyStatsView({
       const startDateString = dateToLocalDateString(weekStart);
       const endDateString = dateToLocalDateString(weekEnd);
 
-      // Get all sessions for the week with book info
-      const sessions = await queryAll<{
-        id: number;
-        book_id: number;
-        minutes_read: number;
-        date: string;
-        created_at: string;
-        notes: string;
-        book_name: string;
-        book_author: string;
-      }>(
-        `
-        SELECT rs.*, eb.name as book_name, eb.author as book_author
-        FROM reading_sessions rs
-        JOIN enhanced_books eb ON rs.book_id = eb.id
-        WHERE rs.date BETWEEN ? AND ?
-        ORDER BY rs.date, rs.created_at
-      `,
-        [startDateString, endDateString],
+      const sessions = await listSessionsWithBooks(
+        startDateString,
+        endDateString,
       );
 
       // Calculate daily breakdown
@@ -240,16 +216,7 @@ export default function WeeklyStatsView({
     goalForDate: GoalForDate,
   ): Promise<StreakInfo> => {
     // Get all daily totals for streak calculation
-    const dailyTotals = await queryAll<{ date: string; total_minutes: number }>(
-      `
-      SELECT rs.date, SUM(rs.minutes_read) as total_minutes
-      FROM reading_sessions rs
-      WHERE rs.date <= ?
-      GROUP BY rs.date
-      ORDER BY rs.date DESC
-    `,
-      [endDate],
-    );
+    const dailyTotals = await getDailyTotals(endDate);
 
     const { currentStreak, longestStreak } = calculateStreaks(
       dailyTotals,
@@ -341,25 +308,6 @@ export default function WeeklyStatsView({
     return t(`components.readingLogs.weekdays.${weekdays[mondayFirstIndex]}`);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = parseLocalDateString(dateString);
-    const month = t(
-      `components.readingLogs.months.${date.toLocaleString("en", { month: "long" }).toLowerCase()}`,
-    );
-    return `${month} ${date.getDate()}, ${date.getFullYear()}`;
-  };
-
-  const formatMinutes = (minutes: number): string => {
-    if (minutes < 60) {
-      return `${minutes}${t("components.readingLogs.minutesSuffix")}`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0
-      ? `${hours}h ${remainingMinutes}m`
-      : `${hours}h`;
-  };
-
   if (loading || !stats) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -393,7 +341,8 @@ export default function WeeklyStatsView({
 
           <TouchableOpacity onPress={onGoToCurrentWeek} style={styles.weekInfo}>
             <Text style={styles.weekRange}>
-              {formatDate(stats.weekStart)} - {formatDate(stats.weekEnd)}
+              {formatDate(stats.weekStart, LONG_DATE)} -{" "}
+              {formatDate(stats.weekEnd, LONG_DATE)}
             </Text>
             <Text style={styles.weekTotal}>
               📊 {t("components.weeklyStats.weeklyAnalytics")}
@@ -420,7 +369,7 @@ export default function WeeklyStatsView({
             <Ionicons name="time" size={24} color={COLORS.primary} />
           </View>
           <Text style={styles.summaryValue}>
-            {formatMinutes(stats.totalMinutes)}
+            {formatDuration(stats.totalMinutes)}
           </Text>
           <Text style={styles.summaryLabel}>
             {t("components.weeklyStats.totalReading")}
@@ -637,7 +586,7 @@ export default function WeeklyStatsView({
               </Text>
               <View style={styles.topBookStats}>
                 <Text style={styles.topBookStat}>
-                  {formatMinutes(stats.topBook.minutesRead)} •{" "}
+                  {formatDuration(stats.topBook.minutesRead)} •{" "}
                   {stats.topBook.sessionsCount}{" "}
                   {t("components.weeklyStats.sessions")}
                 </Text>
@@ -669,7 +618,8 @@ export default function WeeklyStatsView({
                 <View style={styles.distributionInfo}>
                   <Text style={styles.distributionLabel}>{item.timeRange}</Text>
                   <Text style={styles.distributionValue}>
-                    {formatMinutes(item.minutes)} ({Math.round(item.percentage)}
+                    {formatDuration(item.minutes)} (
+                    {Math.round(item.percentage)}
                     %)
                   </Text>
                 </View>

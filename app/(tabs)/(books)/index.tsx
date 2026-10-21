@@ -1,4 +1,4 @@
-import { Link, Stack, useFocusEffect, useRouter } from "expo-router";
+import { Link, Stack, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -17,10 +17,11 @@ import BookCard from "../../../components/BookCard";
 import BookStatusModal, {
   BookStatus,
 } from "../../../components/BookStatusModal";
-import { EnhancedBook, queryAll } from "../../../db/db";
+import { EnhancedBook } from "../../../db/db";
 import {
   addBook,
   BookWithStats,
+  countBooksByStatus,
   deleteBookWithSessions,
   listBooksWithStats,
   updateBookStatus,
@@ -29,6 +30,7 @@ import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
 import { getStatusText } from "../../../utils/bookStatus";
+import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
 type BooksearchProps = {
   name: string;
   setName: (name: string) => void;
@@ -85,9 +87,7 @@ function ManualBookEntry(props: BooksearchProps) {
         ]}
       >
         <View style={styles.modalHeader}>
-          <Text style={styles.cardTitle}>
-            {t("booksPage.addManualButton")}
-          </Text>
+          <Text style={styles.cardTitle}>{t("booksPage.addManualButton")}</Text>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={props.onClose}
@@ -198,9 +198,7 @@ export default function HomeScreen() {
   const [name, setName] = useState("");
   const [author, setAuthor] = useState("");
   const [page, setPage] = useState("");
-  const [books, setBooks] = useState<
-    BookWithStats[]
-  >([]);
+  const [books, setBooks] = useState<BookWithStats[]>([]);
   const [allBooksCount, setAllBooksCount] = useState(0);
   const [statusCounts, setStatusCounts] = useState({
     want_to_read: 0,
@@ -214,8 +212,6 @@ export default function HomeScreen() {
   const [scaleAnim] = useState(new Animated.Value(0.8));
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [selectedBook, setSelectedBook] = useState<EnhancedBook | null>(null);
-  const [statusModalFadeAnim] = useState(new Animated.Value(0));
-  const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
   const [manualBookStatus, setManualBookStatus] =
     useState<BookStatus>("currently_reading");
   const [filterStatus, setFilterStatus] = useState<BookStatus | "all">("all");
@@ -224,29 +220,8 @@ export default function HomeScreen() {
   const loadBooks = useCallback(async () => {
     setLoading(true);
     try {
-      // Get total counts first
-      const totalResult = await queryAll<{ total: number }>(
-        "SELECT COUNT(*) as total FROM enhanced_books",
-      );
-      const totalCount = totalResult[0]?.total || 0;
-      setAllBooksCount(totalCount);
-
-      // Get status counts
-      const statusCountsResult = await queryAll<{
-        reading_status: string;
-        count: number;
-      }>(`
-        SELECT reading_status, COUNT(*) as count 
-        FROM enhanced_books 
-        GROUP BY reading_status
-      `);
-
-      const counts = { want_to_read: 0, currently_reading: 0, read: 0 };
-      statusCountsResult.forEach((row) => {
-        if (row.reading_status in counts) {
-          counts[row.reading_status as keyof typeof counts] = row.count;
-        }
-      });
+      const { total, ...counts } = await countBooksByStatus();
+      setAllBooksCount(total);
       setStatusCounts(counts);
 
       // Preview of books for the active filter; filtering happens in SQL so
@@ -265,11 +240,7 @@ export default function HomeScreen() {
     }
   }, [filterStatus, t]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadBooks();
-    }, [loadBooks]),
-  );
+  useFocusRefresh(loadBooks, ["books", "sessions"], [loadBooks]);
 
   const getStatusCount = (status: BookStatus) => {
     return statusCounts[status] || 0;
@@ -291,7 +262,6 @@ export default function HomeScreen() {
       setPage("");
       setManualBookStatus("currently_reading");
       Keyboard.dismiss();
-      await loadBooks();
       toggleManualForm();
     } catch (e) {
       setError(t("booksPage.failedToSave"));
@@ -315,7 +285,6 @@ export default function HomeScreen() {
             setError(null);
             try {
               await deleteBookWithSessions(bookId);
-              await loadBooks();
             } catch (e) {
               setError(t("booksPage.alert.failedDelete"));
               console.error("Delete book error:", e);
@@ -370,37 +339,11 @@ export default function HomeScreen() {
   const openStatusModal = (book: EnhancedBook) => {
     setSelectedBook(book);
     setStatusModalVisible(true);
-    Animated.parallel([
-      Animated.timing(statusModalFadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(statusModalScaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const closeStatusModal = () => {
-    Animated.parallel([
-      Animated.timing(statusModalFadeAnim, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(statusModalScaleAnim, {
-        toValue: 0.8,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setStatusModalVisible(false);
-      setSelectedBook(null);
-    });
+    setStatusModalVisible(false);
+    setSelectedBook(null);
   };
 
   const handleStatusChange = async (newStatus: BookStatus) => {
@@ -411,7 +354,6 @@ export default function HomeScreen() {
 
     try {
       await updateBookStatus(selectedBook.id, newStatus);
-      await loadBooks();
 
       Alert.alert(
         t("booksPage.alert.statusUpdated"),
@@ -428,11 +370,7 @@ export default function HomeScreen() {
     }
   };
 
-  const renderBook = ({
-    item,
-  }: {
-    item: BookWithStats;
-  }) => (
+  const renderBook = ({ item }: { item: BookWithStats }) => (
     <BookCard
       book={item}
       showDeleteButton={true}
@@ -494,8 +432,6 @@ export default function HomeScreen() {
             }
             onStatusChange={handleStatusChange}
             onClose={closeStatusModal}
-            fadeAnim={statusModalFadeAnim}
-            scaleAnim={statusModalScaleAnim}
           />
 
           <View style={styles.actionButtons}>

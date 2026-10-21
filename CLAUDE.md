@@ -47,7 +47,12 @@ app/
     settings.tsx         Language, notifications, backup/restore, logout (wipes all data)
 components/              Screens' building blocks
 db/db.tsx                SQLite handle, queryAll/queryFirst/execute, schema init
-db/repos/books.ts        Book reads/writes (start of the Phase 2 data layer)
+db/repos/                Data layer. Screens/components use ONLY these (lint-enforced):
+  books.ts               addBook, listBooksWithStats, getBook, setPageCount, updateBookStatus, ...
+  sessions.ts            logSession, updateSession, deleteSession, listSessionsWithBooks, daily totals
+  preferences.ts         getUserPreferences, getDailyGoal, saveOnboardingPreferences, updateProfileBasics
+hooks/useFocusRefresh.ts Load on focus + on data-change events (+ optional deps)
+types/models.ts          Row types (EnhancedBook, ReadingSession, UserPreferences, ...)
 services/
   notificationService.ts Singleton. Schedules ONE local reminder N hours after app is backgrounded
   dataBackupService.ts   JSON export/import (replace or merge)
@@ -59,6 +64,9 @@ utils/
   goalSettings.ts        Growth-goal validation and derived fields
   goalHistory.ts         Goal timeline: recordGoalChange, loadGoalForDate, backfill
   logger.ts              Dev-only log/warn
+  format.ts              formatDuration / formatDate in the app language (use these, no local formatters)
+  dataEvents.ts          Change bus: repo writes emit books/sessions/preferences
+  devData.ts             Dev-only random session generator
 i18n/index.ts            ALL strings, `en` and `tr` in one file
 themes/                  COLORS / SPACING / TYPE tokens (use them; no raw hex in screens)
 ```
@@ -117,7 +125,10 @@ statements in sync** when adding columns, and add new tables to the backup servi
 - **i18n parity**: every key must exist in both `en` and `tr`. No hard-coded user-facing
   strings, including `Alert.alert` titles and buttons. Avoid i18next `_one`/`_other` plurals
   (Hermes `Intl.PluralRules` support is not guaranteed); use explicit keys like `bookCountOne` / `bookCountOther`.
-- Tabs stay mounted: load screen data in `useFocusEffect`, not only `useEffect([])`.
+- Tabs stay mounted: load screen data with `useFocusRefresh(load, topics, deps?)`, not `useEffect([])`.
+  New writes belong in a repo and must `emitDataChange(...)` so visible screens refresh.
+- No SQL in `app/` or `components/` (ESLint `no-restricted-imports`); add a repo function instead.
+  `utils/` and `services/` may query, but prefer repos.
 - Don't define components inside render (e.g. `const Header = () => …; <Header/>`); it remounts every render.
 - Backup **merge** never writes by primary key; it remaps book ids and dedupes sessions.
 - `utils/devMode.ts#ENABLE_DEV_FEATURES` gates dev tools (NotificationTester, random data). Keep it `false` in commits.
@@ -185,3 +196,8 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   transaction (goal history now backed up), all book writes through `db/repos/books.ts`, one-query
   book lists (no N+1, no per-card queries, `refreshTrigger` removed), session indexes, a dev-only
   logger, expo-image covers, forced light mode. Reviewed by a fresh-eyes subagent before commit.
+- **Phase 2: foundations.** `types/models.ts`; `utils/format.ts` replaced ~9 local formatters (dates now
+  follow the app language); repos for books, sessions and preferences, with no SQL left in screens
+  (lint rule); a change bus plus `useFocusRefresh`; `BookStatusModal` owns its animation (5 copies
+  removed); the dev data generator moved out of readinglogs; the notification service's dead
+  "column not found" fallbacks removed; unused imports cleaned (lint warnings 29 → 19).

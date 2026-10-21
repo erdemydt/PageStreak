@@ -1,31 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Alert,
-    Dimensions,
-    findNodeHandle,
-    Modal,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  findNodeHandle,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { EnhancedBook, execute, queryAll } from "../db/db";
-import { updateBookStatus } from "../db/repos/books";
+import { EnhancedBook } from "../db/db";
+import { listBooksWithStats } from "../db/repos/books";
+import { logSession } from "../db/repos/sessions";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
-import { getTodayDateString } from "../utils/dateUtils";
-import {
-    getEnhancedBookProgress,
-    syncBookCurrentPageFromSessions,
-} from "../utils/readingProgress";
+import { getEnhancedBookProgress } from "../utils/readingProgress";
 
 interface ReadingTimeLoggerProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  /** Optional: listeners via useFocusRefresh already reload on save */
+  onSuccess?: () => void;
 }
 
 const { width: screenWidth } = Dimensions.get("window");
@@ -81,11 +79,10 @@ export default function ReadingTimeLogger({
 
   const loadCurrentlyReadingBooks = async () => {
     try {
-      const books = await queryAll<EnhancedBook>(
-        `SELECT * FROM enhanced_books 
-         WHERE reading_status = 'currently_reading' 
-         ORDER BY date_started DESC, date_added DESC`,
-      );
+      const books = await listBooksWithStats({
+        status: "currently_reading",
+        order: "started",
+      });
       setCurrentlyReadingBooks(books);
 
       // Refresh the selection from the fresh list: auto-select when there's only
@@ -141,27 +138,15 @@ export default function ReadingTimeLogger({
 
     setLoading(true);
     try {
-      const today = getTodayDateString(); // YYYY-MM-DD format
       const pagesRead = pages.trim() ? Number(pages) : null;
 
-      // Insert the reading session
-      await execute(
-        `INSERT INTO reading_sessions (book_id, minutes_read, pages_read, date, notes) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [
-          selectedBook.id,
-          Number(minutes),
-          pagesRead,
-          today,
-          notes.trim() || null,
-        ],
-      );
-
-      if (finishBook) {
-        await updateBookStatus(selectedBook.id, "read");
-      }
-      // Re-derive current_page (pinned to the full count if just finished)
-      await syncBookCurrentPageFromSessions(selectedBook.id);
+      await logSession({
+        bookId: selectedBook.id,
+        minutes: Number(minutes),
+        pages: pagesRead,
+        notes: notes.trim() || null,
+        finishBook,
+      });
 
       // Check if daily goal is met and update notification schedule
       await NotificationService.checkAndScheduleNotification();
@@ -175,7 +160,7 @@ export default function ReadingTimeLogger({
       setNotes("");
       setFinishBook(false);
 
-      onSuccess();
+      onSuccess?.();
       onClose();
 
       const successMessage = finishBook

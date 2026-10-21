@@ -2,33 +2,16 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import {
-    checkNotificationDatabaseIntegrity,
-    initializeDatabase,
-    queryFirst,
-    repairNotificationDatabase,
+  checkNotificationDatabaseIntegrity,
+  initializeDatabase,
+  repairNotificationDatabase,
 } from "../db/db";
+import { getUserPreferences } from "../db/repos/preferences";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import { backfillGoalHistoryIfEmpty } from "../utils/goalHistory";
 import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
 import { log } from "../utils/logger";
-
-type UserPreferences = {
-  id: number;
-  username: string;
-  yearly_book_goal: number;
-  preferred_genres?: string;
-  created_at?: string;
-  updated_at?: string;
-  weekly_reading_goal?: number;
-  initial_reading_rate_minutes_per_day?: number;
-  end_reading_rate_goal_minutes_per_day?: number;
-  end_reading_rate_goal_date?: string;
-  current_reading_rate_minutes_per_day?: number;
-  current_reading_rate_last_updated?: string;
-  weekly_reading_rate_increase_minutes?: number;
-  weekly_reading_rate_increase_minutes_percentage?: number;
-};
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
@@ -75,9 +58,7 @@ export default function Index() {
         // Sync system permissions with database preferences
         await NotificationService.syncPermissionsWithDatabase();
 
-        log(
-          "✅ Notification service initialized and permissions synced",
-        );
+        log("✅ Notification service initialized and permissions synced");
       } catch (notificationError) {
         console.error(
           "⚠️ Notification service initialization failed, continuing without notifications:",
@@ -110,9 +91,7 @@ export default function Index() {
 
   const checkUserSetup = async () => {
     try {
-      const user = await queryFirst<UserPreferences>(
-        "SELECT * FROM user_preferences WHERE id = 1",
-      );
+      const user = await getUserPreferences();
       setHasUser(!!user);
 
       // Automatically navigate based on user status

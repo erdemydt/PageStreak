@@ -1,37 +1,37 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Alert,
-    Dimensions,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import WeeklyStatsView from "../../../components/WeeklyStatsView";
+import { EnhancedBook } from "../../../db/db";
+import { getBook } from "../../../db/repos/books";
 import {
-    EnhancedBook,
-    execute,
-    queryAll,
-    ReadingSession,
-} from "../../../db/db";
+  deleteSession,
+  listSessionsWithBooks,
+  SessionWithBook,
+  updateSession,
+} from "../../../db/repos/sessions";
 import { COLORS } from "../../../themes/colors";
 import {
-    dateToLocalDateString,
-    getTodayDateString,
+  dateToLocalDateString,
+  getTodayDateString,
 } from "../../../utils/dateUtils";
 import { isDevModeEnabled } from "../../../utils/devMode";
-import {
-    getEnhancedBookProgress,
-    syncBookCurrentPageFromSessions,
-} from "../../../utils/readingProgress";
-import { log } from "../../../utils/logger";
+import { generateRandomReadingData } from "../../../utils/devData";
+import { getEnhancedBookProgress } from "../../../utils/readingProgress";
+import { formatDate, LONG_DATE } from "../../../utils/format";
+import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
 interface WeekDay {
   date: string;
   day: string;
@@ -39,11 +39,6 @@ interface WeekDay {
   isToday: boolean;
   sessions: SessionWithBook[];
   totalMinutes: number;
-}
-
-interface SessionWithBook extends ReadingSession {
-  book_name: string;
-  book_author: string;
 }
 
 interface EditSessionModalProps {
@@ -80,13 +75,7 @@ function EditSessionModal({
     const loadBookData = async () => {
       if (session) {
         try {
-          const books = await queryAll<EnhancedBook>(
-            "SELECT * FROM enhanced_books WHERE id = ?",
-            [session.book_id],
-          );
-          if (books.length > 0) {
-            setBookData(books[0]);
-          }
+          setBookData(await getBook(session.book_id));
         } catch (error) {
           console.error("Error loading book data:", error);
         }
@@ -178,7 +167,7 @@ function EditSessionModal({
       const pagesValue = pages.trim() ? Number(pages) : undefined;
       await onSave(session.id, Number(minutes), notes.trim(), pagesValue);
       onClose();
-    } catch (error) {
+    } catch {
       Alert.alert(
         t("components.readingLogsEditModal.updateError"),
         t("components.readingLogsEditModal.updateErrorMessage"),
@@ -385,97 +374,6 @@ function EditSessionModal({
   );
 }
 
-// Development utility function to generate random reading data
-const generateRandomReadingData = async (): Promise<void> => {
-  try {
-    // Check if we're in development mode
-    if (!isDevModeEnabled()) {
-      log(
-        "⚠️ Random data generation is only available in development mode",
-      );
-      return;
-    }
-
-    // Get currently reading books
-    const currentlyReadingBooks = await queryAll<EnhancedBook>(
-      `SELECT * FROM enhanced_books 
-       WHERE reading_status = 'currently_reading' 
-       ORDER BY date_started DESC, date_added DESC`,
-    );
-
-    if (currentlyReadingBooks.length === 0) {
-      Alert.alert(
-        "No Currently Reading Books",
-        'Please add some books with "currently reading" status first.',
-      );
-      return;
-    }
-
-    // Generate 20 random reading sessions
-    const sessions = [];
-    const today = new Date();
-
-    for (let i = 0; i < 20; i++) {
-      // Generate random date within the last 30 days
-      const daysBack = Math.floor(Math.random() * 30);
-      const sessionDate = new Date(today);
-      sessionDate.setDate(today.getDate() - daysBack);
-
-      // Generate random time between 1-5 PM (13:00-17:00)
-      const hour = 13 + Math.floor(Math.random() * 4); // 13, 14, 15, or 16
-      const minute = Math.floor(Math.random() * 60);
-      sessionDate.setHours(hour, minute, 0, 0);
-
-      // Random reading time between 1-20 minutes
-      const minutesRead = 1 + Math.floor(Math.random() * 20);
-
-      // Random book selection
-      const randomBook =
-        currentlyReadingBooks[
-          Math.floor(Math.random() * currentlyReadingBooks.length)
-        ];
-
-      // Format date as YYYY-MM-DD using local timezone
-      const dateString = dateToLocalDateString(sessionDate);
-
-      // Create session with timestamp including hour
-      const createdAt = sessionDate.toISOString();
-
-      sessions.push({
-        book_id: randomBook.id,
-        minutes_read: minutesRead,
-        date: dateString,
-        created_at: createdAt,
-        notes: null,
-      });
-    }
-
-    // Insert all sessions into the database
-    for (const session of sessions) {
-      await execute(
-        `INSERT INTO reading_sessions (book_id, minutes_read, date, created_at, notes) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [
-          session.book_id,
-          session.minutes_read,
-          session.date,
-          session.created_at,
-          session.notes,
-        ],
-      );
-    }
-
-    log(`✅ Generated ${sessions.length} random reading sessions`);
-    Alert.alert(
-      "Random Data Generated",
-      `Successfully added ${sessions.length} random reading sessions across different days and hours.`,
-    );
-  } catch (error) {
-    console.error("❌ Error generating random data:", error);
-    Alert.alert("Error", "Failed to generate random reading data");
-  }
-};
-
 export default function ReadingLogs() {
   const [weekData, setWeekData] = useState<WeekDay[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(new Date());
@@ -498,29 +396,6 @@ export default function ReadingLogs() {
     const weekdays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
     return t(`components.readingLogs.weekdays.${weekdays[mondayFirstIndex]}`);
   };
-
-  const getLocalizedMonth = (monthIndex: number): string => {
-    const months = [
-      "january",
-      "february",
-      "march",
-      "april",
-      "may",
-      "june",
-      "july",
-      "august",
-      "september",
-      "october",
-      "november",
-      "december",
-    ];
-    return t(`components.readingLogs.months.${months[monthIndex]}`);
-  };
-  useFocusEffect(
-    useCallback(() => {
-      loadWeekData();
-    }, [currentWeekStart]),
-  );
 
   const getWeekStart = (date: Date) => {
     const d = new Date(date);
@@ -563,16 +438,9 @@ export default function ReadingLogs() {
       const startDateString = dateToLocalDateString(weekStart);
       const endDateString = dateToLocalDateString(weekEnd);
 
-      // Get all sessions for the week with book info
-      const sessions = await queryAll<SessionWithBook>(
-        `
-        SELECT rs.*, eb.name as book_name, eb.author as book_author
-        FROM reading_sessions rs
-        JOIN enhanced_books eb ON rs.book_id = eb.id
-        WHERE rs.date BETWEEN ? AND ?
-        ORDER BY rs.date, rs.created_at
-      `,
-        [startDateString, endDateString],
+      const sessions = await listSessionsWithBooks(
+        startDateString,
+        endDateString,
       );
 
       // Initialize week data
@@ -611,6 +479,7 @@ export default function ReadingLogs() {
       setRefreshing(false);
     }
   };
+  useFocusRefresh(loadWeekData, ["sessions", "books"], [currentWeekStart]);
 
   const navigateWeek = (direction: "prev" | "next") => {
     const newDate = new Date(currentWeekStart);
@@ -639,29 +508,8 @@ export default function ReadingLogs() {
     pages?: number,
   ) => {
     try {
-      // Get the session to find the book_id
-      const sessions = await queryAll<ReadingSession>(
-        "SELECT * FROM reading_sessions WHERE id = ?",
-        [sessionId],
-      );
+      await updateSession(sessionId, { minutes, notes, pages });
 
-      if (sessions.length === 0) {
-        throw new Error("Session not found");
-      }
-
-      const session = sessions[0];
-
-      // Update the session
-      await execute(
-        `UPDATE reading_sessions SET minutes_read = ?, notes = ?, pages_read = ? WHERE id = ?`,
-        [minutes, notes || null, pages || null, sessionId],
-      );
-
-      // Re-derive the book's current page from all sessions. Always do this:
-      // clearing the pages field (pages === undefined) must lower progress too.
-      await syncBookCurrentPageFromSessions(session.book_id);
-
-      loadWeekData();
       Alert.alert(
         t("components.readingLogsEditModal.updateSuccess"),
         t("components.readingLogsEditModal.updateSuccessMessage"),
@@ -674,25 +522,8 @@ export default function ReadingLogs() {
 
   const handleDeleteSession = async (sessionId: number) => {
     try {
-      // Get the session to find the book_id before deleting
-      const sessions = await queryAll<ReadingSession>(
-        "SELECT * FROM reading_sessions WHERE id = ?",
-        [sessionId],
-      );
+      await deleteSession(sessionId);
 
-      if (sessions.length === 0) {
-        throw new Error("Session not found");
-      }
-
-      const session = sessions[0];
-
-      // Delete the session
-      await execute(`DELETE FROM reading_sessions WHERE id = ?`, [sessionId]);
-
-      // Re-derive the book's current page from the remaining sessions
-      await syncBookCurrentPageFromSessions(session.book_id);
-
-      loadWeekData();
       Alert.alert(
         t("components.readingLogsEditModal.deleteSuccess"),
         t("components.readingLogsEditModal.deleteSuccessMessage"),
@@ -709,18 +540,9 @@ export default function ReadingLogs() {
   const handleGenerateRandomData = async () => {
     try {
       await generateRandomReadingData();
-      // Refresh the data after generation
-      loadWeekData();
     } catch (error) {
       console.error("Error generating random data:", error);
     }
-  };
-
-  const formatDate = (date: Date) => {
-    const month = getLocalizedMonth(date.getMonth());
-    const day = date.getDate();
-    const year = date.getFullYear();
-    return `${month} ${day}, ${year}`;
   };
 
   const weekTotal = weekData.reduce((sum, day) => sum + day.totalMinutes, 0);
@@ -856,7 +678,8 @@ export default function ReadingLogs() {
 
           <TouchableOpacity onPress={goToCurrentWeek} style={styles.weekInfo}>
             <Text style={styles.weekRange}>
-              {formatDate(weekStart)} - {formatDate(weekEnd)}
+              {formatDate(weekStart, LONG_DATE)} -{" "}
+              {formatDate(weekEnd, LONG_DATE)}
             </Text>
             <Text style={styles.weekTotal}>
               {weekTotal} {t("components.readingLogs.minutesThisWeek")}

@@ -382,6 +382,11 @@ const resources = {
         },
       },
       error: "Error",
+      duration: {
+        minutes: "{{count}} min",
+        hours: "{{count}} h",
+        hoursMinutes: "{{hours}} h {{minutes}} min",
+      },
       settings: {
         title: "⚙️ Settings",
         subtitle: "Manage your PageStreak preferences",
@@ -1272,6 +1277,11 @@ const resources = {
         },
       },
       error: "Hata",
+      duration: {
+        minutes: "{{count}} dk",
+        hours: "{{count}} sa",
+        hoursMinutes: "{{hours}} sa {{minutes}} dk",
+      },
       settings: {
         title: "⚙️ Ayarlar",
         subtitle: "PageStreak tercihlerinizi yönetin",

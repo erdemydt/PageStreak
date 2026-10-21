@@ -4,7 +4,6 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
-  Animated,
   FlatList,
   StyleSheet,
   Text,
@@ -29,25 +28,18 @@ import { TYPE } from "../../../themes/typography";
 import { parseDbDate } from "../../../utils/dateUtils";
 import { computeBookProgress } from "../../../utils/readingProgress";
 import { getStatusText } from "../../../utils/bookStatus";
+import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
 
 type SortOption =
-  | "date_added"
-  | "title"
-  | "author"
-  | "reading_time"
-  | "progress";
+  "date_added" | "title" | "author" | "reading_time" | "progress";
 type SortDirection = "asc" | "desc";
 
 export default function MyBooksScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const [books, setBooks] = useState<
-    (BookWithStats)[]
-  >([]);
-  const [filteredBooks, setFilteredBooks] = useState<
-    (BookWithStats)[]
-  >([]);
+  const [books, setBooks] = useState<BookWithStats[]>([]);
+  const [filteredBooks, setFilteredBooks] = useState<BookWithStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<BookStatus | "all">("all");
@@ -55,15 +47,7 @@ export default function MyBooksScreen() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [selectedBook, setSelectedBook] = useState<EnhancedBook | null>(null);
-  const [statusModalFadeAnim] = useState(new Animated.Value(0));
-  const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
   const [error, setError] = useState<string | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadBooks();
-    }, []),
-  );
 
   const loadBooks = async () => {
     setLoading(true);
@@ -79,6 +63,7 @@ export default function MyBooksScreen() {
       setLoading(false);
     }
   };
+  useFocusRefresh(loadBooks, ["books", "sessions"]);
 
   const deleteBook = async (bookId: number, bookTitle: string) => {
     Alert.alert(
@@ -93,7 +78,6 @@ export default function MyBooksScreen() {
             setLoading(true);
             try {
               await deleteBookWithSessions(bookId);
-              await loadBooks();
             } catch (e) {
               setError(t("booksPage.alert.failedDelete"));
               console.error("Delete book error:", e);
@@ -113,7 +97,6 @@ export default function MyBooksScreen() {
 
     try {
       await updateBookStatus(selectedBook.id, newStatus);
-      await loadBooks();
 
       Alert.alert(
         t("booksPage.alert.statusUpdated"),
@@ -133,19 +116,6 @@ export default function MyBooksScreen() {
   const openStatusModal = (book: EnhancedBook) => {
     setSelectedBook(book);
     setStatusModalVisible(true);
-    Animated.parallel([
-      Animated.timing(statusModalFadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(statusModalScaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const applyFiltersAndSort = useCallback(() => {
@@ -234,11 +204,7 @@ export default function MyBooksScreen() {
   const getStatusCount = (status: BookStatus) =>
     books.filter((book) => book.reading_status === status).length;
 
-  const renderBook = ({
-    item,
-  }: {
-    item: BookWithStats;
-  }) => (
+  const renderBook = ({ item }: { item: BookWithStats }) => (
     <BookCard
       book={item}
       smaller={true}
@@ -257,8 +223,7 @@ export default function MyBooksScreen() {
     />
   );
 
-  const keyExtractor = (item: BookWithStats) =>
-    item.id.toString();
+  const keyExtractor = (item: BookWithStats) => item.id.toString();
 
   return (
     <View style={styles.container} pointerEvents={loading ? "none" : "auto"}>
@@ -272,24 +237,9 @@ export default function MyBooksScreen() {
         }
         onStatusChange={handleStatusChange}
         onClose={() => {
-          Animated.parallel([
-            Animated.timing(statusModalFadeAnim, {
-              toValue: 0,
-              duration: 250,
-              useNativeDriver: true,
-            }),
-            Animated.timing(statusModalScaleAnim, {
-              toValue: 0.8,
-              duration: 250,
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
-            setStatusModalVisible(false);
-            setSelectedBook(null);
-          });
+          setStatusModalVisible(false);
+          setSelectedBook(null);
         }}
-        fadeAnim={statusModalFadeAnim}
-        scaleAnim={statusModalScaleAnim}
       />
 
       <View style={styles.header}>

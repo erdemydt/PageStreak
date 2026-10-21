@@ -10,6 +10,20 @@ Every change reaches users only through an App Store release. **When to release 
 decision**; phases end in a commit, not a ship. The version is hard-coded in
 `ios/PageStreak/Info.plist` (`1.0.0` / `1`); bump it there for every release.
 
+## Unreleased user-visible changes (for release notes)
+Kept for the owner's release notes; clear it when a release ships.
+- Streaks: each day counts against the goal that applied that day, so a weekly goal increase no
+  longer breaks a streak. The streak no longer shows 0 in the morning before you've read.
+- Weekly goal growth is steady (+N minutes per week), stops at the target, and applies on resume too.
+- Reminders: never between 22:00 and 09:00; in your app language; no duplicates; no reminder after
+  you've already met the goal.
+- Books tab filter shows all matching books (not only the first 10). Deleting a book also removes
+  its sessions everywhere. Books with an unknown page count can be fixed on the book page.
+- Backup merge no longer overwrites existing books; goal history is included in backups.
+- Durations read "45 min", "1 h 30 min" everywhere. Dates follow the app language, not the device language.
+  An unset date on Profile shows "—".
+- Faster library lists; covers are cached on disk. The app stays in light mode until dark mode exists.
+
 ---
 
 ## Phase 0: Housekeeping (no release)
@@ -40,12 +54,12 @@ Things users can feel are wrong today.
 - [x] Set `userInterfaceStyle: "light"` in app.json and Info.plist until real dark mode exists (avoids a dark status bar over the light UI).
 
 ## Phase 2: Foundations refactor (no behavior change; can ship with any release)
-- [ ] `types/models.ts`: one `UserPreferences`, `EnhancedBook`, `ReadingSession`, etc. Typed `queryAll<T>`.
-- [ ] `utils/format.ts`: one duration and date formatter, aware of the app language (replaces about 9 copies).
-- [ ] Repositories (`db/repos/{preferences,books,sessions}.ts`), with no SQL left in `app/` or `components/`.
+- [x] `types/models.ts`: one `UserPreferences`, `EnhancedBook`, `ReadingSession`, etc. Typed `queryAll<T>`.
+- [x] `utils/format.ts`: one duration and date formatter, aware of the app language (replaces about 9 copies).
+- [x] Repositories (`db/repos/{preferences,books,sessions}.ts`), with no SQL left in `app/` or `components/`.
   Enforce it with a `no-restricted-imports` lint rule. Remove dead "column not found" fallbacks and the legacy `books` table fallback.
-- [ ] Hooks (`useUserPreferences`, `useDailyGoal`, `useBooks`) plus a tiny data-change event bus. Delete `refreshTrigger`.
-- [ ] `BookStatusModal` owns its animation (removes 5 copies of the Animated boilerplate).
+- [x] Hooks (`useUserPreferences`, `useDailyGoal`, `useBooks`) plus a tiny data-change event bus. Delete `refreshTrigger`.
+- [x] `BookStatusModal` owns its animation (removes 5 copies of the Animated boilerplate).
 - *Not doing:* Redux/Zustand/React Query, an ORM, FK constraints, normalizing stored dates.
 
 ## Phase 3: UX quick wins (Release A or A2, JS-only)

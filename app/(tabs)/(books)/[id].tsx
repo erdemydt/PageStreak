@@ -1,10 +1,9 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,18 +15,22 @@ import { Image } from "expo-image";
 import BookStatusModal, {
   BookStatus,
 } from "../../../components/BookStatusModal";
-import { EnhancedBook, execute, queryFirst } from "../../../db/db";
-import { updateBookStatus } from "../../../db/repos/books";
+import { EnhancedBook } from "../../../db/db";
+import {
+  getBook,
+  setPageCount,
+  updateBookStatus,
+} from "../../../db/repos/books";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
 import { getStatusColor, getStatusText } from "../../../utils/bookStatus";
-import { parseDbDate } from "../../../utils/dateUtils";
 import {
   getBookReadingTime,
   getEnhancedBookProgress,
-  syncBookCurrentPageFromSessions,
 } from "../../../utils/readingProgress";
+import { formatDate, formatDuration } from "../../../utils/format";
+import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
 
 export default function BookDetailsScreen() {
   const router = useRouter();
@@ -48,9 +51,6 @@ export default function BookDetailsScreen() {
     source: "sessions" | "current_page" | "none";
   }>({ pagesRead: 0, percentage: 0, isComplete: false, source: "none" });
 
-  const statusModalFadeAnim = useRef(new Animated.Value(0)).current;
-  const statusModalScaleAnim = useRef(new Animated.Value(0.8)).current;
-
   const loadData = useCallback(async () => {
     if (!id) return;
 
@@ -59,10 +59,7 @@ export default function BookDetailsScreen() {
 
     try {
       const numericId = Number(id);
-      const foundBook = await queryFirst<EnhancedBook>(
-        "SELECT * FROM enhanced_books WHERE id = ?",
-        [numericId],
-      );
+      const foundBook = await getBook(numericId);
 
       if (!foundBook) {
         setError(t("components.bookDetailModal.bookNotFound"));
@@ -90,70 +87,14 @@ export default function BookDetailsScreen() {
     }
   }, [id, t]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData]),
-  );
-
-  const formatDate = (dateString: string) => {
-    return parseDbDate(dateString)?.toLocaleDateString() ?? dateString;
-  };
-
-  const formatReadingTime = (minutes: number) => {
-    if (minutes < 60) {
-      return `${minutes} ${t("components.bookDetailModal.minutes")}`;
-    }
-
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    if (remainingMinutes > 0) {
-      const hourText =
-        hours > 1
-          ? t("components.bookDetailModal.hours")
-          : t("components.bookDetailModal.hour");
-      return `${hours} ${hourText} ${remainingMinutes} ${t("components.bookDetailModal.minutes")}`;
-    }
-
-    const hourText =
-      hours > 1
-        ? t("components.bookDetailModal.hours")
-        : t("components.bookDetailModal.hour");
-    return `${hours} ${hourText}`;
-  };
+  useFocusRefresh(loadData, ["books", "sessions"], [loadData]);
 
   const openStatusModal = () => {
     setShowStatusModal(true);
-    Animated.parallel([
-      Animated.timing(statusModalFadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.spring(statusModalScaleAnim, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const closeStatusModal = () => {
-    Animated.parallel([
-      Animated.timing(statusModalFadeAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(statusModalScaleAnim, {
-        toValue: 0.8,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setShowStatusModal(false);
-    });
+    setShowStatusModal(false);
   };
 
   const handleStatusChange = async (status: BookStatus) => {
@@ -162,7 +103,6 @@ export default function BookDetailsScreen() {
     try {
       await updateBookStatus(book.id, status);
       closeStatusModal();
-      await loadData();
 
       Alert.alert(
         t("booksPage.alert.statusUpdated"),
@@ -191,14 +131,8 @@ export default function BookDetailsScreen() {
     }
 
     try {
-      await execute("UPDATE enhanced_books SET page = ? WHERE id = ?", [
-        newPageCount,
-        book.id,
-      ]);
-      // Re-derive current_page so it's capped by the new total
-      await syncBookCurrentPageFromSessions(book.id);
+      await setPageCount(book.id, newPageCount);
       setIsEditingPages(false);
-      await loadData();
     } catch (e) {
       console.error("Failed to update page count:", e);
       Alert.alert(t("error"), t("booksPage.failedToSave"));
@@ -388,7 +322,7 @@ export default function BookDetailsScreen() {
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {formatReadingTime(readingTimeMinutes)}
+                {formatDuration(readingTimeMinutes)}
               </Text>
               <Text style={styles.statLabel}>
                 {t("components.bookDetailModal.totalReadingTime")}
@@ -498,8 +432,6 @@ export default function BookDetailsScreen() {
         currentStatus={(book.reading_status as BookStatus) || "want_to_read"}
         onStatusChange={handleStatusChange}
         onClose={closeStatusModal}
-        fadeAnim={statusModalFadeAnim}
-        scaleAnim={statusModalScaleAnim}
       />
     </View>
   );

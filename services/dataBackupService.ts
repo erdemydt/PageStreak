@@ -4,7 +4,8 @@ import * as Sharing from 'expo-sharing';
 import type { AppUsageTracking, EnhancedBook, NotificationPreferences, ReadingSession } from '../db/db';
 import type { SQLiteBindValue, SQLiteDatabase } from 'expo-sqlite';
 import db, { initializeDatabase, queryAll } from '../db/db';
-import type { UserPreferences } from '../types/database';
+import type { UserPreferences } from '../types/models';
+import { emitDataChange } from '../utils/dataEvents';
 import { backfillGoalHistoryIfEmpty } from '../utils/goalHistory';
 import { syncBookCurrentPageFromSessions } from '../utils/readingProgress';
 
@@ -673,6 +674,7 @@ export async function importDataFromBackup(
       await backfillGoalHistoryIfEmpty();
     }
 
+    emitDataChange('books', 'sessions', 'preferences');
     onProgress?.(100, 'Import completed successfully!');
     importResult.success = true;
 

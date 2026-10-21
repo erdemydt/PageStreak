@@ -1,38 +1,29 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { queryAll, queryFirst } from "../../db/db";
+import { getUserPreferences } from "../../db/repos/preferences";
+import {
+  getFirstSessionDate,
+  listSessionMinutes,
+} from "../../db/repos/sessions";
+import { parseDbDate } from "../../utils/dateUtils";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import {
-    updateGrowthGoals,
-    validateGrowthGoals,
+  updateGrowthGoals,
+  validateGrowthGoals,
 } from "../../utils/goalSettings";
 import { loadGoalForDate } from "../../utils/goalHistory";
-
-type UserGoalPrefs = {
-  created_at?: string;
-  current_reading_rate_minutes_per_day?: number;
-  end_reading_rate_goal_minutes_per_day?: number;
-  end_reading_rate_goal_date?: string;
-  initial_reading_rate_minutes_per_day?: number;
-  weekly_reading_rate_increase_minutes?: number;
-};
-
-type ReadingSessionRow = {
-  date: string;
-  minutes_read: number;
-};
+import { useFocusRefresh } from "../../hooks/useFocusRefresh";
 
 type WeeklyPoint = {
   key: string;
@@ -77,8 +68,9 @@ const getTimelineStartDate = (
     return new Date(`${firstReadingDate}T00:00:00`);
   }
 
-  if (createdAt) {
-    return new Date(createdAt);
+  const created = parseDbDate(createdAt);
+  if (created) {
+    return created;
   }
 
   return new Date();
@@ -98,6 +90,9 @@ export default function ReadingGrowthScreen() {
   const [editedCurrentGoal, setEditedCurrentGoal] = useState("");
   const [editedTargetGoal, setEditedTargetGoal] = useState("");
   const [editedTargetDate, setEditedTargetDate] = useState("");
+  // Set once the user types in the goal form; reloads triggered by focus or
+  // data-change events then leave the form alone until it's saved
+  const goalFormDirty = useRef(false);
 
   const currentWeekStart = useMemo(() => getWeekStart(new Date()), []);
 
@@ -137,28 +132,11 @@ export default function ReadingGrowthScreen() {
     try {
       setLoading(true);
 
-      const userPrefs = await queryFirst<UserGoalPrefs>(
-        `SELECT
-          created_at,
-          current_reading_rate_minutes_per_day,
-          end_reading_rate_goal_minutes_per_day,
-          end_reading_rate_goal_date,
-          initial_reading_rate_minutes_per_day,
-          weekly_reading_rate_increase_minutes
-         FROM user_preferences
-         WHERE id = 1`,
-      );
-
-      const firstReadingData = await queryFirst<{ first_date: string | null }>(
-        `SELECT MIN(date) as first_date
-         FROM reading_sessions`,
-      );
+      const userPrefs = await getUserPreferences();
+      const firstReadingDate = await getFirstSessionDate();
 
       const derivedTimelineStart = getWeekStart(
-        getTimelineStartDate(
-          userPrefs?.created_at,
-          firstReadingData?.first_date,
-        ),
+        getTimelineStartDate(userPrefs?.created_at, firstReadingDate),
       );
       const effectiveStartWeek =
         weekWindow.startWeekStart.getTime() < derivedTimelineStart.getTime()
@@ -172,12 +150,7 @@ export default function ReadingGrowthScreen() {
       endDate.setDate(endDate.getDate() + 6);
       const endDateKey = toDateKey(endDate);
 
-      const rows = await queryAll<ReadingSessionRow>(
-        `SELECT date, minutes_read
-         FROM reading_sessions
-         WHERE date BETWEEN ? AND ?`,
-        [startDateKey, endDateKey],
-      );
+      const rows = await listSessionMinutes(startDateKey, endDateKey);
 
       const actualByWeek = new Map<string, number>();
       for (const row of rows) {
@@ -224,13 +197,15 @@ export default function ReadingGrowthScreen() {
       });
 
       setWeeklyData(points);
-      setEditedCurrentGoal(String(currentRate));
-      setEditedTargetGoal(String(targetRate));
-      setEditedTargetDate(
-        userPrefs?.end_reading_rate_goal_date
-          ? `${userPrefs.end_reading_rate_goal_date.slice(8, 10)}/${userPrefs.end_reading_rate_goal_date.slice(5, 7)}/${userPrefs.end_reading_rate_goal_date.slice(0, 4)}`
-          : "",
-      );
+      if (!goalFormDirty.current) {
+        setEditedCurrentGoal(String(currentRate));
+        setEditedTargetGoal(String(targetRate));
+        setEditedTargetDate(
+          userPrefs?.end_reading_rate_goal_date
+            ? `${userPrefs.end_reading_rate_goal_date.slice(8, 10)}/${userPrefs.end_reading_rate_goal_date.slice(5, 7)}/${userPrefs.end_reading_rate_goal_date.slice(0, 4)}`
+            : "",
+        );
+      }
 
       const latestApplicable = [...points]
         .reverse()
@@ -254,14 +229,10 @@ export default function ReadingGrowthScreen() {
     weekWindow.weeks,
   ]);
 
-  useEffect(() => {
-    loadGrowthData();
-  }, [loadGrowthData]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadGrowthData();
-    }, [loadGrowthData]),
+  useFocusRefresh(
+    loadGrowthData,
+    ["sessions", "preferences"],
+    [loadGrowthData],
   );
 
   const maxChartValue = useMemo(() => {
@@ -358,6 +329,7 @@ export default function ReadingGrowthScreen() {
         targetDailyGoal,
         targetDate: editedTargetDate || null,
       });
+      goalFormDirty.current = false;
       await loadGrowthData();
       Alert.alert(t("profile.success.title"), t("growthJourney.success"));
     } catch (error) {
@@ -628,7 +600,10 @@ export default function ReadingGrowthScreen() {
         <TextInput
           style={styles.input}
           value={editedCurrentGoal}
-          onChangeText={setEditedCurrentGoal}
+          onChangeText={(value) => {
+            goalFormDirty.current = true;
+            setEditedCurrentGoal(value);
+          }}
           keyboardType="numeric"
           placeholder={t("profile.placeholders.dailyGoal")}
         />
@@ -639,7 +614,10 @@ export default function ReadingGrowthScreen() {
         <TextInput
           style={styles.input}
           value={editedTargetGoal}
-          onChangeText={setEditedTargetGoal}
+          onChangeText={(value) => {
+            goalFormDirty.current = true;
+            setEditedTargetGoal(value);
+          }}
           keyboardType="numeric"
           placeholder={t("profile.placeholders.targetGoal")}
         />
@@ -650,7 +628,10 @@ export default function ReadingGrowthScreen() {
         <TextInput
           style={styles.input}
           value={editedTargetDate}
-          onChangeText={setEditedTargetDate}
+          onChangeText={(value) => {
+            goalFormDirty.current = true;
+            setEditedTargetDate(value);
+          }}
           placeholder="DD/MM/YYYY"
         />
 

@@ -4,6 +4,7 @@ import { COLORS } from "../themes/colors";
 import { SPACING } from "../themes/spacing";
 import { TYPE } from "../themes/typography";
 import Card from "./Card";
+import { formatDuration } from "../utils/format";
 
 interface DailyProgressCardProps {
   todayMinutes: number;
@@ -20,17 +21,6 @@ export default function DailyProgressCard({
   const percentage =
     goalMinutes > 0 ? Math.min((todayMinutes / goalMinutes) * 100, 100) : 0;
   const isGoalReached = todayMinutes >= goalMinutes;
-
-  const formatMinutes = (minutes: number) => {
-    if (minutes >= 60) {
-      const hours = Math.floor(minutes / 60);
-      const remainingMinutes = minutes % 60;
-      return remainingMinutes > 0
-        ? `${hours} ${t("settings.hours")} ${remainingMinutes} ${t("components.readingTimeLogger.minutesShort")}`
-        : `${hours} ${t("settings.hours")}`;
-    }
-    return `${minutes} ${t("components.readingTimeLogger.minutesShort")}`;
-  };
 
   const getMotivationMessage = () => {
     if (isGoalReached) {
@@ -75,21 +65,21 @@ export default function DailyProgressCard({
           {isGoalReached
             ? t("components.dailyProgress.goalCrushed")
             : t("components.dailyProgress.leftToReach", {
-                time: formatMinutes(goalMinutes - todayMinutes),
+                time: formatDuration(goalMinutes - todayMinutes),
               })}
         </Text>
       </View>
 
       <View style={styles.statsRow}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{formatMinutes(todayMinutes)}</Text>
+          <Text style={styles.statValue}>{formatDuration(todayMinutes)}</Text>
           <Text style={styles.statLabel}>
             {t("components.dailyProgress.today")}
           </Text>
         </View>
 
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{formatMinutes(goalMinutes)}</Text>
+          <Text style={styles.statValue}>{formatDuration(goalMinutes)}</Text>
           <Text style={styles.statLabel}>
             {t("components.dailyProgress.goal")}
           </Text>

@@ -23,72 +23,14 @@ type ColumnDefinition = {
   default?: string;
 };
 
-// Enhanced Book type with Open Library API fields
-export type EnhancedBook = {
-  id: number;
-  name: string;
-  author: string;
-  page: number;
-  // Open Library API fields
-  isbn?: string;
-  cover_id?: number;
-  cover_url?: string;
-  first_publish_year?: number;
-  publisher?: string;
-  language?: string;
-  description?: string;
-  subjects?: string;
-  open_library_key?: string;
-  author_key?: string;
-  rating?: number;
-  date_added?: string;
-  date_started?: string;
-  date_finished?: string;
-  current_page?: number;
-  reading_status?: 'want_to_read' | 'currently_reading' | 'read';
-  notes?: string;
-};
-
-// Reading Session type for tracking daily reading progress
-export type ReadingSession = {
-  id: number;
-  book_id: number;
-  minutes_read: number;
-  pages_read?: number; // Optional: pages read in this session
-  date: string; // YYYY-MM-DD format
-  created_at: string;
-  notes?: string;
-};
-
-// Daily reading progress summary
-export type DailyProgress = {
-  date: string;
-  total_minutes: number;
-  goal_minutes: number;
-  percentage: number;
-  sessions_count: number;
-};
-
-// Notification preferences type
-export type NotificationPreferences = {
-  id: number;
-  notifications_enabled: boolean;
-  daily_reminder_enabled: boolean;
-  daily_reminder_hours_after_last_open: number;
-  daily_reminder_title: string;
-  daily_reminder_body: string;
-  created_at: string;
-  updated_at: string;
-};
-
-// App usage tracking type
-export type AppUsageTracking = {
-  id: number;
-  last_opened_at: string;
-  last_closed_at?: string;
-  session_count_today: number;
-  date: string; // YYYY-MM-DD format
-};
+// Domain types live in types/models.ts; re-exported here for existing imports
+export type {
+  AppUsageTracking,
+  DailyProgress,
+  EnhancedBook,
+  NotificationPreferences,
+  ReadingSession,
+} from '../types/models';
 
 /**
  * Helper to run a SQL query with parameters and get all results as array.
@@ -209,7 +151,7 @@ async function checkDatabaseVersion(): Promise<boolean> {
     log(`✅ Database version ${versionRecord.version} is up to date`);
     return false; // No update needed
     
-  } catch (error) {
+  } catch {
     log('📝 Error checking version, treating as new installation');
     return true; // Treat as new installation if we can't check version
   }
@@ -234,7 +176,7 @@ async function columnExists(tableName: string, columnName: string): Promise<bool
   try {
     const result = await queryAll(`PRAGMA table_info(${tableName})`);
     return result.some((column: any) => column.name === columnName);
-  } catch (error) {
+  } catch {
     // Table might not exist yet
     return false;
   }
@@ -250,7 +192,7 @@ async function tableExists(tableName: string): Promise<boolean> {
       [tableName]
     );
     return !!result;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -538,7 +480,7 @@ async function migrateOldBooksIfNeeded(): Promise<void> {
       
       log('🎉 Book migration completed successfully!');
     }
-  } catch (error) {
+  } catch {
     // Old books table doesn't exist, which is fine for new installations
     log('📚 No old books table found, starting fresh');
   }

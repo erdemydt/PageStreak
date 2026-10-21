@@ -37,7 +37,8 @@ app/
   index.tsx              Boot: init DB → notification prefs → grow daily goal → route to intro/home
   intro.tsx              5-step onboarding; writes user_preferences row id=1
   (tabs)/
-    (home)/index.tsx     Dashboard: current book, daily progress, streak, yearly goal
+    (home)/index.tsx     Today (Folio): minutes vs goal + streak, week strip (→ readinglogs), the book read most
+                         recently (switcher if several), Log reading / timer, today's sessions (tap → edit), yearly line
     (home)/readinglogs.tsx  Week view of sessions, edit/delete sessions, WeeklyStatsView toggle
     (books)/index.tsx    Library preview (10 books, status filter), manual add form
     (books)/my-books.tsx Full library: search/sort/filter
@@ -47,8 +48,13 @@ app/
     reading-growth.tsx   Growth Journey chart (hidden tab, opened from profile)
     settings.tsx         Language, notifications, backup/restore, logout (wipes all data)
 components/              Screens' building blocks (intro/ and profile/ hold those screens' parts + styles)
+  today/                 Today's parts (WeekStrip)
+  session/               SessionFields: minutes/pages/notes fields shared by the log and edit sheets
   ui/                    Folio primitives: Button, Sheet (the one bottom sheet), BookCover, Eyebrow, Hairline,
                          ProgressRule, StatRow, Screen. Build new UI from these
+contexts/
+  SessionSheetsContext.tsx  Hosts the log sheet (ReadingTimeLogger) and edit sheet once at the root:
+                         useSessionSheets().openLogger({bookId?, date?, minutes?, onSuccess?}) / editSession(session)
 db/db.tsx                SQLite handle, queryAll/queryFirst/execute, schema init
 db/repos/                Data layer. Screens/components use ONLY these (lint-enforced):
   books.ts               addBook, listBooksWithStats, getBook, setPageCount, updateBookStatus, ...
@@ -66,6 +72,7 @@ services/
   openLibrary.ts         Search API
 utils/
   dateUtils.ts           Local-date helpers + parseDbDate (use these, see Gotchas)
+  week.ts                Monday-first week dates, weekday labels, loadWeek (each day vs its own goal)
   readingProgress.ts     Session aggregates, streaks, page-progress sync
   bookStatus.ts          Status colors/labels + updateBookStatus / deleteBookWithSessions
   goalSettings.ts        Growth-goal validation and derived fields
@@ -124,6 +131,10 @@ tables there and to the backup service. Test migrations against real DB files: s
   `BookCard` derives progress from those props via `computeBookProgress`.
 - **Goals** (daily/target minutes, target date) are edited only in Growth Journey; Profile edits name, yearly goal and genres.
 - **Yearly goal** counts books with status `read` whose `date_finished` is in the current year.
+- **Session sheets**: never mount ReadingTimeLogger / EditSessionModal in a screen; call `useSessionSheets()`.
+  The logger preselects `bookId` only if that book is currently being read, else the most recently read book.
+- **Reminder taps** land on Today (`NotificationService.onReminderTapped` in the root layout, `router.dismissTo` so Today
+  isn't pushed twice), only for onboarded users and only after boot (`utils/boot.ts`; a launching tap is left to app/index.tsx).
 - **Notifications**: a single reminder with the fixed identifier `daily-reminder`, scheduled only on
   `'background'` (never `'inactive'`) through a serialized queue. Schedule paths never prompt for
   permission. Two modes (`reminder_mode`): 'after_close' (N hours after leaving, outside quiet hours) or

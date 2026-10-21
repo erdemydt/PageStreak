@@ -24,6 +24,10 @@ const ORDER_CLAUSES = {
   status: `${STATUS_ORDER} b.date_added DESC`,
   recent: "b.date_added DESC",
   started: "b.date_started DESC, b.date_added DESC",
+  // Most recently read first (latest session), then books never logged, newest started first
+  // datetime() normalizes both stored created_at formats (SQLite's and ISO with Z)
+  active: `MAX(s.date) IS NULL, MAX(s.date) DESC, MAX(datetime(s.created_at)) DESC,
+           b.date_started DESC, b.date_added DESC`,
 } as const;
 
 export type NewBook = {
@@ -84,13 +88,13 @@ export async function addBook(
  * Books with their session aggregates in a single query (avoids one query
  * per book). order "status" (default): currently reading -> want to read ->
  * read, newest first within each. "recent": newest first. "started": most
- * recently started first.
+ * recently started first. "active": most recently read (by session) first.
  */
 export async function listBooksWithStats(
   options: {
     status?: ReadingStatus;
     limit?: number;
-    order?: "status" | "recent" | "started";
+    order?: keyof typeof ORDER_CLAUSES;
   } = {},
 ): Promise<BookWithStats[]> {
   const params: (string | number)[] = [];

@@ -1,14 +1,10 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { COLORS } from "../themes/colors";
+import { SPACING } from "../themes/spacing";
+import Chip from "./ui/Chip";
 import {
   addDaysToDateString,
   dateToLocalDateString,
@@ -76,22 +72,13 @@ export default function SessionDatePicker({
     <View>
       <View style={styles.chipRow}>
         {chips.map((chip) => (
-          <TouchableOpacity
+          <Chip
             key={chip.key}
-            style={[styles.chip, chip.selected && styles.chipSelected]}
+            label={chip.label}
+            selected={chip.selected}
             onPress={chip.onPress}
-            accessibilityRole="button"
-            accessibilityState={{ selected: chip.selected }}
-          >
-            <Text
-              style={[
-                styles.chipText,
-                chip.selected && styles.chipTextSelected,
-              ]}
-            >
-              {chip.label}
-            </Text>
-          </TouchableOpacity>
+            grow
+          />
         ))}
       </View>
 
@@ -101,6 +88,7 @@ export default function SessionDatePicker({
           mode="date"
           display={Platform.OS === "ios" ? "inline" : "default"}
           maximumDate={new Date()}
+          accentColor={COLORS.accent.primary}
           onChange={(event, date) => {
             // Android shows a dialog that closes itself; iOS stays inline
             if (Platform.OS === "android") setShowPicker(false);
@@ -117,28 +105,6 @@ export default function SessionDatePicker({
 const styles = StyleSheet.create({
   chipRow: {
     flexDirection: "row",
-    gap: 8,
-  },
-  chip: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
-    alignItems: "center",
-  },
-  chipSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.neutral[500],
-  },
-  chipTextSelected: {
-    color: COLORS.white,
+    gap: SPACING[2],
   },
 });

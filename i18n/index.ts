@@ -5,28 +5,9 @@ const resources = {
   en: {
     translation: {
       home: {
-        title: "PageStreak",
-        welcomeBack: "Welcome back, {{username}}!",
-        logReadingTime: "📖 Log Reading Time",
-        viewReadingLogs: "View Reading Logs →",
-        readingJourney: "📊 Your Reading Journey This Year",
-        booksRead: "Books Read",
-        reading: "Reading",
-        wantToRead: "Want to Read",
-        goalAchieved: "🎉 Goal achieved! Amazing work!",
-        goalProgress:
-          "{{remaining}} more books to reach your yearly goal of {{goal}}",
-        recentBooks: "📖 Recent Books ({{count}})",
-        seeAll: "See All →",
-        noBooksYet: "No books yet",
-        startDiscovering: "Start by discovering and adding books!",
-        discoverBooks: "🔍 Discover Books",
-        noBookInProgress: "No book in progress",
-        chooseBookToRead: "📚 Choose a book to read",
         timer: {
-          start: "⏱ Timer",
           stop: "Stop",
-          ready: "⏱ {{minutes}} min ready to log",
+          ready: "{{minutes}} min ready to log",
           log: "Log",
           discard: "Discard",
           discardTitle: "Discard timer?",
@@ -37,9 +18,40 @@ const resources = {
           longMessage:
             "The timer ran for over {{hours}} hours. Did you forget to stop it? Review the minutes before logging.",
         },
-        streakShort: "{{count}}d streak",
       },
 
+      today: {
+        greetingMorning: "Good morning,",
+        greetingAfternoon: "Good afternoon,",
+        greetingEvening: "Good evening,",
+        ofGoal: "of {{goal}} minutes",
+        streak: "{{count}}-day streak",
+        goalMet: "Goal met. Your streak is safe today.",
+        keepStreak: "{{time}} more keeps the streak alive.",
+        toGoal: "{{time}} more to reach today's goal.",
+        start: "A few minutes today starts a streak.",
+        thisWeek: "This week",
+        openHistory: "Open reading history",
+        dayMet: "{{day}}, goal met",
+        dayMissed: "{{day}}, goal not met",
+        dayToday: "{{day}}, today",
+        dayUpcoming: "{{day}}, upcoming",
+        currentlyReading: "Currently reading",
+        pageOf: "Page {{current}} of {{total}} · {{percent}}%",
+        pagesUnknown: "Page count unknown",
+        logReading: "Log reading",
+        timer: "Timer",
+        showBook: "Show {{title}}",
+        noBookInProgress: "Nothing on the go right now.",
+        noBooksYet: "Your library is empty.",
+        chooseBook: "Choose a book to read",
+        addBook: "Add a book",
+        todaysReading: "Today's reading",
+        sessionPages: "{{time}} · {{pages}} pages",
+        yearly: "{{count}} of {{goal}} books in {{year}}",
+        yearlyDone: "All {{goal}} books for {{year}} read",
+        percent: "{{percent}}%",
+      },
       components: {
         bookCard: {
           by: "by",
@@ -52,43 +64,29 @@ const resources = {
           readingTime: "reading time",
         },
 
-        dailyProgress: {
-          title: "📅 Today's Reading Progress",
-          today: "Today",
-          goal: "Goal",
-          dayStreak: "Day Streak",
-          goalCrushed: "🎉 Goal crushed! Amazing work!",
-          almostThere: "💪 Almost there! Keep going!",
-          goodProgress: "📖 Good progress! You're halfway!",
-          greatStart: "🌱 Great start! Keep building momentum!",
-          everyMinute: "📚 Every minute counts! You got this!",
-          readyToStart: "☕ Ready to start your reading session?",
-          leftToReach: "{{time}} left to reach your daily goal",
-        },
-
         sessionDate: {
-          title: "📅 When did you read?",
+          title: "Date",
           today: "Today",
           yesterday: "Yesterday",
           pickDate: "Pick date",
         },
         readingTimeLogger: {
-          title: "📖 Log Reading Time",
+          title: "Log reading",
           cancel: "Cancel",
           save: "Save",
           saving: "Saving...",
-          whichBook: "📚 Which book were you reading?",
+          whichBook: "Book",
           noBooksFound:
             'No currently reading books found. Add a book to your "Currently Reading" list first.',
           startReadingHint: "Or start one from your reading list:",
           startReading: "Start reading",
-          howManyMinutes: "⏰ How many minutes did you read?",
+          howManyMinutes: "Time read",
           enterCustomMinutes: "Enter custom minutes",
           minutesShort: "m",
           minutes: "minutes",
           // New page-related translations
-          pagesRead: "Pages Read",
-          optional: "Optional",
+          pagesRead: "Pages read",
+          optional: "optional",
           trackPagesDescription:
             "Track your page progress to see completion percentage",
           remainingPages: "{{remaining}} of {{total}} pages remaining",
@@ -97,6 +95,7 @@ const resources = {
           pagesShort: "p",
           enterPagesPlaceholder: "e.g., {{max}} pages max",
           selectBookFirst: "Select a book first",
+          noPagesToLog: "No pages left to log for this book",
           progressPreview:
             '📊 Adding {{pages}} pages to "{{bookName}}" ({{total}} pages total)',
           progressPreviewForEdit:
@@ -108,13 +107,13 @@ const resources = {
           tooManyPagesMessage:
             'You entered {{pages}} pages, but only {{remaining}} pages remain in "{{bookName}}"',
           // Finish book translations
-          finishBook: "Finish Book",
+          finishBook: "Finished it?",
           finishBookDescription:
             "Mark this book as completed when logging this session",
           markAsFinished: 'Mark "{{bookName}}" as finished',
           finishBookSubtext: 'This will move the book to your "Read" list',
           // Existing translations
-          notesOptional: "📝 Notes (optional)",
+          notesOptional: "Notes",
           notesPlaceholder:
             "How was your reading session? Any thoughts on the book?",
           invalidInput: "Invalid Input",
@@ -131,7 +130,7 @@ const resources = {
         },
 
         readingLogsEditModal: {
-          title: "Edit Session",
+          title: "Edit session",
           cancel: "Cancel",
           save: "Save",
           saving: "Saving...",
@@ -141,7 +140,7 @@ const resources = {
           readingTimePlaceholder: "Enter minutes",
           notesLabel: "Notes",
           notesPlaceholder: "Optional notes about your reading session",
-          deleteSession: "🗑️ Delete Session",
+          deleteSession: "Delete",
           deleteConfirmTitle: "Delete Session",
           deleteConfirmMessage:
             "Are you sure you want to delete this reading session?",
@@ -910,28 +909,9 @@ const resources = {
   tr: {
     translation: {
       home: {
-        title: "PageStreak",
-        welcomeBack: "Tekrar hoş geldiniz, {{username}}!",
-        logReadingTime: "📖 Okuma Süresi Kaydet",
-        viewReadingLogs: "Okuma Kayıtlarını Görüntüle →",
-        readingJourney: "📊 Bu Yıl Okuma Yolculuğun",
-        booksRead: "Okunan Kitaplar",
-        reading: "Okunmakta",
-        wantToRead: "Okuma Listesinde",
-        goalAchieved: "🎉 Hedef başarıldı! Harika iş!",
-        goalProgress:
-          "Yıllık {{goal}} kitap hedefinize ulaşmak için {{remaining}} kitap daha",
-        recentBooks: "📖 Son Kitaplar ({{count}})",
-        seeAll: "Tümünü Gör →",
-        noBooksYet: "Henüz kitap yok",
-        startDiscovering: "Kitap keşfetmeye ve eklemeye başlayın!",
-        discoverBooks: "🔍 Kitap Keşfet",
-        noBookInProgress: "Şu anda okunan kitap yok",
-        chooseBookToRead: "📚 Okumak için bir kitap seçin",
         timer: {
-          start: "⏱ Zamanlayıcı",
           stop: "Durdur",
-          ready: "⏱ {{minutes}} dk kaydedilmeye hazır",
+          ready: "{{minutes}} dk kaydedilmeye hazır",
           log: "Kaydet",
           discard: "Sil",
           discardTitle: "Zamanlayıcı silinsin mi?",
@@ -942,9 +922,40 @@ const resources = {
           longMessage:
             "Zamanlayıcı {{hours}} saatten uzun çalıştı. Durdurmayı unuttunuz mu? Kaydetmeden önce dakikaları kontrol edin.",
         },
-        streakShort: "{{count}} günlük seri",
       },
 
+      today: {
+        greetingMorning: "Günaydın,",
+        greetingAfternoon: "İyi günler,",
+        greetingEvening: "İyi akşamlar,",
+        ofGoal: "/ {{goal}} dakika",
+        streak: "{{count}} günlük seri",
+        goalMet: "Hedef tamam. Seriniz bugün güvende.",
+        keepStreak: "{{time}} daha okursanız seriniz devam eder.",
+        toGoal: "Bugünkü hedefe {{time}} kaldı.",
+        start: "Bugün birkaç dakika okumak yeni bir seri başlatır.",
+        thisWeek: "Bu hafta",
+        openHistory: "Okuma geçmişini aç",
+        dayMet: "{{day}}, hedef tamam",
+        dayMissed: "{{day}}, hedefe ulaşılmadı",
+        dayToday: "{{day}}, bugün",
+        dayUpcoming: "{{day}}, gelecek",
+        currentlyReading: "Şu an okunan",
+        pageOf: "Sayfa {{current}} / {{total}} · %{{percent}}",
+        pagesUnknown: "Sayfa sayısı bilinmiyor",
+        logReading: "Okuma kaydet",
+        timer: "Zamanlayıcı",
+        showBook: "{{title}} kitabını göster",
+        noBookInProgress: "Şu anda okunan bir kitap yok.",
+        noBooksYet: "Kitaplığınız boş.",
+        chooseBook: "Okuyacak bir kitap seçin",
+        addBook: "Kitap ekleyin",
+        todaysReading: "Bugünkü okumalar",
+        sessionPages: "{{time}} · {{pages}} sayfa",
+        yearly: "{{year}} için {{goal}} kitaptan {{count}} tanesi okundu",
+        yearlyDone: "{{year}} için {{goal}} kitabın hepsi okundu",
+        percent: "%{{percent}}",
+      },
       components: {
         bookCard: {
           by: "Yazar:",
@@ -957,43 +968,29 @@ const resources = {
           readingTime: "okuma süresi",
         },
 
-        dailyProgress: {
-          title: "📅 Bugünkü Okuma İlerlemeniz",
-          today: "Bugün",
-          goal: "Hedef",
-          dayStreak: "Gün Serisi",
-          goalCrushed: "🎉 Hedef aşıldı! Harika iş!",
-          almostThere: "💪 Neredeyse geldiniz! Devam edin!",
-          goodProgress: "📖 İyi ilerleme! Yarı yoldasınız!",
-          greatStart: "🌱 Harika başlangıç! Momentumu korumaya devam et!",
-          everyMinute: "📚 Her dakika değerli! Başarabilirsiniz!",
-          readyToStart: "☕ Okuma seansına başlamaya hazır mısınız?",
-          leftToReach: "Günlük hedefinize ulaşmak için {{time}} kaldı",
-        },
-
         sessionDate: {
-          title: "📅 Ne zaman okudunuz?",
+          title: "Tarih",
           today: "Bugün",
           yesterday: "Dün",
           pickDate: "Tarih seç",
         },
         readingTimeLogger: {
-          title: "📖 Okuma Süresi Kaydet",
+          title: "Okuma kaydet",
           cancel: "İptal",
           save: "Kaydet",
           saving: "Kaydediliyor...",
-          whichBook: "📚 Okuduğunuz Kitabı Seçiniz",
+          whichBook: "Kitap",
           noBooksFound:
             'Şu anda okunuyor durumunda kitap bulunamadı. Önce "Şu anda Okunmakta" listenize bir kitap ekleyin.',
           startReadingHint: "Ya da okuma listenizden birine başlayın:",
           startReading: "Okumaya başla",
-          howManyMinutes: "⏰ Kaç dakika okudunuz?",
+          howManyMinutes: "Okuma süresi",
           enterCustomMinutes: "Özel dakika girin",
           minutesShort: "dk",
           minutes: "dakika",
           // New page-related translations
-          pagesRead: "Okunan Sayfalar",
-          optional: "İsteğe Bağlı",
+          pagesRead: "Okunan sayfalar",
+          optional: "isteğe bağlı",
           trackPagesDescription:
             "Tamamlanma yüzdesini görmek için sayfa ilerlemenizi takip edin",
           remainingPages: "{{total}} sayfanın {{remaining}} sayfası kaldı",
@@ -1002,6 +999,7 @@ const resources = {
           pagesShort: "s",
           enterPagesPlaceholder: "örn., en fazla {{max}} sayfa",
           selectBookFirst: "Önce bir kitap seçin",
+          noPagesToLog: "Bu kitap için kaydedilecek sayfa kalmadı",
           progressPreview:
             '📊 "{{bookName}}" kitabına {{pages}} sayfa ekleniyor (toplam {{total}} sayfa)',
           progressPreviewForEdit:
@@ -1012,13 +1010,13 @@ const resources = {
           tooManyPagesMessage:
             '{{pages}} sayfa girdiniz, ancak "{{bookName}}" kitabında sadece {{remaining}} sayfa kaldı',
           // Finish book translations
-          finishBook: "Kitabı Bitir",
+          finishBook: "Bitirdiniz mi?",
           finishBookDescription:
             "Bu seansı kaydederken kitabı tamamlanmış olarak işaretleyin",
           markAsFinished: '"{{bookName}}" kitabını bitmiş olarak işaretle',
           finishBookSubtext: 'Bu kitabı "Okunan" listenize taşıyacak',
           // Existing translations
-          notesOptional: "📝 Notlar (isteğe bağlı)",
+          notesOptional: "Notlar",
           notesPlaceholder:
             "Okuma seansınız nasıldı? Kitap hakkında düşünceleriniz?",
           invalidInput: "Geçersiz Giriş",
@@ -1035,7 +1033,7 @@ const resources = {
         },
 
         readingLogsEditModal: {
-          title: "Seans Düzenle",
+          title: "Seansı düzenle",
           cancel: "İptal",
           save: "Kaydet",
           saving: "Kaydediliyor...",
@@ -1045,7 +1043,7 @@ const resources = {
           readingTimePlaceholder: "Dakika girin",
           notesLabel: "Notlar",
           notesPlaceholder: "Okuma seansınız hakkında isteğe bağlı notlar",
-          deleteSession: "🗑️ Seansı Sil",
+          deleteSession: "Sil",
           deleteConfirmTitle: "Seansı Sil",
           deleteConfirmMessage:
             "Bu okuma seansını silmek istediğinizden emin misiniz?",

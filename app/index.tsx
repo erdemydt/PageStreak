@@ -7,6 +7,7 @@ import { getUserPreferences } from "../db/repos/preferences";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import { backfillGoalHistoryIfEmpty } from "../utils/goalHistory";
+import { markBootComplete } from "../utils/boot";
 import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
 import { log } from "../utils/logger";
 
@@ -91,6 +92,7 @@ export default function Index() {
       // If table doesn't exist or error, show intro
       router.replace("/intro");
     } finally {
+      markBootComplete();
       setIsLoading(false);
     }
   };

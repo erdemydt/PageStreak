@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Animated,
@@ -6,13 +6,13 @@ import {
   KeyboardAvoidingView,
   Modal,
   PanResponder,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "../../themes/colors";
 import { RADIUS, SPACING } from "../../themes/spacing";
@@ -29,6 +29,8 @@ type Props = {
   dismissible?: boolean;
   /** Wrap the content in a ScrollView (default true) */
   scroll?: boolean;
+  /** E.g. to scroll a focused input at the bottom into view */
+  scrollRef?: RefObject<ScrollView | null>;
 };
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
@@ -47,6 +49,7 @@ export default function Sheet({
   footer,
   dismissible = true,
   scroll = true,
+  scrollRef,
 }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -94,8 +97,16 @@ export default function Sheet({
     }
   }, [visible, backdrop, translateY]);
 
-  const panResponder = useMemo(
-    () =>
+  const panResponder = useMemo(() => {
+    const springBack = () =>
+      Animated.spring(translateY, {
+        toValue: 0,
+        damping: 26,
+        stiffness: 260,
+        useNativeDriver: true,
+      }).start();
+    return (
+
       PanResponder.create({
         onMoveShouldSetPanResponder: (_, g) =>
           latest.current.dismissible && g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
@@ -106,17 +117,14 @@ export default function Sheet({
           if (g.dy > DRAG_CLOSE_DISTANCE || g.vy > 1.2) {
             latest.current.onClose();
           } else {
-            Animated.spring(translateY, {
-              toValue: 0,
-              damping: 26,
-              stiffness: 260,
-              useNativeDriver: true,
-            }).start();
+            springBack();
           }
         },
-      }),
-    [translateY],
-  );
+        // Another responder (or a system gesture) took over mid-drag
+        onPanResponderTerminate: () => springBack(),
+      })
+    );
+  }, [translateY]);
 
   const requestClose = () => {
     if (dismissible) onClose();
@@ -139,31 +147,48 @@ export default function Sheet({
         />
       </Animated.View>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.keyboardArea}
+        // Android too: the app is edge-to-edge, so the window no longer resizes
+        behavior="padding"
+        style={[styles.keyboardArea, { paddingTop: insets.top + SPACING[5] }]}
         pointerEvents="box-none"
       >
         <Animated.View
           style={[
             styles.panel,
             {
-              maxHeight: SCREEN_HEIGHT - insets.top - SPACING[5],
               paddingBottom: Math.max(insets.bottom, SPACING[4]),
               transform: [{ translateY }],
             },
           ]}
           accessibilityViewIsModal
+          onAccessibilityEscape={requestClose}
         >
           <View {...panResponder.panHandlers} style={styles.handleArea}>
             <View style={styles.handle} />
-            {title ? (
-              <Text style={styles.title} accessibilityRole="header">
-                {title}
-              </Text>
-            ) : null}
+            <View style={styles.titleRow}>
+              {title ? (
+                <Text style={styles.title} accessibilityRole="header">
+                  {title}
+                </Text>
+              ) : (
+                <View />
+              )}
+              {dismissible && (
+                <Pressable
+                  onPress={requestClose}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("a11y.close")}
+                  hitSlop={12}
+                  style={styles.close}
+                >
+                  <Ionicons name="close" size={20} color={COLORS.ink.secondary} />
+                </Pressable>
+              )}
+            </View>
           </View>
           {scroll ? (
             <ScrollView
+              ref={scrollRef}
               style={styles.scroll}
               contentContainerStyle={styles.content}
               keyboardShouldPersistTaps="handled"
@@ -190,7 +215,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
   },
+  // Shrinks to fit above the keyboard; the content scrolls inside it
   panel: {
+    flexShrink: 1,
     backgroundColor: COLORS.paper.base,
     borderTopLeftRadius: RADIUS.sheet,
     borderTopRightRadius: RADIUS.sheet,
@@ -213,12 +240,28 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: COLORS.line.strong,
   },
+  titleRow: {
+    alignSelf: "stretch",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING[3],
+  },
   title: {
     ...TYPE.headline,
-    alignSelf: "flex-start",
+    flexShrink: 1,
+  },
+  close: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.paper.sunken,
   },
   scroll: {
     flexGrow: 0,
+    flexShrink: 1,
   },
   content: {
     paddingHorizontal: SPACING[5],

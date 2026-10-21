@@ -185,6 +185,23 @@ async function reset(): Promise<void> {
   await getNotificationPreferences();
 }
 
+/**
+ * Calls `onTap` when the user taps a reminder (warm or cold start). Returns an
+ * unsubscribe function.
+ */
+function onReminderTapped(onTap: () => void): () => void {
+  const subscription = Notifications.addNotificationResponseReceivedListener(
+    (response) => {
+      if (
+        response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER
+      ) {
+        onTap();
+      }
+    },
+  );
+  return () => subscription.remove();
+}
+
 const NotificationService = {
   requestPermissions,
   checkCurrentPermissions,
@@ -194,6 +211,7 @@ const NotificationService = {
   checkAndScheduleNotification,
   cancelScheduledNotification: cancelReminders,
   onAppStateChange,
+  onReminderTapped,
   cleanup,
   reset,
   // Dev tools

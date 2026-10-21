@@ -1,17 +1,15 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
-  Dimensions,
-  findNodeHandle,
-  Modal,
+  Pressable,
+  ScrollView,
   StyleSheet,
+  Switch,
   Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { EnhancedBook } from "../db/db";
 import { listBooksWithStats, updateBookStatus } from "../db/repos/books";
 import { logSession } from "../db/repos/sessions";
@@ -19,8 +17,19 @@ import { getTodayDateString } from "../utils/dateUtils";
 import SessionDatePicker from "./SessionDatePicker";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
+import { SPACING } from "../themes/spacing";
+import { FONTS, TYPE } from "../themes/typography";
 import { getEnhancedBookProgress } from "../utils/readingProgress";
 import { showToast } from "../utils/toast";
+import {
+  FieldGroup,
+  MinutesField,
+  NotesField,
+  PagesField,
+} from "./session/SessionFields";
+import BookCover from "./ui/BookCover";
+import Button from "./ui/Button";
+import Sheet from "./ui/Sheet";
 
 interface ReadingTimeLoggerProps {
   visible: boolean;
@@ -33,8 +42,6 @@ interface ReadingTimeLoggerProps {
   /** YYYY-MM-DD; defaults to today */
   initialDate?: string;
 }
-
-const { width: screenWidth } = Dimensions.get("window");
 
 export default function ReadingTimeLogger({
   visible,
@@ -96,23 +103,25 @@ export default function ReadingTimeLogger({
 
   const loadCurrentlyReadingBooks = async () => {
     try {
+      // Most recently read first, so the preselected book is usually the right one
       const books = await listBooksWithStats({
         status: "currently_reading",
-        order: "started",
+        order: "active",
       });
       setCurrentlyReadingBooks(books);
 
-      // Refresh the selection from the fresh list: auto-select when there's only
-      // one book, and drop a selection that is no longer being read (e.g. a book
-      // finished in the previous session) so we never log time against it.
+      // Refresh the selection from the fresh list, and drop a selection that is no
+      // longer being read (e.g. a book finished in the previous session) so we
+      // never log time against it.
       setSelectedBook((previous) => {
         if (initialBookId !== undefined) {
-          // The timer's book only; if it's no longer being read, let the user
-          // choose rather than silently crediting another book
+          // The requested book only (the timer's, or the book page's); if it's no
+          // longer being read, let the user choose rather than crediting another
           return books.find((book) => book.id === initialBookId) ?? null;
         }
-        if (books.length === 1) return books[0];
-        return books.find((book) => book.id === previous?.id) ?? null;
+        return (
+          books.find((book) => book.id === previous?.id) ?? books[0] ?? null
+        );
       });
 
       setWantToReadBooks(
@@ -190,15 +199,17 @@ export default function ReadingTimeLogger({
         finishBook,
       });
 
-      // Check if daily goal is met and update notification schedule
-      await NotificationService.checkAndScheduleNotification();
+      // The session is saved: a reminder problem must not report "failed to log"
+      // (the user would retry and log it twice)
+      try {
+        await NotificationService.checkAndScheduleNotification();
+      } catch (error) {
+        console.error("Error rescheduling the reminder:", error);
+      }
 
       // Reset form
       setMinutes("");
       setPages("");
-      setSelectedBook(
-        currentlyReadingBooks.length === 1 ? currentlyReadingBooks[0] : null,
-      );
       setNotes("");
       setFinishBook(false);
       setSessionDate(getTodayDateString());
@@ -234,796 +245,233 @@ export default function ReadingTimeLogger({
   };
 
   const handleClose = () => {
+    if (loading) return;
     setMinutes("");
     setPages("");
-    setSelectedBook(
-      currentlyReadingBooks.length === 1 ? currentlyReadingBooks[0] : null,
-    );
     setNotes("");
     setFinishBook(false);
     setSessionDate(getTodayDateString());
     onClose();
   };
-  const notesInputRef = useRef<TextInput>(null);
-  const scrollRef = useRef<KeyboardAwareScrollView>(null);
-  const quickTimeButtons = [5, 10, 15, 30, 45, 60];
-  const quickPageButtons = [5, 10, 20];
+  const scrollRef = useRef<ScrollView>(null);
+  const pagesValid =
+    pages.trim() !== "" &&
+    !isNaN(Number(pages)) &&
+    Number(pages) > 0 &&
+    Number(pages) <= remainingPages;
 
-  const scrollTo = (inputRef: React.RefObject<TextInput | null>) => {
-    const node = findNodeHandle(inputRef.current);
-    if (node && scrollRef.current?.scrollToFocusedInput) {
-      scrollRef.current.scrollToFocusedInput(node);
-      // Additional offset if needed
-      setTimeout(() => {
-        scrollRef.current?.scrollToPosition(0, 300, true);
-      }, 100);
-    }
+  const selectBook = (book: EnhancedBook) => {
+    setSelectedBook(book);
+    setPages(""); // Pages are per book
+    setFinishBook(false);
   };
+
   return (
-    <Modal
+    <Sheet
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
+      onClose={handleClose}
+      title={t("components.readingTimeLogger.title")}
+      dismissible={!loading}
+      scrollRef={scrollRef}
+      footer={
+        <>
+          <Button
+            title={t("components.readingTimeLogger.cancel")}
+            variant="secondary"
+            onPress={handleClose}
+            disabled={loading}
+          />
+          <Button
+            title={t("components.readingTimeLogger.save")}
+            onPress={handleSubmit}
+            loading={loading}
+            grow
+          />
+        </>
+      }
     >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {t("components.readingTimeLogger.title")}
-          </Text>
-        </View>
-
-        <KeyboardAwareScrollView
-          style={styles.content}
-          showsVerticalScrollIndicator={false}
-          enableAutomaticScroll={true}
-          extraScrollHeight={30}
-          keyboardOpeningTime={0}
-          ref={scrollRef}
-        >
-          {/* Book Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {t("components.readingTimeLogger.whichBook")}
+      <FieldGroup label={t("components.readingTimeLogger.whichBook")}>
+        {currentlyReadingBooks.length === 0 ? (
+          <View style={styles.noBooks}>
+            <Text style={styles.noBooksText}>
+              {t("components.readingTimeLogger.noBooksFound")}
             </Text>
-            {currentlyReadingBooks.length === 0 ? (
-              <View style={styles.noBooks}>
-                <Text style={styles.noBooksText}>
-                  {t("components.readingTimeLogger.noBooksFound")}
+            {/* Not a dead end: start one of the want-to-read books here */}
+            {wantToReadBooks.length > 0 && (
+              <>
+                <Text style={styles.hint}>
+                  {t("components.readingTimeLogger.startReadingHint")}
                 </Text>
-                {/* Not a dead end: start one of the want-to-read books here */}
-                {wantToReadBooks.length > 0 && (
-                  <View style={styles.startReadingList}>
-                    <Text style={styles.startReadingHint}>
-                      {t("components.readingTimeLogger.startReadingHint")}
+                {wantToReadBooks.slice(0, 5).map((book) => (
+                  <View key={book.id} style={styles.startRow}>
+                    <Text style={styles.startTitle} numberOfLines={1}>
+                      {book.name}
                     </Text>
-                    {wantToReadBooks.slice(0, 5).map((book) => (
-                      <View key={book.id} style={styles.startReadingRow}>
-                        <Text
-                          style={styles.startReadingTitle}
-                          numberOfLines={1}
-                        >
-                          {book.name}
-                        </Text>
-                        <TouchableOpacity
-                          style={styles.startReadingButton}
-                          onPress={() => startReading(book.id)}
-                        >
-                          <Text style={styles.startReadingButtonText}>
-                            {t("components.readingTimeLogger.startReading")}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
+                    <Button
+                      title={t("components.readingTimeLogger.startReading")}
+                      variant="secondary"
+                      compact
+                      onPress={() => startReading(book.id)}
+                    />
                   </View>
-                )}
-              </View>
-            ) : (
-              <View style={styles.booksList}>
-                {currentlyReadingBooks.map((book) => (
-                  <TouchableOpacity
-                    key={book.id}
-                    style={[
-                      styles.bookOption,
-                      selectedBook?.id === book.id && styles.bookOptionSelected,
-                    ]}
-                    onPress={() => {
-                      setSelectedBook(book);
-                      setPages(""); // Clear pages when switching books
-                      setFinishBook(false); // Reset finish book toggle
-                    }}
-                  >
-                    <View style={styles.bookInfo}>
-                      <Text
-                        style={[
-                          styles.bookTitle,
-                          selectedBook?.id === book.id &&
-                            styles.bookTitleSelected,
-                        ]}
-                      >
-                        {book.name}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.bookAuthor,
-                          selectedBook?.id === book.id &&
-                            styles.bookAuthorSelected,
-                        ]}
-                      >
-                        {t("components.bookCard.by")} {book.author}
-                      </Text>
-                    </View>
-                    {selectedBook?.id === book.id && (
-                      <Text style={styles.checkmark}>✓</Text>
-                    )}
-                  </TouchableOpacity>
                 ))}
-              </View>
+              </>
             )}
           </View>
-
-          {/* Date (backfill a forgotten session) */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {t("components.sessionDate.title")}
-            </Text>
-            <SessionDatePicker value={sessionDate} onChange={setSessionDate} />
-          </View>
-
-          {/* Time Input */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {t("components.readingTimeLogger.howManyMinutes")}
-            </Text>
-
-            {/* Quick Time Buttons */}
-            <View style={styles.quickTimeContainer}>
-              {quickTimeButtons.map((time) => (
-                <TouchableOpacity
-                  key={time}
-                  style={[
-                    styles.quickTimeButton,
-                    minutes === time.toString() &&
-                      styles.quickTimeButtonSelected,
-                  ]}
-                  onPress={() => setMinutes(time.toString())}
-                >
-                  <Text
-                    style={[
-                      styles.quickTimeText,
-                      minutes === time.toString() &&
-                        styles.quickTimeTextSelected,
-                    ]}
-                  >
-                    {time} {t("components.readingTimeLogger.minutesShort")}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Custom Input */}
-            <View style={styles.customTimeContainer}>
-              <TextInput
-                style={styles.timeInput}
-                placeholder={t(
-                  "components.readingTimeLogger.enterCustomMinutes",
-                )}
-                placeholderTextColor={COLORS.neutral[400]}
-                value={minutes}
-                onChangeText={setMinutes}
-                keyboardType="numeric"
-                returnKeyType="next"
-              />
-              <Text style={styles.minutesLabel}>
-                {t("components.readingTimeLogger.minutes")}
-              </Text>
-            </View>
-          </View>
-
-          {/* Pages Input (Optional) */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                {t("components.readingTimeLogger.pagesRead")}
-              </Text>
-              <View style={styles.optionalBadge}>
-                <Text style={styles.optionalText}>
-                  {t("components.readingTimeLogger.optional")}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.sectionSubtitle}>
-              {t("components.readingTimeLogger.trackPagesDescription")}
-            </Text>
-
-            {selectedBook && (
-              <View style={styles.remainingPagesInfo}>
-                <Text style={styles.remainingPagesText}>
-                  {t("components.readingTimeLogger.remainingPages", {
-                    remaining: remainingPages,
-                    total: selectedBook.page,
-                  })}
-                </Text>
-              </View>
-            )}
-
-            {/* Quick Page Buttons */}
-            {selectedBook && remainingPages > 0 && (
-              <View style={styles.quickPagesContainer}>
-                {quickPageButtons
-                  .filter((pageCount) => pageCount <= remainingPages)
-                  .map((pageCount) => (
-                    <TouchableOpacity
-                      key={pageCount}
-                      style={[
-                        styles.quickPageButton,
-                        pages === pageCount.toString() &&
-                          styles.quickPageButtonSelected,
-                      ]}
-                      onPress={() => setPages(pageCount.toString())}
-                    >
-                      <Text
-                        style={[
-                          styles.quickPageText,
-                          pages === pageCount.toString() &&
-                            styles.quickPageTextSelected,
-                        ]}
-                      >
-                        {pageCount}{" "}
-                        {t("components.readingTimeLogger.pagesShort")}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-              </View>
-            )}
-
-            <View style={styles.pagesInputContainer}>
-              <View style={styles.pagesIconContainer}>
-                <Text style={styles.pagesIcon}>📚</Text>
-              </View>
-              <TextInput
-                style={styles.pagesInput}
-                placeholder={
-                  selectedBook
-                    ? t("components.readingTimeLogger.enterPagesPlaceholder", {
-                        max: remainingPages,
-                      })
-                    : t("components.readingTimeLogger.selectBookFirst")
-                }
-                placeholderTextColor={COLORS.neutral[400]}
-                value={pages}
-                onChangeText={setPages}
-                keyboardType="numeric"
-                returnKeyType="next"
-                editable={!!selectedBook && remainingPages > 0}
-              />
-              {pages.trim() && (
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel={t("a11y.clearPages")}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  style={styles.clearPagesButton}
-                  onPress={() => setPages("")}
-                >
-                  <Text style={styles.clearPagesText}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {selectedBook &&
-              pages.trim() &&
-              !isNaN(Number(pages)) &&
-              Number(pages) > 0 &&
-              Number(pages) <= remainingPages && (
-                <View style={styles.progressPreview}>
-                  <Text style={styles.progressPreviewText}>
-                    {t("components.readingTimeLogger.progressPreview", {
-                      pages: Number(pages),
-                      bookName: selectedBook.name,
-                      total: selectedBook.page,
-                    })}
-                  </Text>
-                </View>
-              )}
-
-            {pages.trim() && Number(pages) > remainingPages && (
-              <View style={styles.warningContainer}>
-                <Text style={styles.warningText}>
-                  {t("components.readingTimeLogger.tooManyPagesWarning", {
-                    remaining: remainingPages,
-                  })}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Finish Book Toggle */}
-          {selectedBook && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                {t("components.readingTimeLogger.finishBook")}
-              </Text>
-              <Text style={styles.sectionSubtitle}>
-                {t("components.readingTimeLogger.finishBookDescription")}
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.finishBookToggle,
-                  finishBook && styles.finishBookToggleActive,
-                ]}
-                onPress={() => setFinishBook(!finishBook)}
+        ) : (
+          currentlyReadingBooks.map((book) => {
+            const selected = selectedBook?.id === book.id;
+            return (
+              <Pressable
+                key={book.id}
+                style={styles.bookRow}
+                onPress={() => selectBook(book)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                accessibilityLabel={`${book.name}, ${book.author}`}
               >
-                <View
-                  style={[
-                    styles.finishBookCheckbox,
-                    finishBook && styles.finishBookCheckboxActive,
-                  ]}
-                >
-                  {finishBook && (
-                    <Text style={styles.finishBookCheckmark}>✓</Text>
-                  )}
-                </View>
-                <View style={styles.finishBookTextContainer}>
-                  <Text
-                    style={[
-                      styles.finishBookText,
-                      finishBook && styles.finishBookTextActive,
-                    ]}
-                  >
-                    {t("components.readingTimeLogger.markAsFinished", {
-                      bookName: selectedBook.name,
-                    })}
+                <BookCover
+                  uri={book.cover_url}
+                  title={book.name}
+                  author={book.author}
+                  width={30}
+                />
+                <View style={styles.bookText}>
+                  <Text style={styles.bookTitle} numberOfLines={1}>
+                    {book.name}
                   </Text>
-                  {finishBook && (
-                    <Text style={styles.finishBookSubtext}>
-                      {t("components.readingTimeLogger.finishBookSubtext")}
-                    </Text>
-                  )}
+                  <Text style={styles.bookAuthor} numberOfLines={1}>
+                    {book.author}
+                  </Text>
                 </View>
-              </TouchableOpacity>
-            </View>
-          )}
+                <Ionicons
+                  name={selected ? "checkmark-circle" : "ellipse-outline"}
+                  size={24}
+                  color={selected ? COLORS.accent.primary : COLORS.line.strong}
+                />
+              </Pressable>
+            );
+          })
+        )}
+      </FieldGroup>
 
-          {/* Notes (Optional) */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {t("components.readingTimeLogger.notesOptional")}
-            </Text>
-            <TextInput
-              style={styles.notesInput}
-              placeholder={t("components.readingTimeLogger.notesPlaceholder")}
-              placeholderTextColor={COLORS.neutral[400]}
-              value={notes}
-              ref={notesInputRef}
-              onChangeText={setNotes}
-              onFocus={() => {
-                scrollTo(notesInputRef);
-              }}
-              multiline
-              numberOfLines={3}
-              returnKeyType="done"
+      <FieldGroup label={t("components.sessionDate.title")}>
+        <SessionDatePicker value={sessionDate} onChange={setSessionDate} />
+      </FieldGroup>
+
+      <MinutesField value={minutes} onChange={setMinutes} />
+
+      <PagesField
+        value={pages}
+        onChange={setPages}
+        remaining={remainingPages}
+        enabled={!!selectedBook && remainingPages > 0}
+        disabledHint={
+          selectedBook
+            ? t("components.readingTimeLogger.noPagesToLog")
+            : t("components.readingTimeLogger.selectBookFirst")
+        }
+        remainingText={
+          selectedBook
+            ? t("components.readingTimeLogger.remainingPages", {
+                remaining: remainingPages,
+                total: selectedBook.page,
+              })
+            : undefined
+        }
+        preview={
+          selectedBook && pagesValid
+            ? t("components.readingTimeLogger.progressPreview", {
+                pages: Number(pages),
+                bookName: selectedBook.name,
+                total: selectedBook.page,
+              })
+            : undefined
+        }
+      />
+
+      {selectedBook && (
+        <FieldGroup label={t("components.readingTimeLogger.finishBook")}>
+          <View style={styles.finishRow}>
+            <View style={styles.finishText}>
+              <Text style={styles.finishTitle}>
+                {t("components.readingTimeLogger.markAsFinished", {
+                  bookName: selectedBook.name,
+                })}
+              </Text>
+              <Text style={styles.hint}>
+                {finishBook
+                  ? t("components.readingTimeLogger.finishBookSubtext")
+                  : t("components.readingTimeLogger.finishBookDescription")}
+              </Text>
+            </View>
+            <Switch
+              value={finishBook}
+              onValueChange={setFinishBook}
+              trackColor={{ true: COLORS.accent.primary, false: COLORS.line.strong }}
+              accessibilityLabel={t("components.readingTimeLogger.finishBook")}
             />
           </View>
-          {/* Action Buttons */}
-          <View style={styles.actionButonsContainer}>
-            <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
-              <Text style={styles.cancelButtonText}>
-                {t("components.readingTimeLogger.cancel")}
-              </Text>
-            </TouchableOpacity>
+        </FieldGroup>
+      )}
 
-            <TouchableOpacity
-              onPress={handleSubmit}
-              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-              disabled={loading}
-            >
-              <Text style={styles.saveButtonText}>
-                {loading
-                  ? t("components.readingTimeLogger.saving")
-                  : t("components.readingTimeLogger.save")}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAwareScrollView>
-      </View>
-    </Modal>
+      <NotesField
+        value={notes}
+        onChange={setNotes}
+        label={t("components.readingTimeLogger.notesOptional")}
+        placeholder={t("components.readingTimeLogger.notesPlaceholder")}
+        onFocus={() =>
+          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250)
+        }
+      />
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.neutral[50],
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.neutral[200],
-  },
-  actionButonsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-
-    borderTopWidth: 1,
-    borderTopColor: COLORS.neutral[200],
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
-  },
-  cancelButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: COLORS.neutral[200],
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-  },
-  saveButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  saveButtonDisabled: {
-    backgroundColor: COLORS.neutral[300],
-  },
-  saveButtonText: {
-    fontSize: 16,
-    color: COLORS.white,
-    fontWeight: "600",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  section: {
-    marginTop: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.neutral[700],
-    marginBottom: 12,
-  },
   noBooks: {
-    backgroundColor: COLORS.state.warningSoft,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.warning,
+    gap: SPACING[3],
   },
-  noBooksText: {
-    color: COLORS.state.warningText,
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  startReadingList: {
-    marginTop: 12,
-    gap: 8,
-  },
-  startReadingHint: {
-    color: COLORS.state.warningText,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  startReadingRow: {
+  noBooksText: TYPE.body,
+  hint: TYPE.meta,
+  startRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: SPACING[3],
   },
-  startReadingTitle: {
+  startTitle: {
+    ...TYPE.bodyStrong,
     flex: 1,
-    fontSize: 14,
-    color: COLORS.neutral[700],
   },
-  startReadingButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  startReadingButtonText: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  booksList: {
-    gap: 8,
-  },
-  bookOption: {
-    backgroundColor: COLORS.white,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
+  bookRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: SPACING[3],
+    minHeight: 56,
   },
-  bookOptionSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.state.cardAccent,
-  },
-  bookInfo: {
+  bookText: {
     flex: 1,
+    gap: 1,
   },
   bookTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.neutral[800],
-    marginBottom: 4,
-  },
-  bookTitleSelected: {
-    color: COLORS.primary,
+    fontFamily: FONTS.serif,
+    fontSize: 18,
+    lineHeight: 23,
+    color: COLORS.ink.primary,
   },
   bookAuthor: {
+    ...TYPE.meta,
+    fontFamily: FONTS.serifItalic,
     fontSize: 14,
-    color: COLORS.neutral[500],
   },
-  bookAuthorSelected: {
-    color: COLORS.primaryDark,
-  },
-  checkmark: {
-    fontSize: 18,
-    color: COLORS.primary,
-    fontWeight: "bold",
-  },
-  quickTimeContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 16,
-  },
-  quickTimeButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
-    minWidth: (screenWidth - 40 - 16) / 3, // 3 buttons per row with gaps
-  },
-  quickTimeButtonSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  quickTimeText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.neutral[500],
-    textAlign: "center",
-  },
-  quickTimeTextSelected: {
-    color: COLORS.white,
-  },
-  customTimeContainer: {
+  finishRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
-    paddingHorizontal: 16,
+    gap: SPACING[4],
   },
-  timeInput: {
+  finishText: {
     flex: 1,
-    minHeight: 48,
-    fontSize: 16,
-    color: COLORS.neutral[800],
+    gap: 2,
   },
-  minutesLabel: {
-    fontSize: 16,
-    color: COLORS.neutral[500],
-    fontWeight: "500",
-  },
-  notesInput: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
-    padding: 16,
-    fontSize: 16,
-    color: COLORS.neutral[800],
-    textAlignVertical: "top",
-    minHeight: 80,
-  },
-  // Pages input styles
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  optionalBadge: {
-    backgroundColor: COLORS.state.primarySoftAlt,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 8,
-    borderWidth: 1,
-    borderColor: COLORS.state.accentCyan,
-  },
-  optionalText: {
-    fontSize: 10,
-    color: COLORS.state.accentCyan,
-    fontWeight: "600",
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: COLORS.neutral[500],
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  pagesInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  pagesIconContainer: {
-    marginRight: 12,
-  },
-  pagesIcon: {
-    fontSize: 20,
-  },
-  pagesInput: {
-    flex: 1,
-    minHeight: 48,
-    fontSize: 16,
-    color: COLORS.neutral[800],
-  },
-  clearPagesButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: COLORS.neutral[100],
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 8,
-  },
-  clearPagesText: {
-    fontSize: 12,
-    color: COLORS.neutral[500],
-    fontWeight: "bold",
-  },
-  progressPreview: {
-    backgroundColor: COLORS.state.primarySoftAlt,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.state.accentCyan,
-  },
-  progressPreviewText: {
-    fontSize: 12,
-    color: COLORS.state.accentCyanDark,
-    lineHeight: 16,
-    textAlign: "center",
-  },
-  // Remaining pages info
-  remainingPagesInfo: {
-    backgroundColor: COLORS.state.primarySoftAlt,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: COLORS.state.infoBorder,
-  },
-  remainingPagesText: {
-    fontSize: 12,
-    color: COLORS.state.accentCyanDark,
-    fontWeight: "500",
-    textAlign: "center",
-  },
-  // Quick pages buttons
-  quickPagesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 16,
-  },
-  quickPageButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
-    minWidth: (screenWidth - 40 - 16) / 3,
-  },
-  quickPageButtonSelected: {
-    backgroundColor: COLORS.success,
-    borderColor: COLORS.success,
-  },
-  quickPageText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.neutral[500],
-    textAlign: "center",
-  },
-  quickPageTextSelected: {
-    color: COLORS.white,
-  },
-  // Warning styles
-  warningContainer: {
-    backgroundColor: COLORS.state.dangerSoft,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.state.dangerBorder,
-  },
-  warningText: {
-    fontSize: 12,
-    color: COLORS.state.dangerText,
-    lineHeight: 16,
-    textAlign: "center",
-    fontWeight: "500",
-  },
-  // Finish book styles
-  finishBookToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
-    padding: 16,
-  },
-  finishBookToggleActive: {
-    backgroundColor: COLORS.state.successSoft,
-    borderColor: COLORS.success,
-  },
-  finishBookCheckbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[300],
-    backgroundColor: COLORS.white,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  finishBookCheckboxActive: {
-    backgroundColor: COLORS.success,
-    borderColor: COLORS.success,
-  },
-  finishBookCheckmark: {
-    fontSize: 14,
-    color: COLORS.white,
-    fontWeight: "bold",
-  },
-  finishBookTextContainer: {
-    flex: 1,
-  },
-  finishBookText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.neutral[700],
-    marginBottom: 4,
-  },
-  finishBookTextActive: {
-    color: COLORS.state.successText,
-  },
-  finishBookSubtext: {
-    fontSize: 12,
-    color: COLORS.state.successText,
-    lineHeight: 16,
-  },
+  finishTitle: TYPE.bodyStrong,
 });

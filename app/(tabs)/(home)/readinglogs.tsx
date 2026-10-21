@@ -10,14 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import EditSessionModal from "../../../components/EditSessionModal";
 import WeeklyStatsView from "../../../components/WeeklyStatsView";
+import { useSessionSheets } from "../../../contexts/SessionSheetsContext";
 import {
-  deleteSession,
-  restoreSession,
   listSessionsWithBooks,
   SessionWithBook,
-  updateSession,
 } from "../../../db/repos/sessions";
 import { COLORS } from "../../../themes/colors";
 import {
@@ -28,7 +25,6 @@ import { isDevModeEnabled } from "../../../utils/devMode";
 import { generateRandomReadingData } from "../../../utils/devData";
 import { formatDate, LONG_DATE } from "../../../utils/format";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
-import { showToast } from "../../../utils/toast";
 interface WeekDay {
   date: string;
   day: string;
@@ -43,9 +39,7 @@ export default function ReadingLogs() {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(new Date());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [selectedSession, setSelectedSession] =
-    useState<SessionWithBook | null>(null);
+  const { editSession } = useSessionSheets();
 
   const [isWeeklyView, setIsWeeklyView] = useState(false);
 
@@ -158,50 +152,6 @@ export default function ReadingLogs() {
   const onRefresh = () => {
     setRefreshing(true);
     loadWeekData();
-  };
-
-  const handleEditSession = (session: SessionWithBook) => {
-    setSelectedSession(session);
-    setEditModalVisible(true);
-  };
-
-  const handleUpdateSession = async (
-    sessionId: number,
-    minutes: number,
-    notes: string,
-    pages: number | undefined,
-    date: string,
-  ) => {
-    try {
-      await updateSession(sessionId, { minutes, notes, pages, date });
-      showToast({
-        message: t("components.readingLogsEditModal.updateSuccessMessage"),
-      });
-    } catch (error) {
-      console.error("Error updating session:", error);
-      throw error;
-    }
-  };
-
-  const handleDeleteSession = async (sessionId: number) => {
-    try {
-      const deleted = await deleteSession(sessionId);
-      showToast({
-        message: t("components.readingLogsEditModal.deleteSuccessMessage"),
-        actionLabel: t("components.readingLogsEditModal.undo"),
-        onAction: () => {
-          restoreSession(deleted).catch((error) =>
-            console.error("Error restoring session:", error),
-          );
-        },
-      });
-    } catch (error) {
-      console.error("Error deleting session:", error);
-      Alert.alert(
-        t("components.readingLogsEditModal.deleteError"),
-        t("components.readingLogsEditModal.deleteErrorMessage"),
-      );
-    }
   };
 
   const handleGenerateRandomData = async () => {
@@ -425,7 +375,7 @@ export default function ReadingLogs() {
                     <TouchableOpacity
                       key={session.id}
                       style={styles.sessionCard}
-                      onPress={() => handleEditSession(session)}
+                      onPress={() => editSession(session)}
                     >
                       <View style={styles.sessionHeader}>
                         <Text style={styles.sessionTime}>
@@ -454,14 +404,6 @@ export default function ReadingLogs() {
           ))}
         </View>
       </ScrollView>
-
-      <EditSessionModal
-        visible={editModalVisible}
-        session={selectedSession}
-        onClose={() => setEditModalVisible(false)}
-        onSave={handleUpdateSession}
-        onDelete={handleDeleteSession}
-      />
     </View>
   );
 }

@@ -30,6 +30,8 @@ export default function HomeLayout() {
         name="index"
         options={{
           title: t("navigation.home"),
+          // Today draws its own Folio header
+          headerShown: false,
         }}
       />
 

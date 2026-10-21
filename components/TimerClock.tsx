@@ -8,7 +8,7 @@ import {
 } from "../utils/readingTimer";
 
 /**
- * Live "⏱ 12:34" for a running timer. Ticks on its own so the screen around
+ * Live "12:34" for a running timer. Ticks on its own so the screen around
  * it doesn't re-render every second; the time itself comes from timestamps.
  */
 export default function TimerClock({
@@ -34,7 +34,7 @@ export default function TimerClock({
         minutes: Math.floor(elapsedMs / 60000),
       })}
     >
-      ⏱ {formatElapsed(elapsedMs)}
+      {formatElapsed(elapsedMs)}
     </Text>
   );
 }

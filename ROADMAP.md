@@ -60,6 +60,10 @@ Kept for the owner's release notes; clear it when a release ships.
 - Reading timer on the Home card: start, stop (opens the logger pre-filled), or log/discard later.
 - Daily and target goals are edited in one place, Growth Journey.
 - Faster library lists; covers are cached on disk. The app stays in light mode until dark mode exists.
+- New look (Folio): serif headings and numbers, paper colors, a calmer tab bar and headers.
+- New Today screen: today's minutes and streak at a glance, this week's days, the book you read last (switch between
+  books in progress), and today's sessions (tap to fix one). Tapping a reminder opens Today.
+- Logging and editing a session use a new bottom sheet; the logger preselects the book you read last.
 
 ---
 
@@ -187,7 +191,7 @@ changes**: UI and routing only. Every old route keeps a `<Redirect>` stub for 2+
 
 - [x] **8.0 Folio foundation**: Newsreader + Inter fonts; semantic, dark-ready tokens (legacy keys mapped); `TYPE` scale;
   `components/ui/` primitives (Screen, Eyebrow, Hairline, Button, Sheet, BookCover, ProgressRule, StatRow); Folio tab bar; haptics.
-- [ ] **8.1 Logging + Today**: LogSessionProvider, logger as a Folio sheet, Today rebuilt, most-recent-book query,
+- [x] **8.1 Logging + Today**: LogSessionProvider, logger as a Folio sheet, Today rebuilt, most-recent-book query,
   notification response listener (after DB init).
 - [ ] **8.2 Book detail**: shared route group `(home,books,progress)/book/[id]` (fallback: root-stack route), drop the
   `withAnchor` jumps, per-book sessions, one status control, "…" menu with delete, finish sheet.

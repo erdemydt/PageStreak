@@ -5,14 +5,17 @@ import { Newsreader_400Regular } from "@expo-google-fonts/newsreader/400Regular"
 import { Newsreader_400Regular_Italic } from "@expo-google-fonts/newsreader/400Regular_Italic";
 import { Newsreader_500Medium } from "@expo-google-fonts/newsreader/500Medium";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import { AppState, AppStateStatus, View } from "react-native";
 import { LanguageProvider } from "../contexts/LanguageContext";
+import { SessionSheetsProvider } from "../contexts/SessionSheetsContext";
 import "../i18n";
 import { initializeDatabase } from "../db/db";
+import { getUserPreferences } from "../db/repos/preferences";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
+import { isBootComplete } from "../utils/boot";
 import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
 import ToastHost from "../components/ToastHost";
 
@@ -56,8 +59,26 @@ export default function RootLayout() {
       handleAppStateChange,
     );
 
+    // A reminder tap always lands on Today, wherever the app was left. A tap that
+    // launched the app is left to app/index.tsx, which boots and lands on Today
+    // itself; onboarding is never skipped (no profile, no navigation).
+    const unsubscribeReminderTaps = NotificationService.onReminderTapped(
+      async () => {
+        if (!isBootComplete()) return;
+        try {
+          if (await getUserPreferences()) {
+            // Pops back to Today if it's already in the stack (navigate would push a copy)
+            router.dismissTo("/(tabs)/(home)");
+          }
+        } catch (error) {
+          console.error("Error opening Today from a reminder:", error);
+        }
+      },
+    );
+
     return () => {
       subscription?.remove();
+      unsubscribeReminderTaps();
     };
   }, []);
 
@@ -69,18 +90,20 @@ export default function RootLayout() {
 
   return (
     <LanguageProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen
-          name="intro"
-          options={{
-            presentation: "modal",
-            headerShown: false,
-            animation: "slide_from_bottom",
-          }}
-        />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      <SessionSheetsProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen
+            name="intro"
+            options={{
+              presentation: "modal",
+              headerShown: false,
+              animation: "slide_from_bottom",
+            }}
+          />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </SessionSheetsProvider>
       <ToastHost />
     </LanguageProvider>
   );

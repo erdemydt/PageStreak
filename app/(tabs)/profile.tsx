@@ -13,11 +13,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { execute, queryFirst } from "../../db/db";
+import db, { execute, queryFirst } from "../../db/db";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import { TYPE } from "../../themes/typography";
 import { parseDbDate } from "../../utils/dateUtils";
+import { recordGoalChange } from "../../utils/goalHistory";
 import {
   computeGrowthGoalFields,
   validateGrowthGoals,
@@ -186,7 +187,8 @@ export default function ProfileScreen() {
       const goalsChanged =
         currentDailyGoal !==
           userPreferences?.current_reading_rate_minutes_per_day ||
-        targetDailyGoal !== userPreferences?.end_reading_rate_goal_minutes_per_day;
+        targetDailyGoal !==
+          userPreferences?.end_reading_rate_goal_minutes_per_day;
 
       if (!goalsChanged) {
         // Don't reset the growth plan (initial rate, last-updated date, weekly
@@ -212,35 +214,39 @@ export default function ProfileScreen() {
         targetDate: userPreferences?.end_reading_rate_goal_date,
       });
 
-      await execute(
-        `UPDATE user_preferences SET 
-          username = ?, 
-          yearly_book_goal = ?, 
-          preferred_genres = ?,
-          weekly_reading_goal = ?,
-          initial_reading_rate_minutes_per_day = ?,
-          end_reading_rate_goal_minutes_per_day = ?,
-          end_reading_rate_goal_date = ?,
-          current_reading_rate_minutes_per_day = ?,
-          current_reading_rate_last_updated = ?,
-          weekly_reading_rate_increase_minutes = ?,
-          weekly_reading_rate_increase_minutes_percentage = ?,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = 1`,
-        [
-          editedUsername.trim(),
-          yearlyGoal,
-          editedGenres.join(","),
-          computedGoals.weeklyReadingGoal,
-          computedGoals.initialReadingRate,
-          computedGoals.targetReadingRate,
-          computedGoals.endGoalDate,
-          computedGoals.currentReadingRate,
-          new Date().toISOString(),
-          computedGoals.weeklyIncreaseMinutes,
-          computedGoals.weeklyIncreasePercentage,
-        ],
-      );
+      // Preferences and goal history change together or not at all
+      await db.withTransactionAsync(async () => {
+        await execute(
+          `UPDATE user_preferences SET 
+            username = ?, 
+            yearly_book_goal = ?, 
+            preferred_genres = ?,
+            weekly_reading_goal = ?,
+            initial_reading_rate_minutes_per_day = ?,
+            end_reading_rate_goal_minutes_per_day = ?,
+            end_reading_rate_goal_date = ?,
+            current_reading_rate_minutes_per_day = ?,
+            current_reading_rate_last_updated = ?,
+            weekly_reading_rate_increase_minutes = ?,
+            weekly_reading_rate_increase_minutes_percentage = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = 1`,
+          [
+            editedUsername.trim(),
+            yearlyGoal,
+            editedGenres.join(","),
+            computedGoals.weeklyReadingGoal,
+            computedGoals.initialReadingRate,
+            computedGoals.targetReadingRate,
+            computedGoals.endGoalDate,
+            computedGoals.currentReadingRate,
+            new Date().toISOString(),
+            computedGoals.weeklyIncreaseMinutes,
+            computedGoals.weeklyIncreasePercentage,
+          ],
+        );
+        await recordGoalChange(computedGoals.currentReadingRate);
+      });
 
       await loadUserPreferences();
       setIsEditing(false);

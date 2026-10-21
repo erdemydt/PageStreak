@@ -18,6 +18,7 @@ import {
     updateGrowthGoals,
     validateGrowthGoals,
 } from "../../utils/goalSettings";
+import { loadGoalForDate } from "../../utils/goalHistory";
 
 type UserGoalPrefs = {
   created_at?: string;
@@ -64,9 +65,6 @@ const addWeeks = (baseDate: Date, weeks: number) => {
   date.setDate(date.getDate() + weeks * 7);
   return date;
 };
-
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
 
 const diffWeeks = (laterDate: Date, earlierDate: Date) =>
   Math.floor((laterDate.getTime() - earlierDate.getTime()) / MS_PER_WEEK);
@@ -195,13 +193,7 @@ export default function ReadingGrowthScreen() {
       const currentRate = userPrefs?.current_reading_rate_minutes_per_day || 30;
       const targetRate =
         userPrefs?.end_reading_rate_goal_minutes_per_day || currentRate;
-      const initialRate =
-        userPrefs?.initial_reading_rate_minutes_per_day || currentRate;
-      const weeklyIncrease =
-        userPrefs?.weekly_reading_rate_increase_minutes || 0;
-
-      const minRate = Math.min(initialRate, currentRate, targetRate);
-      const maxRate = Math.max(initialRate, currentRate, targetRate);
+      const goalForDate = await loadGoalForDate();
 
       const renderedWeeks: Date[] = [];
       for (
@@ -214,23 +206,18 @@ export default function ReadingGrowthScreen() {
 
       const points = renderedWeeks.map((weekStart) => {
         const weekKey = toDateKey(weekStart);
-        const weeksFromTimelineStart = Math.max(
-          0,
-          diffWeeks(weekStart, derivedTimelineStart),
-        );
-
-        let estimatedDailyRate = currentRate;
-        if (weeklyIncrease > 0) {
-          estimatedDailyRate =
-            initialRate + weeksFromTimelineStart * weeklyIncrease;
+        // The week's target is the sum of each day's goal as it was then
+        let targetMinutes = 0;
+        for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+          const day = new Date(weekStart);
+          day.setDate(day.getDate() + dayOffset);
+          targetMinutes += goalForDate(toDateKey(day));
         }
-
-        const targetDailyRate = clamp(estimatedDailyRate, minRate, maxRate);
 
         return {
           key: weekKey,
           weekStart,
-          targetMinutes: targetDailyRate * 7,
+          targetMinutes,
           actualMinutes: actualByWeek.get(weekKey) || 0,
           applicable: true,
         } as WeeklyPoint;

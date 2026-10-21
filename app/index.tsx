@@ -3,16 +3,15 @@ import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import {
     checkNotificationDatabaseIntegrity,
-    execute,
     initializeDatabase,
     queryFirst,
     repairNotificationDatabase,
 } from "../db/db";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
-import { parseDbDate } from "../utils/dateUtils";
-
-const MS_PER_WEEK = 1000 * 60 * 60 * 24 * 7;
+import { backfillGoalHistoryIfEmpty } from "../utils/goalHistory";
+import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
+import { log } from "../utils/logger";
 
 type UserPreferences = {
   id: number;
@@ -41,22 +40,22 @@ export default function Index() {
 
   const initializeAppDatabase = async () => {
     try {
-      console.log("🔄 Starting app database initialization...");
+      log("🔄 Starting app database initialization...");
 
       // Initialize all database tables first
       await initializeDatabase();
-      console.log("✅ Database tables initialized");
+      log("✅ Database tables initialized");
 
       // Verify database integrity before proceeding
       const dbIntegrity = await checkNotificationDatabaseIntegrity();
-      console.log("📊 Database integrity check:", dbIntegrity);
+      log("📊 Database integrity check:", dbIntegrity);
 
       // If notification tables are missing, repair them
       if (
         !dbIntegrity.notification_preferences_exists ||
         !dbIntegrity.notification_preferences_has_defaults
       ) {
-        console.log("🔧 Repairing notification database...");
+        log("🔧 Repairing notification database...");
         await repairNotificationDatabase();
       }
 
@@ -67,7 +66,7 @@ export default function Index() {
         // Get or create notification preferences (this will handle first-time permission request)
         const notificationPrefs =
           await NotificationService.getNotificationPreferences();
-        console.log("🔔 Notification preferences initialized:", {
+        log("🔔 Notification preferences initialized:", {
           enabled: notificationPrefs?.notifications_enabled,
           reminders: notificationPrefs?.daily_reminder_enabled,
           hours: notificationPrefs?.daily_reminder_hours_after_last_open,
@@ -76,7 +75,7 @@ export default function Index() {
         // Sync system permissions with database preferences
         await NotificationService.syncPermissionsWithDatabase();
 
-        console.log(
+        log(
           "✅ Notification service initialized and permissions synced",
         );
       } catch (notificationError) {
@@ -86,9 +85,17 @@ export default function Index() {
         );
       }
 
+      // Never let goal bookkeeping block startup or send an onboarded user
+      // back to intro; streaks fall back to the current goal without history
+      try {
+        await backfillGoalHistoryIfEmpty();
+      } catch (error) {
+        console.error("❌ Failed to backfill goal history:", error);
+      }
+
       // Grow the daily goal before navigating, so the home screen shows the
       // up-to-date goal on first render
-      await initiateWeeklyProgressLogic();
+      await applyWeeklyGoalGrowth();
 
       // Then check user setup and handle navigation
       await checkUserSetup();
@@ -98,64 +105,6 @@ export default function Index() {
       setHasUser(false);
       router.replace("/intro");
       setIsLoading(false);
-    }
-  };
-
-  /**
-   * Grows the daily reading goal toward the target, linearly by
-   * weekly_reading_rate_increase_minutes per elapsed week (the same model the
-   * Growth Journey chart projects). Catches up if several weeks passed since
-   * the last launch and never overshoots the target.
-   */
-  const initiateWeeklyProgressLogic = async () => {
-    try {
-      const info = await getUserGoalInformation();
-      if (!info) return;
-
-      const lastUpdated = parseDbDate(info.current_reading_rate_last_updated);
-      if (!lastUpdated) {
-        // No usable baseline yet; start counting weeks from now
-        await execute(
-          "UPDATE user_preferences SET current_reading_rate_last_updated = ? WHERE id = 1",
-          [new Date().toISOString()],
-        );
-        return;
-      }
-
-      const weeksPassed = getWeeksPassed(lastUpdated);
-      const goalDate = parseDbDate(info.end_reading_rate_goal_date);
-      const currentRate = info.current_reading_rate_minutes_per_day;
-      const targetRate = info.end_reading_rate_goal_minutes_per_day;
-      const weeklyIncrease = info.weekly_reading_rate_increase_minutes;
-
-      if (
-        weeksPassed <= 0 ||
-        !goalDate ||
-        goalDate <= new Date() ||
-        weeklyIncrease <= 0 ||
-        currentRate >= targetRate
-      ) {
-        return;
-      }
-
-      const newRate = Math.min(
-        targetRate,
-        Math.round(currentRate + weeklyIncrease * weeksPassed),
-      );
-      // Advance the baseline by whole weeks so a partial week isn't lost
-      const newLastUpdated = new Date(
-        lastUpdated.getTime() + weeksPassed * MS_PER_WEEK,
-      );
-
-      await execute(
-        "UPDATE user_preferences SET current_reading_rate_minutes_per_day = ?, current_reading_rate_last_updated = ? WHERE id = 1",
-        [newRate, newLastUpdated.toISOString()],
-      );
-      console.log(
-        `✅ Daily goal grew from ${currentRate} to ${newRate} minutes (${weeksPassed} week(s) passed)`,
-      );
-    } catch (error) {
-      console.error("❌ Failed to initialize weekly progress logic:", error);
     }
   };
 
@@ -182,38 +131,6 @@ export default function Index() {
     }
   };
 
-  const getWeeksPassed = (startDate: Date) => {
-    const diffInMs = Date.now() - startDate.getTime();
-    return Math.floor(diffInMs / MS_PER_WEEK);
-  };
-
-  const getUserGoalInformation = async () => {
-    try {
-      const user = await queryFirst<UserPreferences>(
-        "SELECT * FROM user_preferences WHERE id = 1",
-      );
-      if (!user) return null;
-
-      return {
-        weekly_reading_goal: user.weekly_reading_goal || 210,
-        initial_reading_rate_minutes_per_day:
-          user.initial_reading_rate_minutes_per_day || 30,
-        end_reading_rate_goal_minutes_per_day:
-          user.end_reading_rate_goal_minutes_per_day || 60,
-        end_reading_rate_goal_date: user.end_reading_rate_goal_date || null,
-        current_reading_rate_minutes_per_day:
-          user.current_reading_rate_minutes_per_day || 30,
-        current_reading_rate_last_updated:
-          user.current_reading_rate_last_updated || null,
-        // 0 is meaningful here (target == current): don't replace it with a default
-        weekly_reading_rate_increase_minutes:
-          user.weekly_reading_rate_increase_minutes ?? 0,
-      };
-    } catch (error) {
-      console.error("❌ Error fetching user goal information:", error);
-      return null;
-    }
-  };
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>

@@ -1,5 +1,6 @@
 import { execute, queryAll, queryFirst } from '../db/db';
 import { addDaysToDateString, getTodayDateString } from './dateUtils';
+import { GoalForDate, loadGoalForDate } from './goalHistory';
 
 /**
  * Calculate book completion percentage based on cumulative pages read from sessions
@@ -30,6 +31,22 @@ export const calculateBookProgressFromSessions = async (bookId: number, totalPag
     console.error('Error calculating book progress from sessions:', error);
     return { pagesRead: 0, percentage: 0, isComplete: false };
   }
+};
+
+/**
+ * Pure version of getEnhancedBookProgress for books already loaded with their
+ * session aggregate (see listBooksWithStats): session pages win, then current_page.
+ */
+export const computeBookProgress = (book: {
+  page: number;
+  current_page?: number | null;
+  pages_from_sessions?: number | null;
+}): { pagesRead: number; percentage: number; isComplete: boolean } => {
+  const fromSessions = book.pages_from_sessions ?? 0;
+  const pagesRead = fromSessions > 0 ? fromSessions : book.current_page ?? 0;
+  const percentage =
+    book.page > 0 ? Math.min(Math.round((pagesRead / book.page) * 100), 100) : 0;
+  return { pagesRead, percentage, isComplete: percentage >= 100 };
 };
 
 /**
@@ -123,16 +140,18 @@ export const getTodayReadingMinutes = async (): Promise<number> => {
 
 /**
  * Computes the current and longest streak of consecutive days meeting the goal.
+ * Each day is judged against the goal that applied on that day (goalForDate),
+ * so a weekly goal increase never retroactively breaks a streak.
  * The current streak stays alive through today: if today's goal isn't met yet,
  * it counts back from yesterday instead of dropping to 0.
  */
 export const calculateStreaks = (
   dailyTotals: { date: string; total_minutes: number }[],
-  dailyGoal: number,
+  goalForDate: GoalForDate,
   today: string = getTodayDateString()
 ): { currentStreak: number; longestStreak: number } => {
   const goalMetDates = new Set(
-    dailyTotals.filter(day => day.total_minutes >= dailyGoal).map(day => day.date)
+    dailyTotals.filter(day => day.total_minutes >= goalForDate(day.date)).map(day => day.date)
   );
 
   let currentStreak = 0;
@@ -154,7 +173,7 @@ export const calculateStreaks = (
   return { currentStreak, longestStreak };
 };
 
-export const getReadingStreak = async (dailyGoal: number = 30): Promise<number> => {
+export const getReadingStreak = async (): Promise<number> => {
   try {
     const dailyTotals = await queryAll<{date: string, total_minutes: number}>(
       `SELECT date, SUM(minutes_read) as total_minutes
@@ -162,7 +181,7 @@ export const getReadingStreak = async (dailyGoal: number = 30): Promise<number> 
        GROUP BY date`
     );
 
-    return calculateStreaks(dailyTotals, dailyGoal).currentStreak;
+    return calculateStreaks(dailyTotals, await loadGoalForDate()).currentStreak;
   } catch (error) {
     console.error('Error calculating reading streak:', error);
     return 0;

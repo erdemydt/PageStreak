@@ -1,4 +1,5 @@
 // Open Library API service
+import { log } from "../utils/logger";
 
 export interface OpenLibrarySearchResult {
   numFound: number;
@@ -51,7 +52,7 @@ const BASE_URL = 'https://openlibrary.org';
 const COVERS_URL = 'https://covers.openlibrary.org';
 
 // User-Agent header required by Open Library for regular API usage
-const USER_AGENT = 'PageStreak/1.0 (taninmiskisi05@gmail.com)';
+const USER_AGENT = 'PageStreak/1.0 (+https://github.com/erdemydt/PageStreak)';
 
 export class OpenLibraryService {
   /**
@@ -62,7 +63,7 @@ export class OpenLibraryService {
       const encodedQuery = encodeURIComponent(query);
       const url = `${BASE_URL}/search.json?q=${encodedQuery}&limit=${limit}&fields=key,title,author_name,author_key,first_publish_year,number_of_pages_median,cover_i,publisher,language,isbn,subject,ratings_average,ratings_count`;
       
-      console.log('Searching Open Library:', url);
+      log('Searching Open Library:', url);
       
       const response = await fetch(url, {
         headers: {

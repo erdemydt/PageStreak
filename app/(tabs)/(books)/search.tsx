@@ -7,7 +7,6 @@ import {
   Alert,
   Animated,
   FlatList,
-  Image,
   Keyboard,
   StyleSheet,
   Text,
@@ -16,10 +15,11 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import BookStatusModal, {
   BookStatus,
 } from "../../../components/BookStatusModal";
-import { execute } from "../../../db/db";
+import { addBook } from "../../../db/repos/books";
 import {
   OpenLibraryService,
   SearchBookResult,
@@ -147,53 +147,25 @@ export default function BookSearchScreen() {
     if (!selectedBook) return;
 
     try {
-      const subjects = selectedBook.subjects
-        ? JSON.stringify(selectedBook.subjects)
-        : null;
-
-      let dateField = "";
-      let dateValue = null;
-
-      // Set appropriate date fields based on status
-      if (status === "currently_reading") {
-        dateField = ", date_started";
-        dateValue = new Date().toISOString();
-      } else if (status === "read") {
-        dateField = ", date_finished";
-        dateValue = new Date().toISOString();
-      }
-
-      const query = `
-        INSERT INTO enhanced_books (
-          name, author, page, isbn, cover_id, cover_url,
-          first_publish_year, publisher, language, subjects,
-          open_library_key, author_key, rating, reading_status, date_added${dateField}
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${dateValue ? ", ?" : ""})
-      `;
-
-      const params = [
-        selectedBook.title,
-        selectedBook.authors.join(", "),
-        selectedBook.pageCount || 0,
-        selectedBook.isbn || null,
-        selectedBook.coverId || null,
-        selectedBook.coverUrl || null,
-        selectedBook.firstPublishYear || null,
-        selectedBook.publisher || null,
-        selectedBook.language || "eng",
-        subjects,
-        selectedBook.key,
-        null, // author_key - would need additional processing
-        selectedBook.rating || null,
+      await addBook(
+        {
+          name: selectedBook.title,
+          author: selectedBook.authors.join(", "),
+          page: selectedBook.pageCount || 0,
+          isbn: selectedBook.isbn,
+          cover_id: selectedBook.coverId,
+          cover_url: selectedBook.coverUrl,
+          first_publish_year: selectedBook.firstPublishYear,
+          publisher: selectedBook.publisher,
+          language: selectedBook.language,
+          subjects: selectedBook.subjects
+            ? JSON.stringify(selectedBook.subjects)
+            : null,
+          open_library_key: selectedBook.key,
+          rating: selectedBook.rating,
+        },
         status,
-        new Date().toISOString(),
-      ];
-
-      if (dateValue) {
-        params.push(dateValue);
-      }
-
-      await execute(query, params);
+      );
 
       const statusText = t(`booksPage.search.statusLabels.${status}`);
 
@@ -235,7 +207,9 @@ export default function BookSearchScreen() {
           <Image
             source={{ uri: item.coverUrl }}
             style={styles.bookCover}
-            defaultSource={require("../../../assets/images/icon.png")}
+            placeholder={require("../../../assets/images/icon.png")}
+            cachePolicy="memory-disk"
+            transition={150}
           />
         ) : (
           <View style={styles.bookCoverPlaceholder}>

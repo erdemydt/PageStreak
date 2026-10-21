@@ -31,6 +31,7 @@ import {
     getEnhancedBookProgress,
     syncBookCurrentPageFromSessions,
 } from "../../../utils/readingProgress";
+import { log } from "../../../utils/logger";
 interface WeekDay {
   date: string;
   day: string;
@@ -389,7 +390,7 @@ const generateRandomReadingData = async (): Promise<void> => {
   try {
     // Check if we're in development mode
     if (!isDevModeEnabled()) {
-      console.log(
+      log(
         "⚠️ Random data generation is only available in development mode",
       );
       return;
@@ -464,7 +465,7 @@ const generateRandomReadingData = async (): Promise<void> => {
       );
     }
 
-    console.log(`✅ Generated ${sessions.length} random reading sessions`);
+    log(`✅ Generated ${sessions.length} random reading sessions`);
     Alert.alert(
       "Random Data Generated",
       `Successfully added ${sessions.length} random reading sessions across different days and hours.`,

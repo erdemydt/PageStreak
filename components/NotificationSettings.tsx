@@ -17,6 +17,7 @@ import { NotificationPreferences } from "../db/db";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import { isDevModeEnabled } from "../utils/devMode";
+import { log, warn } from "../utils/logger";
 
 export default function NotificationSettings() {
   const { t } = useTranslation();
@@ -54,7 +55,7 @@ export default function NotificationSettings() {
 
       // If system permissions changed, sync with database
       if (preferences && hasPermission !== preferences.notifications_enabled) {
-        console.log("🔄 System permissions changed, syncing with database");
+        log("🔄 System permissions changed, syncing with database");
         await NotificationService.syncPermissionsWithDatabase();
         await loadPreferences(); // Reload preferences to reflect changes
       }
@@ -67,7 +68,7 @@ export default function NotificationSettings() {
     try {
       setLoading(true);
       const prefs = await NotificationService.getNotificationPreferences();
-      console.log("🔔 Raw preferences from database:", prefs);
+      log("🔔 Raw preferences from database:", prefs);
 
       if (prefs) {
         // Ensure boolean values are properly converted from SQLite integers
@@ -76,10 +77,10 @@ export default function NotificationSettings() {
           notifications_enabled: Boolean(prefs.notifications_enabled),
           daily_reminder_enabled: Boolean(prefs.daily_reminder_enabled),
         };
-        console.log("🔔 Normalized preferences:", normalizedPrefs);
+        log("🔔 Normalized preferences:", normalizedPrefs);
         setPreferences(normalizedPrefs);
       } else {
-        console.log("⚠️ No preferences returned from service");
+        log("⚠️ No preferences returned from service");
         setPreferences(null);
       }
     } catch (error) {
@@ -94,8 +95,8 @@ export default function NotificationSettings() {
   ) => {
     if (!preferences) return;
 
-    console.log("🔄 Updating preferences:", JSON.stringify(updates, null, 2));
-    console.log(
+    log("🔄 Updating preferences:", JSON.stringify(updates, null, 2));
+    log(
       "🔄 Current preferences before update:",
       JSON.stringify(preferences, null, 2),
     );
@@ -104,17 +105,17 @@ export default function NotificationSettings() {
       setSaving(true);
       const success =
         await NotificationService.updateNotificationPreferences(updates);
-      console.log("✅ Update success:", success);
+      log("✅ Update success:", success);
 
       if (success) {
         const updatedPrefs = { ...preferences, ...updates };
-        console.log(
+        log(
           "📱 Setting new preferences state:",
           JSON.stringify(updatedPrefs, null, 2),
         );
         setPreferences(updatedPrefs);
       } else {
-        console.warn("⚠️ Update was not successful");
+        warn("⚠️ Update was not successful");
       }
     } catch (error) {
       console.error("❌ Error updating notification preferences:", error);
@@ -128,7 +129,7 @@ export default function NotificationSettings() {
   };
 
   const handleNotificationToggle = async (enabled: boolean) => {
-    console.log("🔔 Main notification toggle changed to:", enabled);
+    log("🔔 Main notification toggle changed to:", enabled);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     if (enabled) {
@@ -138,12 +139,12 @@ export default function NotificationSettings() {
 
       if (!currentSystemPermission) {
         // Try to request permission
-        console.log("🔐 Requesting notification permissions...");
+        log("🔐 Requesting notification permissions...");
         const hasPermission = await NotificationService.requestPermissions();
-        console.log("🔐 Permission granted:", hasPermission);
+        log("🔐 Permission granted:", hasPermission);
 
         if (!hasPermission) {
-          console.warn("⚠️ Permission denied, showing settings alert");
+          warn("⚠️ Permission denied, showing settings alert");
           Alert.alert(
             t("settings.permissionRequired"),
             t("settings.notificationPermissionDenied"),
@@ -170,7 +171,7 @@ export default function NotificationSettings() {
       }
     }
 
-    console.log("📱 Updating main notification preference to:", enabled);
+    log("📱 Updating main notification preference to:", enabled);
     await updatePreferences({ notifications_enabled: enabled });
   };
 
@@ -233,7 +234,7 @@ export default function NotificationSettings() {
   };
 
   if (loading || !preferences) {
-    console.log(
+    log(
       "🔄 Loading notification settings or preferences not available",
     );
     return (
@@ -248,7 +249,7 @@ export default function NotificationSettings() {
     );
   }
 
-  console.log("🎨 Rendering NotificationSettings with preferences:", {
+  log("🎨 Rendering NotificationSettings with preferences:", {
     notifications_enabled: preferences.notifications_enabled,
     daily_reminder_enabled: preferences.daily_reminder_enabled,
     daily_reminder_hours_after_last_open:
@@ -350,7 +351,7 @@ export default function NotificationSettings() {
               <Switch
                 value={preferences.daily_reminder_enabled}
                 onValueChange={(enabled) => {
-                  console.log("⏰ Daily reminder toggle changed to:", enabled);
+                  log("⏰ Daily reminder toggle changed to:", enabled);
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   updatePreferences({ daily_reminder_enabled: enabled });
                 }}
@@ -399,7 +400,7 @@ export default function NotificationSettings() {
                             hours && styles.hourOptionCardSelected,
                         ]}
                         onPress={() => {
-                          console.log("⏱️ Hour option changed to:", hours);
+                          log("⏱️ Hour option changed to:", hours);
                           Haptics.impactAsync(
                             Haptics.ImpactFeedbackStyle.Light,
                           );

@@ -2,8 +2,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { AppUsageTracking, EnhancedBook, NotificationPreferences, ReadingSession } from '../db/db';
-import { execute, initializeDatabase, queryAll, queryFirst } from '../db/db';
+import type { SQLiteBindValue, SQLiteDatabase } from 'expo-sqlite';
+import db, { initializeDatabase, queryAll } from '../db/db';
 import type { UserPreferences } from '../types/database';
+import { backfillGoalHistoryIfEmpty } from '../utils/goalHistory';
 import { syncBookCurrentPageFromSessions } from '../utils/readingProgress';
 
 // Current app schema version - increment when making breaking changes to backup format
@@ -25,6 +27,8 @@ export type BackupData = {
     weekly_progress?: WeeklyProgress[];
     notification_preferences?: NotificationPreferences[];
     app_usage_tracking?: AppUsageTracking[];
+    // Added after schema v1; absent in older backups
+    goal_history?: { effective_date: string; minutes: number }[];
   };
 };
 
@@ -147,6 +151,9 @@ export async function exportDataToBackup(
       onProgress?.(progress, 'Exporting user preferences...');
       const preferences = await queryAll<UserPreferences>('SELECT * FROM user_preferences');
       backupData.tables.user_preferences = preferences;
+      backupData.tables.goal_history = await queryAll<{ effective_date: string; minutes: number }>(
+        'SELECT effective_date, minutes FROM goal_history ORDER BY effective_date'
+      );
       progress += 10;
     }
 
@@ -344,18 +351,29 @@ export async function validateBackupFile(fileUri: string): Promise<BackupValidat
 }
 
 /**
+ * Run a statement on a specific connection (e.g. a transaction), binding
+ * missing backup fields (undefined) as NULL
+ */
+function runIn(conn: Pick<SQLiteDatabase, 'runAsync'>, sql: string, params: unknown[] = []) {
+  return conn.runAsync(sql, params.map(value => value ?? null) as SQLiteBindValue[]);
+}
+
+/**
  * Find a local book that is the same book as a backup entry: same Open Library
  * key when available, otherwise same title and author (case-insensitive)
  */
-async function findMatchingBook(book: EnhancedBook): Promise<{ id: number } | null> {
+async function findMatchingBook(
+  conn: Pick<SQLiteDatabase, 'getFirstAsync'>,
+  book: EnhancedBook
+): Promise<{ id: number } | null> {
   if (book.open_library_key) {
-    const byKey = await queryFirst<{ id: number }>(
+    const byKey = await conn.getFirstAsync<{ id: number }>(
       'SELECT id FROM enhanced_books WHERE open_library_key = ?',
       [book.open_library_key]
     );
     if (byKey) return byKey;
   }
-  return queryFirst<{ id: number }>(
+  return conn.getFirstAsync<{ id: number }>(
     'SELECT id FROM enhanced_books WHERE LOWER(name) = LOWER(?) AND LOWER(author) = LOWER(?)',
     [book.name, book.author]
   );
@@ -391,20 +409,23 @@ export async function importDataFromBackup(
     // Ensure database is properly initialized with latest schema
     await initializeDatabase();
 
-    // Enable WAL mode for better performance
-    await execute('PRAGMA journal_mode=WAL');
-    await execute('PRAGMA foreign_keys=ON');
+    // Merge mode bookkeeping: backup book id -> local book id
+    const bookIdMap = new Map<number, number>();
+    const touchedBookIds = new Set<number>();
+    let importedBooks = 0;
+    let importedSessions = 0;
+    // Replace mode clears preferences whenever the backup has the key (even
+    // empty), so the goal timeline must be reset in exactly those cases too
+    const importsPreferences =
+      options.mode === 'replace'
+        ? backupData.tables.user_preferences !== undefined
+        : !!backupData.tables.user_preferences?.length;
 
-    // Start transaction
-    await execute('BEGIN TRANSACTION');
-
-    try {
+    // One exclusive transaction on its own connection: other writes (e.g. app
+    // usage tracking on app-state changes) can't slip into it, and any error
+    // rolls the whole import back. Every statement must go through `txn`.
+    await db.withExclusiveTransactionAsync(async (txn) => {
       let progress = 20;
-      // Merge mode bookkeeping: backup book id -> local book id
-      const bookIdMap = new Map<number, number>();
-      const touchedBookIds = new Set<number>();
-      let importedBooks = 0;
-      let importedSessions = 0;
 
       // Import based on mode
       if (options.mode === 'replace') {
@@ -412,22 +433,22 @@ export async function importDataFromBackup(
         
         // Clear existing data in reverse dependency order
         if (backupData.tables.reading_sessions) {
-          await execute('DELETE FROM reading_sessions');
+          await runIn(txn, 'DELETE FROM reading_sessions');
         }
         if (backupData.tables.enhanced_books) {
-          await execute('DELETE FROM enhanced_books');
+          await runIn(txn, 'DELETE FROM enhanced_books');
         }
         if (backupData.tables.user_preferences) {
-          await execute('DELETE FROM user_preferences');
+          await runIn(txn, 'DELETE FROM user_preferences');
         }
         if (backupData.tables.weekly_progress) {
-          await execute('DELETE FROM weekly_progress');
+          await runIn(txn, 'DELETE FROM weekly_progress');
         }
         if (backupData.tables.notification_preferences) {
-          await execute('DELETE FROM notification_preferences');
+          await runIn(txn, 'DELETE FROM notification_preferences');
         }
         if (backupData.tables.app_usage_tracking) {
-          await execute('DELETE FROM app_usage_tracking');
+          await runIn(txn, 'DELETE FROM app_usage_tracking');
         }
         
         progress += 10;
@@ -438,7 +459,7 @@ export async function importDataFromBackup(
         onProgress?.(progress, 'Importing user preferences...');
         for (const pref of backupData.tables.user_preferences) {
           if (options.mode === 'replace') {
-            await execute(`
+            await runIn(txn, `
               INSERT INTO user_preferences (
                 id, username, yearly_book_goal, preferred_genres, created_at, updated_at,
                 weekly_reading_goal, initial_reading_rate_minutes_per_day,
@@ -456,7 +477,7 @@ export async function importDataFromBackup(
             ]);
           } else {
             // Merge mode - use INSERT OR REPLACE
-            await execute(`
+            await runIn(txn, `
               INSERT OR REPLACE INTO user_preferences (
                 id, username, yearly_book_goal, preferred_genres, created_at, updated_at,
                 weekly_reading_goal, initial_reading_rate_minutes_per_day,
@@ -482,7 +503,7 @@ export async function importDataFromBackup(
         onProgress?.(progress, 'Importing books...');
         for (const book of backupData.tables.enhanced_books) {
           if (options.mode === 'replace') {
-            await execute(`
+            await runIn(txn, `
               INSERT INTO enhanced_books (
                 id, name, author, page, isbn, cover_id, cover_url, first_publish_year,
                 publisher, language, description, subjects, open_library_key, author_key,
@@ -499,13 +520,13 @@ export async function importDataFromBackup(
             // Merge mode: never overwrite by id (ids are per-device, so the
             // same id is usually a different book). Reuse a matching existing
             // book, otherwise insert with a fresh id, and remember the mapping.
-            const existing = await findMatchingBook(book);
+            const existing = await findMatchingBook(txn, book);
             if (existing) {
               bookIdMap.set(book.id, existing.id);
               continue;
             }
 
-            const insertResult = await execute(`
+            const insertResult = await runIn(txn, `
               INSERT INTO enhanced_books (
                 name, author, page, isbn, cover_id, cover_url, first_publish_year,
                 publisher, language, description, subjects, open_library_key, author_key,
@@ -532,7 +553,7 @@ export async function importDataFromBackup(
         onProgress?.(progress, 'Importing reading sessions...');
         for (const session of backupData.tables.reading_sessions) {
           if (options.mode === 'replace') {
-            await execute(`
+            await runIn(txn, `
               INSERT INTO reading_sessions (id, book_id, minutes_read, pages_read, date, created_at, notes)
               VALUES (?, ?, ?, ?, ?, ?, ?)
             `, [
@@ -547,7 +568,7 @@ export async function importDataFromBackup(
               continue;
             }
 
-            const duplicate = await queryFirst(
+            const duplicate = await txn.getFirstAsync(
               `SELECT id FROM reading_sessions
                WHERE book_id = ? AND date = ? AND minutes_read = ? AND created_at IS ?`,
               [bookId, session.date, session.minutes_read, session.created_at ?? null]
@@ -556,7 +577,7 @@ export async function importDataFromBackup(
               continue;
             }
 
-            await execute(`
+            await runIn(txn, `
               INSERT INTO reading_sessions (book_id, minutes_read, pages_read, date, created_at, notes)
               VALUES (?, ?, ?, ?, ?, ?)
             `, [
@@ -582,7 +603,7 @@ export async function importDataFromBackup(
             ? 'INSERT INTO weekly_progress'
             : 'INSERT OR REPLACE INTO weekly_progress';
           
-          await execute(`
+          await runIn(txn, `
             ${insertQuery} (id, weeks_passed, target_reading_minutes, achived_reading_minutes, date_created)
             VALUES (?, ?, ?, ?, ?)
           `, [
@@ -600,7 +621,7 @@ export async function importDataFromBackup(
             ? 'INSERT INTO notification_preferences'
             : 'INSERT OR REPLACE INTO notification_preferences';
           
-          await execute(`
+          await runIn(txn, `
             ${insertQuery} (
               id, notifications_enabled, daily_reminder_enabled, daily_reminder_hours_after_last_open,
               daily_reminder_title, daily_reminder_body, created_at, updated_at
@@ -621,7 +642,7 @@ export async function importDataFromBackup(
             ? 'INSERT INTO app_usage_tracking'
             : 'INSERT OR REPLACE INTO app_usage_tracking';
           
-          await execute(`
+          await runIn(txn, `
             ${insertQuery} (id, last_opened_at, last_closed_at, session_count_today, date)
             VALUES (?, ?, ?, ?, ?)
           `, [
@@ -630,22 +651,30 @@ export async function importDataFromBackup(
         }
       }
 
-      // Keep merged books' current_page consistent with their combined sessions
-      for (const bookId of touchedBookIds) {
-        await syncBookCurrentPageFromSessions(bookId);
+
+      // The goal timeline belongs to the imported preferences
+      if (importsPreferences) {
+        await runIn(txn, 'DELETE FROM goal_history');
+        for (const row of backupData.tables.goal_history ?? []) {
+          await runIn(txn, 
+            'INSERT OR REPLACE INTO goal_history (effective_date, minutes) VALUES (?, ?)',
+            [row.effective_date, row.minutes]
+          );
+        }
       }
+    });
 
-      // Commit transaction
-      await execute('COMMIT');
-      
-      onProgress?.(100, 'Import completed successfully!');
-      importResult.success = true;
-
-    } catch (error) {
-      // Rollback on error
-      await execute('ROLLBACK');
-      throw error;
+    // Keep merged books' current_page consistent with their combined sessions
+    for (const bookId of touchedBookIds) {
+      await syncBookCurrentPageFromSessions(bookId);
     }
+    // Older backups carry no goal history: rebuild it from the imported plan
+    if (importsPreferences) {
+      await backfillGoalHistoryIfEmpty();
+    }
+
+    onProgress?.(100, 'Import completed successfully!');
+    importResult.success = true;
 
   } catch (error) {
     console.error('Import failed:', error);

@@ -17,16 +17,18 @@ import BookCard from "../../../components/BookCard";
 import BookStatusModal, {
   BookStatus,
 } from "../../../components/BookStatusModal";
-import { EnhancedBook, execute, queryAll } from "../../../db/db";
+import { EnhancedBook, queryAll } from "../../../db/db";
+import {
+  addBook,
+  BookWithStats,
+  deleteBookWithSessions,
+  listBooksWithStats,
+  updateBookStatus,
+} from "../../../db/repos/books";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
-import {
-  deleteBookWithSessions,
-  getStatusText,
-  updateBookStatus,
-} from "../../../utils/bookStatus";
-import { getBookReadingTime } from "../../../utils/readingProgress";
+import { getStatusText } from "../../../utils/bookStatus";
 type BooksearchProps = {
   name: string;
   setName: (name: string) => void;
@@ -197,7 +199,7 @@ export default function HomeScreen() {
   const [author, setAuthor] = useState("");
   const [page, setPage] = useState("");
   const [books, setBooks] = useState<
-    (EnhancedBook & { reading_time?: number })[]
+    BookWithStats[]
   >([]);
   const [allBooksCount, setAllBooksCount] = useState(0);
   const [statusCounts, setStatusCounts] = useState({
@@ -247,33 +249,12 @@ export default function HomeScreen() {
       });
       setStatusCounts(counts);
 
-      // Get a preview of books for the active filter, with default sorting
-      // (currently reading -> want to read -> read). Filtering happens in SQL so
-      // the preview isn't limited to whichever statuses made the first 10 rows.
-      const whereClause =
-        filterStatus === "all" ? "" : "WHERE reading_status = ?";
-      const res = await queryAll<EnhancedBook>(
-        `
-        SELECT * FROM enhanced_books
-        ${whereClause}
-        ORDER BY
-          CASE WHEN reading_status = 'currently_reading' THEN 1
-               WHEN reading_status = 'want_to_read' THEN 2
-               WHEN reading_status = 'read' THEN 3
-               ELSE 4 END,
-          date_added DESC
-        LIMIT 10
-      `,
-        filterStatus === "all" ? [] : [filterStatus],
-      );
-
-      // Fetch reading time for each book (only for preview)
-      const booksWithReadingTime = await Promise.all(
-        res.map(async (book) => {
-          const readingTime = await getBookReadingTime(book.id);
-          return { ...book, reading_time: readingTime };
-        }),
-      );
+      // Preview of books for the active filter; filtering happens in SQL so
+      // the preview isn't limited to whichever statuses made the first 10 rows
+      const booksWithReadingTime = await listBooksWithStats({
+        status: filterStatus === "all" ? undefined : filterStatus,
+        limit: 10,
+      });
 
       setBooks(booksWithReadingTime);
     } catch (e) {
@@ -300,35 +281,10 @@ export default function HomeScreen() {
     setLoading(true);
     setError(null);
     try {
-      let dateField = "";
-      let dateValue = null;
-
-      // Set appropriate date fields based on status
-      if (manualBookStatus === "currently_reading") {
-        dateField = ", date_started";
-        dateValue = new Date().toISOString();
-      } else if (manualBookStatus === "read") {
-        dateField = ", date_finished";
-        dateValue = new Date().toISOString();
-      }
-
-      const query = `
-        INSERT INTO enhanced_books (name, author, page, reading_status, date_added${dateField})
-        VALUES (?, ?, ?, ?, ? ${dateValue ? ", ?" : ""})
-      `;
-
-      const params = [
-        name.trim(),
-        author.trim(),
-        Number(page),
+      await addBook(
+        { name: name.trim(), author: author.trim(), page: Number(page) },
         manualBookStatus,
-        new Date().toISOString(),
-      ];
-      if (dateValue) {
-        params.push(dateValue);
-      }
-
-      await execute(query, params);
+      );
 
       setName("");
       setAuthor("");
@@ -475,7 +431,7 @@ export default function HomeScreen() {
   const renderBook = ({
     item,
   }: {
-    item: EnhancedBook & { reading_time?: number };
+    item: BookWithStats;
   }) => (
     <BookCard
       book={item}

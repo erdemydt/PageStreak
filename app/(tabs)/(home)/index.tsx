@@ -3,17 +3,18 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 
 import BookCard from "../../../components/BookCard";
 import DailyProgressCard from "../../../components/DailyProgressCard";
 import ReadingTimeLogger from "../../../components/ReadingTimeLogger";
-import { EnhancedBook, queryAll, queryFirst } from "../../../db/db";
+import { queryFirst } from "../../../db/db";
+import { BookWithStats, listBooksWithStats } from "../../../db/repos/books";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
@@ -33,24 +34,15 @@ type UserPreferences = {
   current_reading_rate_minutes_per_day?: number;
 };
 
-type ReadingSession = {
-  id: number;
-  book_id: number;
-  minutes_read: number;
-  date: string;
-  created_at: string;
-};
-
 export default function HomeScreen() {
   const { t } = useTranslation();
-  const [books, setBooks] = useState<EnhancedBook[]>([]);
+  const [books, setBooks] = useState<BookWithStats[]>([]);
   const [userPreferences, setUserPreferences] =
     useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(false);
   const [showReadingLogger, setShowReadingLogger] = useState(false);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [readingStreak, setReadingStreak] = useState(0);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Refresh data when screen comes into focus (e.g., when returning from books tab)
   useFocusEffect(
@@ -58,7 +50,6 @@ export default function HomeScreen() {
       loadData();
     }, []),
   );
-
 
   const loadData = async () => {
     setLoading(true);
@@ -75,33 +66,7 @@ export default function HomeScreen() {
       // Load reading streak
       await loadReadingStreak();
 
-      // Load books - try enhanced books first, fallback to regular books
-      try {
-        const enhancedBooks = await queryAll<EnhancedBook>(
-          "SELECT * FROM enhanced_books ORDER BY date_added DESC",
-        );
-        setBooks(enhancedBooks);
-      } catch (e) {
-        // Fallback to regular books table
-        try {
-          const regularBooks = await queryAll<{
-            id: number;
-            name: string;
-            author: string;
-            page: number;
-          }>("SELECT * FROM books ORDER BY id DESC");
-          const mappedBooks: EnhancedBook[] = regularBooks.map((book) => ({
-            ...book,
-            reading_status: "read" as const,
-            date_added: new Date().toISOString(),
-            current_page: book.page,
-          }));
-          setBooks(mappedBooks);
-        } catch (bookError) {
-          console.log("No books table found");
-          setBooks([]);
-        }
-      }
+      setBooks(await listBooksWithStats({ order: "recent" }));
     } catch (e) {
       console.error("Failed to load data:", e);
     } finally {
@@ -121,40 +86,7 @@ export default function HomeScreen() {
 
   const loadReadingStreak = async () => {
     try {
-      // Get the user's daily goal with fallback for missing columns
-      let user;
-      let dailyGoal = 30; // Default fallback
-
-      try {
-        user = await queryFirst<UserPreferences>(
-          "SELECT current_reading_rate_minutes_per_day FROM user_preferences WHERE id = 1",
-        );
-        dailyGoal = user?.current_reading_rate_minutes_per_day || 30;
-      } catch (columnError) {
-        // If the column doesn't exist, fall back to basic user check
-        console.log(
-          "📝 current_reading_rate_minutes_per_day column not found, using default goal",
-        );
-        try {
-          const basicUser = await queryFirst<UserPreferences>(
-            "SELECT id FROM user_preferences WHERE id = 1",
-          );
-          if (!basicUser) {
-            // No user exists yet
-            setReadingStreak(0);
-            return;
-          }
-        } catch (error) {
-          console.log(
-            "📝 user_preferences table not found, using default streak",
-          );
-          setReadingStreak(0);
-          return;
-        }
-      }
-
-      const streak = await getReadingStreak(dailyGoal);
-      setReadingStreak(streak);
+      setReadingStreak(await getReadingStreak());
     } catch (e) {
       console.error("Error calculating reading streak:", e);
       setReadingStreak(0);
@@ -182,17 +114,12 @@ export default function HomeScreen() {
     books[0] ||
     null;
 
-  const renderBook = ({ item }: { item: EnhancedBook }) => (
-    <BookCard book={item} compact={true} refreshTrigger={refreshTrigger} />
+  const renderBook = ({ item }: { item: BookWithStats }) => (
+    <BookCard book={item} compact={true} />
   );
 
   const handleReadingLoggerSuccess = () => {
-    loadTodayProgress();
-    loadReadingStreak();
-    // Refresh books data to trigger BookCard re-renders with updated progress
     loadData();
-    // Increment refresh trigger to force BookCard re-renders
-    setRefreshTrigger((prev) => prev + 1);
   };
   // Rendered as an element (not a component type defined during render), so the
   // header isn't unmounted and remounted on every state change
@@ -223,7 +150,9 @@ export default function HomeScreen() {
                 <Image
                   source={{ uri: currentBook.cover_url }}
                   style={styles.heroCover}
-                  defaultSource={require("../../../assets/images/icon.png")}
+                  placeholder={require("../../../assets/images/icon.png")}
+                  cachePolicy="memory-disk"
+                  transition={150}
                 />
               ) : (
                 <View style={styles.heroCoverPlaceholder}>
@@ -355,7 +284,6 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <FlatList
-        key={`books-list-${refreshTrigger}`}
         data={books.slice(0, 4)} // Show only recent 4 books
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderBook}

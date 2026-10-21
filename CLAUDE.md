@@ -47,6 +47,7 @@ app/
     settings.tsx         Language, notifications, backup/restore, logout (wipes all data)
 components/              Screens' building blocks
 db/db.tsx                SQLite handle, queryAll/queryFirst/execute, schema init
+db/repos/books.ts        Book reads/writes (start of the Phase 2 data layer)
 services/
   notificationService.ts Singleton. Schedules ONE local reminder N hours after app is backgrounded
   dataBackupService.ts   JSON export/import (replace or merge)
@@ -56,6 +57,8 @@ utils/
   readingProgress.ts     Session aggregates, streaks, page-progress sync
   bookStatus.ts          Status colors/labels + updateBookStatus / deleteBookWithSessions
   goalSettings.ts        Growth-goal validation and derived fields
+  goalHistory.ts         Goal timeline: recordGoalChange, loadGoalForDate, backfill
+  logger.ts              Dev-only log/warn
 i18n/index.ts            ALL strings, `en` and `tr` in one file
 themes/                  COLORS / SPACING / TYPE tokens (use them; no raw hex in screens)
 ```
@@ -70,6 +73,8 @@ themes/                  COLORS / SPACING / TYPE tokens (use them; no raw hex in
   `page` can be 0 when Open Library has no page count (user can fix it on the detail screen).
 - `reading_sessions`: `book_id`, `minutes_read`, optional `pages_read`, `date` (local `YYYY-MM-DD`).
 - `notification_preferences` (row id=1), `app_usage_tracking`, `database_version`.
+- `goal_history`: `(effective_date TEXT PK, minutes)`, the daily goal over time. Backfilled from
+  the growth plan for older installs, and included in backups.
 - `weekly_progress`: **vestigial**. Nothing reads it any more; it's kept only for backup-format compatibility.
 - No FK constraints: deleting a book must delete its sessions (`deleteBookWithSessions`).
 
@@ -81,17 +86,25 @@ statements in sync** when adding columns, and add new tables to the backup servi
 
 ## Domain rules
 
-- **Daily goal growth** (`app/index.tsx#initiateWeeklyProgressLogic`): linear,
+- **Daily goal growth** (`utils/goalSettings.ts#applyWeeklyGoalGrowth`, run on cold start and on resume): linear,
   `+weekly_reading_rate_increase_minutes` per full week since `current_reading_rate_last_updated`,
-  capped at the target, stops after the goal date. `reading-growth.tsx` projects the same line.
-- **Streak** (`utils/readingProgress.ts#calculateStreaks`): consecutive local days with
-  minutes ≥ the current daily goal. It stays alive through today (counts from yesterday until today's goal is met).
+  capped at the target, stops after the goal date. The new goal is recorded in `goal_history` as effective
+  *today* (never back-dated: users must not be judged against goals they never saw). Preference and
+  goal-history writes happen together in `db.withTransactionAsync`.
+- **Streak** (`utils/readingProgress.ts#calculateStreaks`): consecutive local days, each meeting
+  **the goal in effect that day** (`utils/goalHistory.ts`: `goal_history` table, one row per goal
+  change). It stays alive through today. Any code that changes `current_reading_rate_minutes_per_day`
+  **must** call `recordGoalChange`.
 - **Page progress**: `current_page` is a cache of `SUM(pages_read)` over the book's sessions,
   capped at `page`; finished books are pinned to `page`. After any session insert, edit or delete,
   call `syncBookCurrentPageFromSessions(bookId)`.
-- **Status changes** go through `updateBookStatus` (keeps `date_started` / `date_finished` consistent).
+- **Book writes** go through `db/repos/books.ts` (`addBook`, `updateBookStatus`, `deleteBookWithSessions`).
+  Lists come from `listBooksWithStats` (one JOIN carrying `reading_time` and `pages_from_sessions`);
+  `BookCard` derives progress from those props via `computeBookProgress`.
 - **Yearly goal** counts books with status `read` whose `date_finished` is in the current year.
-- **Notifications**: no reminder if today's goal is met; reminders are pushed out of quiet
+- **Notifications**: a single reminder with the fixed identifier `daily-reminder`, scheduled only on
+  `'background'` (never `'inactive'`) through a serialized queue. Schedule paths never prompt for
+  permission. No reminder if today's goal is met; reminders are pushed out of quiet
   hours (22:00–09:00); text comes from i18n (`settings.notificationMessages.*`), not the DB columns.
 
 ## Gotchas (read before touching dates, i18n, or data)
@@ -108,6 +121,10 @@ statements in sync** when adding columns, and add new tables to the backup servi
 - Don't define components inside render (e.g. `const Header = () => …; <Header/>`); it remounts every render.
 - Backup **merge** never writes by primary key; it remaps book ids and dedupes sessions.
 - `utils/devMode.ts#ENABLE_DEV_FEATURES` gates dev tools (NotificationTester, random data). Keep it `false` in commits.
+- Logging: use `log`/`warn` from `utils/logger.ts` (dev-only); `console.error` for real errors.
+- Backup import runs in `db.withExclusiveTransactionAsync`: every statement inside it must use `txn`
+  (`runIn(txn, …)`); a global `execute` there fails with "database is locked".
+- Light mode is forced (app.json, Info.plist, Android theme) until real dark mode exists.
 - `NotificationService` is a singleton default export; the class is also exported (lint warns about the name; that's harmless).
 
 ## Working agreement
@@ -163,3 +180,8 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   BookSearchModal, ReadingCalendar, ReadingStats), unrunnable `scripts/`, `api-test.js`, stale
   root docs, unused helpers in `utils/` and the backup service, and their translation keys.
   Personal backup JSONs are untracked and gitignored, and still on disk. Then ran a multi-agent audit to build the roadmap.
+- **Phase 1: trust & correctness.** Fair streaks (goal_history plus backfill, also used by weekly
+  stats and the growth chart), a notification lifecycle overhaul, the backup import in an exclusive
+  transaction (goal history now backed up), all book writes through `db/repos/books.ts`, one-query
+  book lists (no N+1, no per-card queries, `refreshTrigger` removed), session indexes, a dev-only
+  logger, expo-image covers, forced light mode. Reviewed by a fresh-eyes subagent before commit.

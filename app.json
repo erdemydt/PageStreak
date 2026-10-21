@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/Logo.png",
     "scheme": "pagestreak",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,

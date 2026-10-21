@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,18 +12,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import BookStatusModal, {
   BookStatus,
 } from "../../../components/BookStatusModal";
 import { EnhancedBook, execute, queryFirst } from "../../../db/db";
+import { updateBookStatus } from "../../../db/repos/books";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
-import {
-  getStatusColor,
-  getStatusText,
-  updateBookStatus,
-} from "../../../utils/bookStatus";
+import { getStatusColor, getStatusText } from "../../../utils/bookStatus";
 import { parseDbDate } from "../../../utils/dateUtils";
 import {
   getBookReadingTime,
@@ -189,10 +186,7 @@ export default function BookDetailsScreen() {
 
     const newPageCount = Number(pagesInput);
     if (!Number.isInteger(newPageCount) || newPageCount <= 0) {
-      Alert.alert(
-        t("error"),
-        t("components.bookDetailModal.invalidPageCount"),
-      );
+      Alert.alert(t("error"), t("components.bookDetailModal.invalidPageCount"));
       return;
     }
 
@@ -241,7 +235,9 @@ export default function BookDetailsScreen() {
               <Image
                 source={{ uri: book.cover_url }}
                 style={styles.cover}
-                defaultSource={require("../../../assets/images/icon.png")}
+                placeholder={require("../../../assets/images/icon.png")}
+                cachePolicy="memory-disk"
+                transition={150}
               />
             ) : (
               <View style={styles.coverPlaceholder}>

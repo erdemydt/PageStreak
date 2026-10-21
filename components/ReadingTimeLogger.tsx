@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { EnhancedBook, execute, queryAll } from "../db/db";
+import { updateBookStatus } from "../db/repos/books";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import { getTodayDateString } from "../utils/dateUtils";
@@ -156,23 +157,11 @@ export default function ReadingTimeLogger({
         ],
       );
 
-      // Sync the book's current_page based on cumulative pages from sessions
-      if (pagesRead) {
-        await syncBookCurrentPageFromSessions(selectedBook.id);
-      }
-
-      // Handle book completion if finish book is checked
       if (finishBook) {
-        const today = getTodayDateString();
-        await execute(
-          `UPDATE enhanced_books 
-           SET reading_status = 'read', 
-               date_finished = ?,
-               current_page = page
-           WHERE id = ?`,
-          [today, selectedBook.id],
-        );
+        await updateBookStatus(selectedBook.id, "read");
       }
+      // Re-derive current_page (pinned to the full count if just finished)
+      await syncBookCurrentPageFromSessions(selectedBook.id);
 
       // Check if daily goal is met and update notification schedule
       await NotificationService.checkAndScheduleNotification();

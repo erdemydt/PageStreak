@@ -16,6 +16,7 @@ import {
     parseDbDate,
     parseLocalDateString,
 } from "../utils/dateUtils";
+import { GoalForDate, loadGoalForDate } from "../utils/goalHistory";
 import { calculateStreaks } from "../utils/readingProgress";
 
 interface WeeklyStats {
@@ -92,6 +93,7 @@ export default function WeeklyStatsView({
       );
       const goalMinutes = userPrefs?.current_reading_rate_minutes_per_day || 30;
       setDailyGoal(goalMinutes);
+      const goalForDate = await loadGoalForDate();
 
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
@@ -124,7 +126,7 @@ export default function WeeklyStatsView({
       const dailyBreakdown = getDailyBreakdown(
         weekStart,
         sessions,
-        goalMinutes,
+        goalForDate,
       );
 
       // Calculate total minutes
@@ -150,7 +152,11 @@ export default function WeeklyStatsView({
       ];
 
       // Calculate goal progress (weekly goal is daily goal * 7)
-      const weeklyGoal = goalMinutes * 7;
+      // Sum of each day's goal, so past weeks use the goal of that week
+      const weeklyGoal = dailyBreakdown.reduce(
+        (sum, day) => sum + goalForDate(day.date),
+        0,
+      );
       const goalProgress =
         weeklyGoal > 0 ? (totalMinutes / weeklyGoal) * 100 : 0;
 
@@ -158,7 +164,7 @@ export default function WeeklyStatsView({
       const streakInfo = await calculateStreakInfo(
         startDateString,
         endDateString,
-        goalMinutes,
+        goalForDate,
       );
 
       // Find top book (most minutes read this week)
@@ -199,7 +205,7 @@ export default function WeeklyStatsView({
   const getDailyBreakdown = (
     weekStart: Date,
     sessions: any[],
-    goalMinutes: number,
+    goalForDate: GoalForDate,
   ): DailyStats[] => {
     const dailyStats: DailyStats[] = [];
 
@@ -221,7 +227,7 @@ export default function WeeklyStatsView({
         dayName: getLocalizedWeekday(date),
         minutes: dayMinutes,
         sessions: daySessions.length,
-        goalMet: dayMinutes >= goalMinutes,
+        goalMet: dayMinutes >= goalForDate(dateString),
       });
     }
 
@@ -231,7 +237,7 @@ export default function WeeklyStatsView({
   const calculateStreakInfo = async (
     startDate: string,
     endDate: string,
-    goalMinutes: number,
+    goalForDate: GoalForDate,
   ): Promise<StreakInfo> => {
     // Get all daily totals for streak calculation
     const dailyTotals = await queryAll<{ date: string; total_minutes: number }>(
@@ -247,13 +253,13 @@ export default function WeeklyStatsView({
 
     const { currentStreak, longestStreak } = calculateStreaks(
       dailyTotals,
-      goalMinutes,
+      goalForDate,
     );
 
     // Days within this week that met the goal
     const streakThisWeek = dailyTotals.filter(
       (day) =>
-        day.total_minutes >= goalMinutes &&
+        day.total_minutes >= goalForDate(day.date) &&
         day.date >= startDate &&
         day.date <= endDate,
     ).length;

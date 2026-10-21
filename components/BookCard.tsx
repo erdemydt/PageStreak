@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image } from "expo-image";
 import Svg, { Path } from "react-native-svg";
 import { EnhancedBook } from "../db/db";
 import { COLORS } from "../themes/colors";
 import { SPACING } from "../themes/spacing";
 import { getStatusColor, getStatusText } from "../utils/bookStatus";
 import { parseDbDate } from "../utils/dateUtils";
-import { getEnhancedBookProgress } from "../utils/readingProgress";
+import { computeBookProgress } from "../utils/readingProgress";
 
 interface BookCardProps {
-  book: EnhancedBook;
+  book: EnhancedBook & { pages_from_sessions?: number };
   onPress?: () => void;
   onDelete?: () => void;
   onStatusChange?: () => void;
@@ -20,7 +21,6 @@ interface BookCardProps {
   readingTimeMinutes?: number;
   compact?: boolean;
   smaller?: boolean;
-  refreshTrigger?: number;
 }
 
 export default function BookCard({
@@ -34,44 +34,11 @@ export default function BookCard({
   readingTimeMinutes = 0,
   compact = false,
   smaller = false,
-  refreshTrigger = 0,
 }: BookCardProps) {
   const { t } = useTranslation();
-  const [progressData, setProgressData] = useState<{
-    pagesRead: number;
-    percentage: number;
-    isComplete: boolean;
-    source: "sessions" | "current_page" | "none";
-  }>({ pagesRead: 0, percentage: 0, isComplete: false, source: "none" });
-
-  useEffect(() => {
-    const loadProgress = async () => {
-      const progress = await getEnhancedBookProgress(
-        book.id,
-        book.page,
-        book.current_page || 0,
-      );
-      setProgressData(progress);
-    };
-
-    if (book.reading_status === "currently_reading") {
-      loadProgress();
-    } else {
-      // Reset progress data for non-currently-reading books
-      setProgressData({
-        pagesRead: 0,
-        percentage: 0,
-        isComplete: false,
-        source: "none",
-      });
-    }
-  }, [
-    book.id,
-    book.page,
-    book.current_page,
-    book.reading_status,
-    refreshTrigger,
-  ]);
+  // Progress is derived from the row itself (current_page / session aggregate),
+  // so cards don't each run their own query
+  const progressData = computeBookProgress(book);
 
   const formatReadingTime = (minutes: number) => {
     if (minutes < 60) {
@@ -219,7 +186,9 @@ export default function BookCard({
             <Image
               source={{ uri: book.cover_url }}
               style={styles.compactCover}
-              defaultSource={require("../assets/images/icon.png")}
+              placeholder={require("../assets/images/icon.png")}
+              cachePolicy="memory-disk"
+              transition={150}
             />
           ) : (
             <View style={styles.compactCoverPlaceholder}>
@@ -259,7 +228,9 @@ export default function BookCard({
             <Image
               source={{ uri: book.cover_url }}
               style={styles.smallerCover}
-              defaultSource={require("../assets/images/icon.png")}
+              placeholder={require("../assets/images/icon.png")}
+              cachePolicy="memory-disk"
+              transition={150}
             />
           ) : (
             <View style={styles.smallerCoverPlaceholder}>
@@ -328,7 +299,9 @@ export default function BookCard({
             <Image
               source={{ uri: book.cover_url }}
               style={styles.cover}
-              defaultSource={require("../assets/images/icon.png")}
+              placeholder={require("../assets/images/icon.png")}
+              cachePolicy="memory-disk"
+              transition={150}
             />
           ) : (
             <View style={styles.coverPlaceholder}>

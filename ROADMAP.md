@@ -14,30 +14,30 @@ decision**; phases end in a commit, not a ship. The version is hard-coded in
 
 ## Phase 0: Housekeeping (no release)
 - [x] ~~Scrub backup JSONs from git history~~: owner decided it doesn't matter (they remain in `5ed70eb`).
-- [ ] Replace the personal Gmail in the Open Library User-Agent (`services/openLibrary.ts:54`) with an alias or support URL.
+- [x] Replace the personal Gmail in the Open Library User-Agent (now the project URL; change it if you prefer another contact)
 
 ## Phase 1: Trust & correctness (Release A, JS-only)
 Things users can feel are wrong today.
-- [ ] **Fair streaks:** judge each past day against the goal in effect *that* day (derive it from
+- [x] **Fair streaks:** judge each past day against the goal in effect *that* day (derive it from
   `initial_rate + weekly_increase × weeks`, or add a `goal_history` table). Today a weekly goal
   step-up can zero a long streak. (`utils/readingProgress.ts#calculateStreaks`)
-- [ ] **Notification lifecycle:**
+- [x] **Notification lifecycle:**
   - Schedule only on `'background'` (not `'inactive'`) and serialize the handler.
   - Use a fixed identifier `daily-reminder` instead of cancel-all.
   - Don't call `requestPermissions()` from schedule paths.
   - Create the Android channel once at startup.
-- [ ] **Backup import:** use `withExclusiveTransactionAsync` instead of raw BEGIN/COMMIT on the shared connection.
+- [x] **Backup import:** use `withExclusiveTransactionAsync` instead of raw BEGIN/COMMIT on the shared connection.
   Drop the import-only PRAGMAs.
-- [ ] **Remaining writes through helpers:**
+- [x] **Remaining writes through helpers:**
   - Logger "finish book" should go through `updateBookStatus`, and always sync progress.
   - One `addBook()` shared by search and manual add.
-- [ ] **Performance:**
+- [x] **Performance:**
   - Add indexes `reading_sessions(book_id)` and `(date)`.
   - Replace the per-book `getBookReadingTime` N+1 with one JOIN.
   - BookCard should read progress from props / `current_page` instead of querying per card.
-- [ ] Add a `utils/logger.ts` gated on `__DEV__`. Stop logging user data in release builds.
-- [ ] Switch cover images to `expo-image` with disk cache (already linked, no native change).
-- [ ] Set `userInterfaceStyle: "light"` in app.json and Info.plist until real dark mode exists (avoids a dark status bar over the light UI).
+- [x] Add a `utils/logger.ts` gated on `__DEV__`. Stop logging user data in release builds.
+- [x] Switch cover images to `expo-image` with disk cache (already linked, no native change).
+- [x] Set `userInterfaceStyle: "light"` in app.json and Info.plist until real dark mode exists (avoids a dark status bar over the light UI).
 
 ## Phase 2: Foundations refactor (no behavior change; can ship with any release)
 - [ ] `types/models.ts`: one `UserPreferences`, `EnhancedBook`, `ReadingSession`, etc. Typed `queryAll<T>`.

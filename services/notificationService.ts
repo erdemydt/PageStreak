@@ -5,6 +5,12 @@ import { AppUsageTracking, checkNotificationDatabaseIntegrity, execute, Notifica
 import i18n from '../i18n';
 import { dateToLocalDateString, getTodayDateString } from '../utils/dateUtils';
 import { isDevModeEnabled } from '../utils/devMode';
+import { log } from '../utils/logger';
+
+// The daily reminder always uses this identifier, so scheduling a new one
+// replaces the old one and cancelling never touches other notifications
+const REMINDER_ID = 'daily-reminder';
+const ANDROID_CHANNEL_ID = 'default';
 
 // Reminders never fire during quiet hours; they're pushed to QUIET_HOURS_END instead
 const QUIET_HOURS_START = 22;
@@ -39,7 +45,9 @@ Notifications.setNotificationHandler({
 
 export class NotificationService {
   private static instance: NotificationService;
-  private notificationIdentifier: string | null = null;
+  // Serializes app-state handling so overlapping transitions can't interleave
+  // cancel/schedule calls
+  private appStateQueue: Promise<void> = Promise.resolve();
 
   private constructor() {}
 
@@ -73,16 +81,27 @@ export class NotificationService {
   /**
    * Request notification permissions from the user
    */
+  /**
+   * Create/update the Android notification channel (no-op elsewhere).
+   * Safe to call repeatedly; it also refreshes the localized channel name.
+   */
+  async ensureAndroidChannel(): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    try {
+      await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+        name: i18n.t('settings.dailyReadingReminders'),
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    } catch (error) {
+      console.error('❌ Error creating Android notification channel:', error);
+    }
+  }
+
   async requestPermissions(): Promise<boolean> {
     try {
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'default',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#FF231F7C',
-        });
-      }
+      await this.ensureAndroidChannel();
 
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
@@ -122,11 +141,11 @@ export class NotificationService {
       const prefs = await this.getNotificationPreferences();
       
       if (!prefs) {
-        console.log('📝 No preferences found, creating defaults');
+        log('📝 No preferences found, creating defaults');
         return;
       }
 
-      console.log('🔄 Syncing permissions:', {
+      log('🔄 Syncing permissions:', {
         hasSystemPermission,
         dbNotificationsEnabled: prefs.notifications_enabled,
         dbDailyReminderEnabled: prefs.daily_reminder_enabled
@@ -134,7 +153,7 @@ export class NotificationService {
 
       // If system permissions are denied but database shows enabled, update database
       if (!hasSystemPermission && (prefs.notifications_enabled || prefs.daily_reminder_enabled)) {
-        console.log('🔄 System permissions denied, updating database to reflect this');
+        log('🔄 System permissions denied, updating database to reflect this');
         await this.updateNotificationPreferences({
           notifications_enabled: false,
           daily_reminder_enabled: false
@@ -153,7 +172,12 @@ export class NotificationService {
    */
   async areNotificationsEnabled(): Promise<boolean> {
     try {
-      const prefs = await this.getNotificationPreferences();
+      // Read-only on purpose: getNotificationPreferences() creates a missing
+      // row, which requests permission. This runs from background transitions,
+      // where a missing row simply means "not enabled".
+      const prefs = await queryFirst<NotificationPreferences>(
+        'SELECT * FROM notification_preferences WHERE id = 1'
+      );
       return !!(prefs?.notifications_enabled && prefs?.daily_reminder_enabled);
     } catch (error) {
       console.error('❌ Error checking notification preferences:', error);
@@ -172,7 +196,7 @@ export class NotificationService {
       
       // If no preferences exist, create default ones
       if (!prefs) {
-        console.log('🔔 No notification preferences found, creating defaults...');
+        log('🔔 No notification preferences found, creating defaults...');
         await this.createDefaultNotificationPreferences();
         return await queryFirst<NotificationPreferences>(
           'SELECT * FROM notification_preferences WHERE id = 1'
@@ -272,16 +296,16 @@ export class NotificationService {
       let dailyRemindersEnabled = true; // Default to true
       
       if (isFirstInstall) {
-        console.log('🔔 First app installation detected, requesting notification permissions...');
+        log('🔔 First app installation detected, requesting notification permissions...');
         
         try {
           const hasPermission = await this.requestPermissions();
           if (hasPermission) {
-            console.log('✅ Notification permissions granted on first install');
+            log('✅ Notification permissions granted on first install');
             notificationsEnabled = true;
             dailyRemindersEnabled = true;
           } else {
-            console.log('❌ Notification permissions denied on first install');
+            log('❌ Notification permissions denied on first install');
             notificationsEnabled = false;
             dailyRemindersEnabled = false;
           }
@@ -304,13 +328,13 @@ export class NotificationService {
       `, [notificationsEnabled ? 1 : 0, dailyRemindersEnabled ? 1 : 0]);
       
       if (isFirstInstall) {
-        console.log('🔔 Created default notification preferences for first install:', {
+        log('🔔 Created default notification preferences for first install:', {
           notifications_enabled: notificationsEnabled,
           daily_reminder_enabled: dailyRemindersEnabled,
           daily_reminder_hours_after_last_open: 5
         });
       } else {
-        console.log('🔔 Updated existing notification preferences');
+        log('🔔 Updated existing notification preferences');
       }
     } catch (error) {
       console.error('❌ Error creating default notification preferences:', error);
@@ -328,25 +352,26 @@ export class NotificationService {
       // Check if user is logged in first
       const isLoggedIn = await this.isUserLoggedIn();
       if (!isLoggedIn) {
-        console.log('👤 No user logged in, skipping notification scheduling');
+        log('👤 No user logged in, skipping notification scheduling');
         return;
       }
 
       const areEnabled = await this.areNotificationsEnabled();
       if (!areEnabled) {
-        console.log('📵 Notifications disabled, skipping schedule');
+        log('📵 Notifications disabled, skipping schedule');
         return;
       }
 
-      const hasPermission = await this.requestPermissions();
+      // Never prompt from here: this runs while the app is going to background
+      const hasPermission = await this.checkCurrentPermissions();
       if (!hasPermission) {
-        console.log('📵 No notification permission, skipping schedule');
+        log('📵 No notification permission, skipping schedule');
         return;
       }
 
       const prefs = await this.getNotificationPreferences();
       if (!prefs) {
-        console.log('📵 No notification preferences found');
+        log('📵 No notification preferences found');
         return;
       }
 
@@ -361,7 +386,7 @@ export class NotificationService {
         // In development: schedule for 1 minute for quick testing
         triggerSeconds = 60; // 1 minute
         triggerTime.setMinutes(triggerTime.getMinutes() + 1);
-        console.log(`🔧 [DEV MODE] Scheduling notification in 1 minute for testing`);
+        log(`🔧 [DEV MODE] Scheduling notification in 1 minute for testing`);
       } else {
         // In production: use hours from preferences, outside quiet hours
         triggerTime.setHours(triggerTime.getHours() + prefs.daily_reminder_hours_after_last_open);
@@ -374,7 +399,9 @@ export class NotificationService {
         dateToLocalDateString(triggerTime) === getTodayDateString()
       );
 
-      this.notificationIdentifier = await Notifications.scheduleNotificationAsync({
+      await this.ensureAndroidChannel();
+      await Notifications.scheduleNotificationAsync({
+        identifier: REMINDER_ID,
         content: {
           title: i18n.t('settings.notificationMessages.defaultTitle'),
           body: enhancedMessage,
@@ -385,16 +412,17 @@ export class NotificationService {
             isDevelopment: this.isDevelopment(),
           },
         },
-        trigger: { 
+        trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: triggerSeconds
+          seconds: triggerSeconds,
+          channelId: ANDROID_CHANNEL_ID,
         },
       });
 
-      console.log(`✅ Scheduled daily reminder notification for ${triggerTime.toLocaleString()}`);
+      log(`✅ Scheduled daily reminder notification for ${triggerTime.toLocaleString()}`);
       
       if (this.isDevelopment()) {
-        console.log(`🔧 [DEV MODE] Notification will appear in 1 minute for testing purposes`);
+        log(`🔧 [DEV MODE] Notification will appear in 1 minute for testing purposes`);
       }
     } catch (error) {
       console.error('❌ Error scheduling daily reminder notification:', error);
@@ -407,7 +435,7 @@ export class NotificationService {
    */
   async scheduleTestNotification(minutes: number = 1): Promise<void> {
     if (!this.isDevelopment()) {
-      console.log('⚠️ Test notifications are only available in development mode');
+      log('⚠️ Test notifications are only available in development mode');
       return;
     }
 
@@ -415,13 +443,13 @@ export class NotificationService {
       // Check if user is logged in first
       const isLoggedIn = await this.isUserLoggedIn();
       if (!isLoggedIn) {
-        console.log('👤 No user logged in, skipping test notification scheduling');
+        log('👤 No user logged in, skipping test notification scheduling');
         return;
       }
 
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) {
-        console.log('📵 No notification permission for test notification');
+        log('📵 No notification permission for test notification');
         return;
       }
 
@@ -432,7 +460,7 @@ export class NotificationService {
       triggerTime.setMinutes(triggerTime.getMinutes() + minutes);
 
       // Schedule the test notification
-      this.notificationIdentifier = await Notifications.scheduleNotificationAsync({
+      await Notifications.scheduleNotificationAsync({
         content: {
           title: '🧪 Test Notification',
           body: `This is a test notification scheduled ${minutes} minute(s) ago when the app was last opened.`,
@@ -450,7 +478,7 @@ export class NotificationService {
         },
       });
 
-      console.log(`🧪 [TEST] Scheduled test notification for ${triggerTime.toLocaleString()} (${minutes} minute(s) from now)`);
+      log(`🧪 [TEST] Scheduled test notification for ${triggerTime.toLocaleString()} (${minutes} minute(s) from now)`);
     } catch (error) {
       console.error('❌ Error scheduling test notification:', error);
     }
@@ -465,32 +493,33 @@ export class NotificationService {
       // Check if user is logged in first
       const isLoggedIn = await this.isUserLoggedIn();
       if (!isLoggedIn) {
-        console.log('👤 No user logged in, skipping notification scheduling based on last open');
+        log('👤 No user logged in, skipping notification scheduling based on last open');
         return;
       }
 
       const areEnabled = await this.areNotificationsEnabled();
       if (!areEnabled) {
-        console.log('📵 Notifications disabled, skipping schedule based on last open');
+        log('📵 Notifications disabled, skipping schedule based on last open');
         return;
       }
 
-      const hasPermission = await this.requestPermissions();
+      // Never prompt from here: this runs while the app is going to background
+      const hasPermission = await this.checkCurrentPermissions();
       if (!hasPermission) {
-        console.log('📵 No notification permission, skipping schedule based on last open');
+        log('📵 No notification permission, skipping schedule based on last open');
         return;
       }
 
       const prefs = await this.getNotificationPreferences();
       if (!prefs) {
-        console.log('📵 No notification preferences found');
+        log('📵 No notification preferences found');
         return;
       }
 
       // Get the last time the app was opened
       const lastOpenedTime = await this.getLastOpenedTime();
       if (!lastOpenedTime) {
-        console.log('📝 No last opened time found, scheduling from now');
+        log('📝 No last opened time found, scheduling from now');
         await this.scheduleDailyReminderNotification();
         return;
       }
@@ -510,7 +539,7 @@ export class NotificationService {
         // In development: schedule for 1 minute for quick testing
         triggerSeconds = 60; // 1 minute
         triggerTime.setMinutes(triggerTime.getMinutes() + 1);
-        console.log(`🔧 [DEV MODE] Scheduling notification in 1 minute for testing`);
+        log(`🔧 [DEV MODE] Scheduling notification in 1 minute for testing`);
       
       } else {
         // In production: calculate remaining time needed
@@ -520,12 +549,12 @@ export class NotificationService {
           // Enough time has passed, send notification soon
           triggerSeconds = 60; // 1 minute delay
           triggerTime.setMinutes(triggerTime.getMinutes() + 1);
-          console.log(`📱 ${hoursSinceLastOpen.toFixed(2)} hours have passed since last open (target: ${targetHours}h). Scheduling notification in 1 minute.`);
+          log(`📱 ${hoursSinceLastOpen.toFixed(2)} hours have passed since last open (target: ${targetHours}h). Scheduling notification in 1 minute.`);
         } else {
           // Not enough time has passed, schedule for remaining time
           const remainingHours = targetHours - hoursSinceLastOpen;
           triggerTime = new Date(Date.now() + remainingHours * 3600 * 1000);
-          console.log(`📱 ${hoursSinceLastOpen.toFixed(2)} hours have passed since last open. Scheduling notification in ${remainingHours.toFixed(2)} more hours.`);
+          log(`📱 ${hoursSinceLastOpen.toFixed(2)} hours have passed since last open. Scheduling notification in ${remainingHours.toFixed(2)} more hours.`);
         }
 
         triggerTime = adjustForQuietHours(triggerTime);
@@ -537,7 +566,9 @@ export class NotificationService {
         dateToLocalDateString(triggerTime) === getTodayDateString()
       );
 
-      this.notificationIdentifier = await Notifications.scheduleNotificationAsync({
+      await this.ensureAndroidChannel();
+      await Notifications.scheduleNotificationAsync({
+        identifier: REMINDER_ID,
         content: {
           title: i18n.t('settings.notificationMessages.defaultTitle'),
           body: enhancedMessage,
@@ -550,13 +581,14 @@ export class NotificationService {
             isDevelopment: this.isDevelopment(),
           },
         },
-        trigger: { 
+        trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: triggerSeconds
+          seconds: triggerSeconds,
+          channelId: ANDROID_CHANNEL_ID,
         },
       });
 
-      console.log(`✅ Scheduled notification based on last open time for ${triggerTime.toLocaleString()}`);
+      log(`✅ Scheduled notification based on last open time for ${triggerTime.toLocaleString()}`);
     } catch (error) {
       console.error('❌ Error scheduling notification based on last open:', error);
     }
@@ -567,14 +599,7 @@ export class NotificationService {
    */
   async cancelScheduledNotification(): Promise<void> {
     try {
-      if (this.notificationIdentifier) {
-        await Notifications.cancelScheduledNotificationAsync(this.notificationIdentifier);
-        this.notificationIdentifier = null;
-        console.log('✅ Cancelled scheduled notification');
-      }
-      
-      // Also cancel all scheduled notifications as a fallback
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await Notifications.cancelScheduledNotificationAsync(REMINDER_ID);
     } catch (error) {
       console.error('❌ Error cancelling notification:', error);
     }
@@ -596,7 +621,7 @@ export class NotificationService {
         );
       } catch (columnError) {
         // If the column doesn't exist, fall back to basic user preferences
-        console.log('📝 current_reading_rate_minutes_per_day column not found, using default goal');
+        log('📝 current_reading_rate_minutes_per_day column not found, using default goal');
         userPrefs = null;
       }
       
@@ -619,7 +644,7 @@ export class NotificationService {
             return false;
           }
         } catch (error) {
-          console.log('📝 No user preferences found, assuming goal not met');
+          log('📝 No user preferences found, assuming goal not met');
           return false;
         }
       }
@@ -635,7 +660,7 @@ export class NotificationService {
         );
       } catch (sessionError) {
         // reading_sessions table might not exist yet
-        console.log('📝 reading_sessions table not found, assuming no reading today');
+        log('📝 reading_sessions table not found, assuming no reading today');
         return false;
       }
 
@@ -757,18 +782,22 @@ export class NotificationService {
       // Check if user is logged in first
       const isLoggedIn = await this.isUserLoggedIn();
       if (!isLoggedIn) {
-        console.log('👤 No user logged in, skipping notification check and scheduling');
+        log('👤 No user logged in, skipping notification check and scheduling');
         return;
       }
 
+      // In both early-return cases, drop a reminder scheduled earlier today
+      // (e.g. by a previous log that didn't reach the goal yet)
       const areEnabled = await this.areNotificationsEnabled();
       if (!areEnabled) {
+        await this.cancelScheduledNotification();
         return;
       }
 
       const isGoalMet = await this.isDailyGoalMet();
       if (isGoalMet) {
-        console.log('🎯 Daily goal already met, no notification needed');
+        log('🎯 Daily goal already met, no notification needed');
+        await this.cancelScheduledNotification();
         return;
       }
 
@@ -782,7 +811,14 @@ export class NotificationService {
   /**
    * Handle app foreground/background state changes
    */
-  async onAppStateChange(nextAppState: string): Promise<void> {
+  onAppStateChange(nextAppState: string): Promise<void> {
+    this.appStateQueue = this.appStateQueue.then(() =>
+      this.handleAppStateChange(nextAppState)
+    );
+    return this.appStateQueue;
+  }
+
+  private async handleAppStateChange(nextAppState: string): Promise<void> {
     try {
       if (nextAppState === 'active') {
         // App came to foreground
@@ -790,7 +826,9 @@ export class NotificationService {
         
         // Cancel any pending notifications since user is now active
         await this.cancelScheduledNotification();
-      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
+      } else if (nextAppState === 'background') {
+        // Only 'background', not 'inactive': iOS reports 'inactive' for Control
+        // Center, Face ID, system alerts and on the way to background
         // App went to background
         await this.trackAppClosed();
         
@@ -856,7 +894,7 @@ export class NotificationService {
           [now.toISOString(), today]
         );
         
-        console.log('✅ Recreated app usage tracking table and logged session');
+        log('✅ Recreated app usage tracking table and logged session');
       } catch (recreateError) {
         console.error('❌ Failed to recreate app usage tracking:', recreateError);
       }
@@ -905,7 +943,7 @@ export class NotificationService {
           [now.toISOString(), now.toISOString(), today]
         );
         
-        console.log('✅ Recreated app usage tracking and logged close event');
+        log('✅ Recreated app usage tracking and logged close event');
       } catch (recreateError) {
         console.error('❌ Failed to recreate app usage tracking for close event:', recreateError);
       }
@@ -933,7 +971,7 @@ export class NotificationService {
    */
   async sendImmediateTestNotification(): Promise<void> {
     if (!this.isDevelopment()) {
-      console.log('⚠️ Immediate test notifications are only available in development mode');
+      log('⚠️ Immediate test notifications are only available in development mode');
       return;
     }
 
@@ -941,13 +979,13 @@ export class NotificationService {
       // Check if user is logged in first
       const isLoggedIn = await this.isUserLoggedIn();
       if (!isLoggedIn) {
-        console.log('👤 No user logged in, skipping immediate test notification');
+        log('👤 No user logged in, skipping immediate test notification');
         return;
       }
 
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) {
-        console.log('📵 No notification permission for immediate test');
+        log('📵 No notification permission for immediate test');
         return;
       }
 
@@ -965,7 +1003,7 @@ export class NotificationService {
         trigger: null, // Send immediately
       });
 
-      console.log('🧪 [TEST] Sent immediate test notification');
+      log('🧪 [TEST] Sent immediate test notification');
     } catch (error) {
       console.error('❌ Error sending immediate test notification:', error);
     }
@@ -985,7 +1023,7 @@ export class NotificationService {
     try {
       const [enabled, permissions, lastOpened, scheduled, prefs] = await Promise.all([
         this.areNotificationsEnabled(),
-        this.requestPermissions(),
+        this.checkCurrentPermissions(),
         this.getLastOpenedTime(),
         Notifications.getAllScheduledNotificationsAsync(),
         this.getNotificationPreferences()
@@ -1001,7 +1039,7 @@ export class NotificationService {
       };
 
       if (this.isDevelopment()) {
-        console.log('📊 [DEV] Notification Status:', status);
+        log('📊 [DEV] Notification Status:', status);
       }
 
       return status;
@@ -1024,15 +1062,13 @@ export class NotificationService {
    */
   async cleanup(): Promise<void> {
     try {
-      console.log('🧹 Cleaning up notification service...');
+      log('🧹 Cleaning up notification service...');
       
-      // Cancel all scheduled notifications
-      await this.cancelScheduledNotification();
+      // Cancel everything, including reminders scheduled by older app
+      // versions under random identifiers
+      await Notifications.cancelAllScheduledNotificationsAsync();
       
-      // Reset internal state
-      this.notificationIdentifier = null;
-      
-      console.log('✅ Notification service cleanup completed');
+      log('✅ Notification service cleanup completed');
     } catch (error) {
       console.error('❌ Error during notification cleanup:', error);
     }
@@ -1043,10 +1079,11 @@ export class NotificationService {
    */
   async reset(): Promise<void> {
     try {
-      console.log('🔔 Resetting notification service...');
+      log('🔔 Resetting notification service...');
       
       // First clean up any existing state
       await this.cleanup();
+      await this.ensureAndroidChannel();
       
       // Verify that notification tables exist and are properly set up
       try {
@@ -1054,7 +1091,7 @@ export class NotificationService {
         const integrity = await checkNotificationDatabaseIntegrity();
         
         if (!integrity.notification_preferences_exists || !integrity.notification_preferences_has_defaults) {
-          console.log('🔧 Notification tables missing or incomplete, attempting repair...');
+          log('🔧 Notification tables missing or incomplete, attempting repair...');
           const repairSuccess = await repairNotificationDatabase();
           
           if (!repairSuccess) {
@@ -1066,9 +1103,9 @@ export class NotificationService {
         // Now try to ensure notification preferences exist
         const prefs = await this.getNotificationPreferences();
         if (prefs) {
-          console.log('🔔 Notification service reset successfully and preferences restored');
+          log('🔔 Notification service reset successfully and preferences restored');
         } else {
-          console.log('⚠️ Notification service reset but could not restore preferences');
+          log('⚠️ Notification service reset but could not restore preferences');
         }
       } catch (dbError) {
         console.error('⚠️ Database integrity check failed during reset:', dbError);
@@ -1076,7 +1113,7 @@ export class NotificationService {
         // Try to create default preferences directly as a fallback
         try {
           await this.createDefaultNotificationPreferences();
-          console.log('🔔 Created default notification preferences as fallback');
+          log('🔔 Created default notification preferences as fallback');
         } catch (fallbackError) {
           console.error('❌ Failed to create default notification preferences as fallback:', fallbackError);
         }

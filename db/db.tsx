@@ -1,7 +1,11 @@
 import { openDatabaseSync, SQLiteDatabase, SQLiteExecuteAsyncResult } from 'expo-sqlite';
+import { log } from '../utils/logger';
 
 // Open or create a local SQLite database
 const db: SQLiteDatabase = openDatabaseSync('pagestreak.db');
+// Wait briefly instead of failing with "database is locked" while another
+// connection (e.g. the backup import's exclusive transaction) holds the lock
+db.execSync('PRAGMA busy_timeout = 3000');
 
 export type DB = SQLiteDatabase;
 export type DBResult<T = any> = SQLiteExecuteAsyncResult<T>;
@@ -120,19 +124,19 @@ export async function execute(sql: string, params?: any): Promise<SQLiteRunResul
  */
 export async function initializeDatabase(): Promise<void> {
   if (isInitialized) {
-    console.log('📦 Database already initialized, skipping...');
+    log('📦 Database already initialized, skipping...');
     return;
   }
 
   try {
-    console.log('🔄 Initializing database tables...');
+    log('🔄 Initializing database tables...');
 
     // 0. Create database version tracking table and check version
     await createOrUpdateDatabaseVersionTable();
     const needsUpdate = await checkDatabaseVersion();
 
     if (!needsUpdate && isInitialized) {
-      console.log('📦 Database is up to date, skipping initialization...');
+      log('📦 Database is up to date, skipping initialization...');
       return;
     }
 
@@ -154,6 +158,9 @@ export async function initializeDatabase(): Promise<void> {
     // 6. Create and update app_usage_tracking table
     await createOrUpdateAppUsageTrackingTable();
 
+    // 6b. Daily goal history (see utils/goalHistory.ts)
+    await createGoalHistoryTable();
+
     // 7. Migrate old books if they exist (from legacy 'books' table)
     await migrateOldBooksIfNeeded();
 
@@ -161,7 +168,7 @@ export async function initializeDatabase(): Promise<void> {
     await updateDatabaseVersion();
 
     isInitialized = true;
-    console.log('✅ Database initialization completed successfully');
+    log('✅ Database initialization completed successfully');
 
   } catch (error) {
     console.error('❌ Database initialization failed:', error);
@@ -190,20 +197,20 @@ async function checkDatabaseVersion(): Promise<boolean> {
     const versionRecord = await queryFirst<{version: number}>('SELECT version FROM database_version WHERE id = 1');
     
     if (!versionRecord) {
-      console.log('📝 No version record found, treating as new installation');
+      log('📝 No version record found, treating as new installation');
       return true; // New installation, needs setup
     }
     
     if (versionRecord.version < CURRENT_DB_VERSION) {
-      console.log(`🔄 Database version ${versionRecord.version} < ${CURRENT_DB_VERSION}, updating...`);
+      log(`🔄 Database version ${versionRecord.version} < ${CURRENT_DB_VERSION}, updating...`);
       return true; // Needs update
     }
     
-    console.log(`✅ Database version ${versionRecord.version} is up to date`);
+    log(`✅ Database version ${versionRecord.version} is up to date`);
     return false; // No update needed
     
   } catch (error) {
-    console.log('📝 Error checking version, treating as new installation');
+    log('📝 Error checking version, treating as new installation');
     return true; // Treat as new installation if we can't check version
   }
 }
@@ -217,7 +224,7 @@ async function updateDatabaseVersion(): Promise<void> {
     VALUES (1, ?, CURRENT_TIMESTAMP)
   `, [CURRENT_DB_VERSION]);
   
-  console.log(`📝 Updated database version to ${CURRENT_DB_VERSION}`);
+  log(`📝 Updated database version to ${CURRENT_DB_VERSION}`);
 }
 
 /**
@@ -288,7 +295,7 @@ async function createOrUpdateEnhancedBooksTable(): Promise<void> {
     if (!(await columnExists('enhanced_books', column.name))) {
       const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
       await execute(`ALTER TABLE enhanced_books ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
-      console.log(`✅ Added column: enhanced_books.${column.name}`);
+      log(`✅ Added column: enhanced_books.${column.name}`);
     }
   }
 }
@@ -326,7 +333,7 @@ async function createOrUpdateUserPreferencesTable(): Promise<void> {
     if (!(await columnExists('user_preferences', column.name))) {
       const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
       await execute(`ALTER TABLE user_preferences ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
-      console.log(`✅ Added column: user_preferences.${column.name}`);
+      log(`✅ Added column: user_preferences.${column.name}`);
     }
   }
 }
@@ -357,12 +364,28 @@ async function createOrUpdateReadingSessionsTable(): Promise<void> {
     if (!(await columnExists('reading_sessions', column.name))) {
       const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
       await execute(`ALTER TABLE reading_sessions ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
-      console.log(`✅ Added column: reading_sessions.${column.name}`);
+      log(`✅ Added column: reading_sessions.${column.name}`);
     }
   }
 
+  await createReadingSessionsIndexes();
+
   // Note: Foreign key constraint for reading_sessions.book_id -> enhanced_books.id 
   // is enforced at the application level (SQLite limitations with existing tables)
+}
+
+export async function createReadingSessionsIndexes(): Promise<void> {
+  await execute('CREATE INDEX IF NOT EXISTS idx_reading_sessions_book_id ON reading_sessions(book_id)');
+  await execute('CREATE INDEX IF NOT EXISTS idx_reading_sessions_date ON reading_sessions(date)');
+}
+
+export async function createGoalHistoryTable(): Promise<void> {
+  await execute(`
+    CREATE TABLE IF NOT EXISTS goal_history (
+      effective_date TEXT PRIMARY KEY,
+      minutes INTEGER NOT NULL
+    )
+  `);
 }
 
 /**
@@ -389,7 +412,7 @@ async function createOrUpdateWeeklyProgressTable(): Promise<void> {
     if (!(await columnExists('weekly_progress', column.name))) {
       const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
       await execute(`ALTER TABLE weekly_progress ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
-      console.log(`✅ Added column: weekly_progress.${column.name}`);
+      log(`✅ Added column: weekly_progress.${column.name}`);
     }
   }
 }
@@ -428,7 +451,7 @@ async function createOrUpdateNotificationPreferencesTable(): Promise<void> {
     if (!(await columnExists('notification_preferences', column.name))) {
       const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
       await execute(`ALTER TABLE notification_preferences ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
-      console.log(`✅ Added column: notification_preferences.${column.name}`);
+      log(`✅ Added column: notification_preferences.${column.name}`);
     }
   }
 
@@ -438,13 +461,13 @@ async function createOrUpdateNotificationPreferencesTable(): Promise<void> {
     if (!existingPrefs) {
       // Don't create defaults here - let NotificationService handle first-time setup
       // This ensures permission request happens at the right time
-      console.log('🔔 No notification preferences found - will be created by NotificationService when needed');
+      log('🔔 No notification preferences found - will be created by NotificationService when needed');
     }
   } catch (error) {
     console.error('⚠️  Failed to check notification preferences:', error);
   }
 
-  console.log('✅ Created/verified notification_preferences table');
+  log('✅ Created/verified notification_preferences table');
 }
 
 /**
@@ -475,7 +498,7 @@ async function createOrUpdateAppUsageTrackingTable(): Promise<void> {
     if (!(await columnExists('app_usage_tracking', column.name))) {
       const defaultClause = column.default ? ` DEFAULT ${column.default}` : '';
       await execute(`ALTER TABLE app_usage_tracking ADD COLUMN ${column.name} ${column.type}${defaultClause}`);
-      console.log(`✅ Added column: app_usage_tracking.${column.name}`);
+      log(`✅ Added column: app_usage_tracking.${column.name}`);
     }
   }
 
@@ -484,7 +507,7 @@ async function createOrUpdateAppUsageTrackingTable(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_app_usage_date ON app_usage_tracking(date)
   `);
 
-  console.log('✅ Created/verified app_usage_tracking table');
+  log('✅ Created/verified app_usage_tracking table');
 }
 
 /**
@@ -496,7 +519,7 @@ async function migrateOldBooksIfNeeded(): Promise<void> {
     const oldBooks = await queryAll<{id: number, name: string, author: string, page: number}>('SELECT * FROM books');
     
     if (oldBooks.length > 0) {
-      console.log(`📚 Found ${oldBooks.length} books to migrate from old table`);
+      log(`📚 Found ${oldBooks.length} books to migrate from old table`);
       
       for (const book of oldBooks) {
         // Check if book already exists in enhanced_books
@@ -509,15 +532,15 @@ async function migrateOldBooksIfNeeded(): Promise<void> {
             ) VALUES (?, ?, ?, 'read', datetime('now'), ?, datetime('now'))
           `, [book.name, book.author, book.page, book.page]);
           
-          console.log(`✅ Migrated: ${book.name} by ${book.author}`);
+          log(`✅ Migrated: ${book.name} by ${book.author}`);
         }
       }
       
-      console.log('🎉 Book migration completed successfully!');
+      log('🎉 Book migration completed successfully!');
     }
   } catch (error) {
     // Old books table doesn't exist, which is fine for new installations
-    console.log('📚 No old books table found, starting fresh');
+    log('📚 No old books table found, starting fresh');
   }
 }
 
@@ -573,13 +596,13 @@ export async function checkNotificationDatabaseIntegrity(): Promise<{
  */
 export async function repairNotificationDatabase(): Promise<boolean> {
   try {
-    console.log('🔧 Repairing notification database...');
+    log('🔧 Repairing notification database...');
     
     // Recreate notification tables
     await createOrUpdateNotificationPreferencesTable();
     await createOrUpdateAppUsageTrackingTable();
     
-    console.log('✅ Notification database repaired');
+    log('✅ Notification database repaired');
     return true;
   } catch (error) {
     console.error('❌ Failed to repair notification database:', error);

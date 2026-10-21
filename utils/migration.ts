@@ -1,20 +1,21 @@
-import { execute, resetInitializationFlag } from '../db/db';
+import { createGoalHistoryTable, createReadingSessionsIndexes, execute, resetInitializationFlag } from '../db/db';
 import NotificationService from '../services/notificationService';
+import { log, warn } from './logger';
 
 /**
  * Logout user - resets all data and removes user preferences
  * WARNING: This will delete all data!
  */
 export const logoutUser = async () => {
-  console.log('👋 Logging out user - ALL DATA WILL BE LOST!');
+  log('👋 Logging out user - ALL DATA WILL BE LOST!');
   
   try {
     // Cancel any scheduled notifications before clearing data
     try {
       await NotificationService.cleanup();
-      console.log('📵 Cancelled scheduled notifications');
+      log('📵 Cancelled scheduled notifications');
     } catch (notifError) {
-      console.warn('⚠️  Could not cancel notifications:', notifError);
+      warn('⚠️  Could not cancel notifications:', notifError);
     }
 
     // Drop all user data tables
@@ -26,8 +27,9 @@ export const logoutUser = async () => {
     await execute('DROP TABLE IF EXISTS notification_preferences');
     await execute('DROP TABLE IF EXISTS app_usage_tracking');
     await execute('DROP TABLE IF EXISTS database_version');
+    await execute('DROP TABLE IF EXISTS goal_history');
     
-    console.log('🗑️  All user data cleared');
+    log('🗑️  All user data cleared');
     
     // Only recreate empty table structures without default data
     await execute(`
@@ -121,6 +123,9 @@ export const logoutUser = async () => {
       )
     `);
 
+    await createReadingSessionsIndexes();
+    await createGoalHistoryTable();
+
     // Recreate database version table
     await execute(`
       CREATE TABLE IF NOT EXISTS database_version (
@@ -133,7 +138,7 @@ export const logoutUser = async () => {
     // Reset database initialization flag so it can be re-initialized
     resetInitializationFlag();
     
-    console.log('🎉 User logout completed!');
+    log('🎉 User logout completed!');
     return true;
   } catch (error) {
     console.error('❌ Logout failed:', error);

@@ -16,16 +16,19 @@ import BookCard from "../../../components/BookCard";
 import BookStatusModal, {
   BookStatus,
 } from "../../../components/BookStatusModal";
-import { EnhancedBook, queryAll } from "../../../db/db";
+import { EnhancedBook } from "../../../db/db";
+import {
+  BookWithStats,
+  deleteBookWithSessions,
+  listBooksWithStats,
+  updateBookStatus,
+} from "../../../db/repos/books";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { TYPE } from "../../../themes/typography";
-import {
-  deleteBookWithSessions,
-  getStatusText,
-  updateBookStatus,
-} from "../../../utils/bookStatus";
-import { getBookReadingTime } from "../../../utils/readingProgress";
+import { parseDbDate } from "../../../utils/dateUtils";
+import { computeBookProgress } from "../../../utils/readingProgress";
+import { getStatusText } from "../../../utils/bookStatus";
 
 type SortOption =
   | "date_added"
@@ -40,10 +43,10 @@ export default function MyBooksScreen() {
   const router = useRouter();
 
   const [books, setBooks] = useState<
-    (EnhancedBook & { reading_time?: number })[]
+    (BookWithStats)[]
   >([]);
   const [filteredBooks, setFilteredBooks] = useState<
-    (EnhancedBook & { reading_time?: number })[]
+    (BookWithStats)[]
   >([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,24 +68,7 @@ export default function MyBooksScreen() {
   const loadBooks = async () => {
     setLoading(true);
     try {
-      // Get all books with reading progress data
-      const booksData = await queryAll<EnhancedBook>(`
-        SELECT * FROM enhanced_books 
-        ORDER BY 
-          CASE WHEN reading_status = 'currently_reading' THEN 1 
-               WHEN reading_status = 'want_to_read' THEN 2 
-               WHEN reading_status = 'read' THEN 3 
-               ELSE 4 END,
-          date_added DESC
-      `);
-
-      // Fetch reading time for each book
-      const booksWithReadingTime = await Promise.all(
-        booksData.map(async (book) => {
-          const readingTime = await getBookReadingTime(book.id);
-          return { ...book, reading_time: readingTime };
-        }),
-      );
+      const booksWithReadingTime = await listBooksWithStats();
 
       setBooks(booksWithReadingTime);
       setFilteredBooks(booksWithReadingTime);
@@ -201,13 +187,13 @@ export default function MyBooksScreen() {
           bValue = b.reading_time || 0;
           break;
         case "progress":
-          aValue = (a.current_page || 0) / a.page;
-          bValue = (b.current_page || 0) / b.page;
+          aValue = computeBookProgress(a).percentage;
+          bValue = computeBookProgress(b).percentage;
           break;
         case "date_added":
         default:
-          aValue = new Date(a.date_added || "").getTime();
-          bValue = new Date(b.date_added || "").getTime();
+          aValue = parseDbDate(a.date_added)?.getTime() ?? 0;
+          bValue = parseDbDate(b.date_added)?.getTime() ?? 0;
           break;
       }
 
@@ -251,7 +237,7 @@ export default function MyBooksScreen() {
   const renderBook = ({
     item,
   }: {
-    item: EnhancedBook & { reading_time?: number };
+    item: BookWithStats;
   }) => (
     <BookCard
       book={item}
@@ -271,7 +257,7 @@ export default function MyBooksScreen() {
     />
   );
 
-  const keyExtractor = (item: EnhancedBook & { reading_time?: number }) =>
+  const keyExtractor = (item: BookWithStats) =>
     item.id.toString();
 
   return (

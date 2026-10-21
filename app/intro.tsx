@@ -3,22 +3,24 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Animated,
-    Dimensions,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { execute } from "../db/db";
+import db, { execute } from "../db/db";
+import { recordGoalChange } from "../utils/goalHistory";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
+import { log } from "../utils/logger";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -270,36 +272,41 @@ export default function IntroScreen() {
       // Use the selected goal date instead of end of year
       const endGoalDate = goalDate.toISOString();
 
-      // Insert or replace the single user preferences record
-      await execute(
-        `INSERT OR REPLACE INTO user_preferences (
-          id, username, yearly_book_goal, preferred_genres, updated_at,
-          weekly_reading_goal, 
-          initial_reading_rate_minutes_per_day, end_reading_rate_goal_minutes_per_day,
-          end_reading_rate_goal_date, current_reading_rate_minutes_per_day,
-          current_reading_rate_last_updated, weekly_reading_rate_increase_minutes,
-          weekly_reading_rate_increase_minutes_percentage
-        ) VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          username.trim(),
-          Number(yearlyGoal),
-          preferredGenres.join(","),
-          weeklyReadingGoal,
-          initialReadingRateMinutesPerDay,
-          endReadingRateGoalMinutesPerDay,
-          endGoalDate,
-          initialReadingRateMinutesPerDay, // current rate starts at initial rate
-          new Date().toISOString(), // current_reading_rate_last_updated
-          weeklyReadingRateIncreaseMinutes,
-          weeklyReadingRateIncreasePercentage,
-        ],
-      );
+      // Preferences and goal history are written together or not at all
+      await db.withTransactionAsync(async () => {
+        // Insert or replace the single user preferences record
+        await execute(
+          `INSERT OR REPLACE INTO user_preferences (
+            id, username, yearly_book_goal, preferred_genres, updated_at,
+            weekly_reading_goal, 
+            initial_reading_rate_minutes_per_day, end_reading_rate_goal_minutes_per_day,
+            end_reading_rate_goal_date, current_reading_rate_minutes_per_day,
+            current_reading_rate_last_updated, weekly_reading_rate_increase_minutes,
+            weekly_reading_rate_increase_minutes_percentage
+          ) VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            username.trim(),
+            Number(yearlyGoal),
+            preferredGenres.join(","),
+            weeklyReadingGoal,
+            initialReadingRateMinutesPerDay,
+            endReadingRateGoalMinutesPerDay,
+            endGoalDate,
+            initialReadingRateMinutesPerDay, // current rate starts at initial rate
+            new Date().toISOString(), // current_reading_rate_last_updated
+            weeklyReadingRateIncreaseMinutes,
+            weeklyReadingRateIncreasePercentage,
+          ],
+        );
+
+        await recordGoalChange(initialReadingRateMinutesPerDay);
+      });
 
       // Initialize notification preferences for new user
       const notificationPrefs =
         await NotificationService.getNotificationPreferences();
       if (!notificationPrefs) {
-        console.log("🔔 Initializing notification preferences for new user");
+        log("🔔 Initializing notification preferences for new user");
       }
 
       Keyboard.dismiss();

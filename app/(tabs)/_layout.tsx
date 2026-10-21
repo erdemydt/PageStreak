@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, Tabs } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { COLORS } from "../../themes/colors";
+import { FONTS } from "../../themes/typography";
 
 export default function TabLayout() {
   const { t } = useTranslation();
@@ -13,22 +14,27 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           tabBarStyle: styles.tabBar,
-          tabBarActiveTintColor: COLORS.primary,
-          tabBarInactiveTintColor: COLORS.neutral[400],
+          tabBarActiveTintColor: COLORS.ink.primary,
+          tabBarInactiveTintColor: COLORS.ink.tertiary,
           tabBarLabelStyle: styles.tabBarLabel,
           // The tab bar has a fixed height; scaled labels would be clipped
           tabBarAllowFontScaling: false,
           headerStyle: styles.header,
           headerTitleStyle: styles.headerTitle,
-          headerTintColor: COLORS.white,
+          headerTintColor: COLORS.ink.primary,
+          headerShadowVisible: false,
         }}
       >
         <Tabs.Screen
           name="(home)"
           options={{
             title: t("navigation.home"),
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="home" size={size} color={color} />
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "home" : "home-outline"}
+                size={23}
+                color={color}
+              />
             ),
             headerShown: false,
           }}
@@ -38,8 +44,12 @@ export default function TabLayout() {
           options={{
             title: t("navigation.books"),
             headerShown: false,
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="book" size={size} color={color} />
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "book" : "book-outline"}
+                size={23}
+                color={color}
+              />
             ),
           }}
         />
@@ -47,8 +57,12 @@ export default function TabLayout() {
           name="profile"
           options={{
             title: t("navigation.profile"),
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person" size={size} color={color} />
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "person" : "person-outline"}
+                size={23}
+                color={color}
+              />
             ),
             headerShown: false,
           }}
@@ -67,7 +81,11 @@ export default function TabLayout() {
                 onPress={() => router.replace("/(tabs)/profile")}
                 style={styles.headerBackButton}
               >
-                <Ionicons name="chevron-back" size={22} color={COLORS.white} />
+                <Ionicons
+                  name="chevron-back"
+                  size={24}
+                  color={COLORS.ink.primary}
+                />
               </TouchableOpacity>
             ),
           }}
@@ -76,8 +94,12 @@ export default function TabLayout() {
           name="settings"
           options={{
             title: t("navigation.settings"),
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="settings" size={size} color={color} />
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "settings" : "settings-outline"}
+                size={23}
+                color={color}
+              />
             ),
             headerShown: false,
           }}
@@ -91,35 +113,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  // Folio: a paper bar under a hairline (the navigator adds the safe-area inset)
   tabBar: {
-    backgroundColor: COLORS.white,
-    borderTopWidth: 0,
-    elevation: 20,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    height: Platform.OS === "ios" ? 88 : 70,
-    paddingBottom: Platform.OS === "ios" ? 20 : 10,
-    paddingTop: 10,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  tabBarLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  header: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.paper.base,
+    borderTopWidth: StyleSheet.hairlineWidth * 2,
+    borderTopColor: COLORS.line.hairline,
     elevation: 0,
     shadowOpacity: 0,
-    borderBottomWidth: 0,
+    paddingTop: 6,
+  },
+  tabBarLabel: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 10,
+    letterSpacing: 0.2,
+    marginTop: 2,
+  },
+  header: {
+    backgroundColor: COLORS.paper.base,
   },
   headerTitle: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: "bold",
+    fontFamily: FONTS.serif,
+    fontSize: 19,
+    color: COLORS.ink.primary,
   },
   headerBackButton: {
     marginLeft: 8,

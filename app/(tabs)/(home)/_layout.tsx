@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { COLORS } from "../../../themes/colors";
+import { FONTS } from "../../../themes/typography";
 
 // Keep the dashboard underneath when another tab navigates in (withAnchor)
 export const unstable_settings = {
@@ -14,12 +15,15 @@ export default function HomeLayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: COLORS.primary,
+          backgroundColor: COLORS.paper.base,
         },
-        headerTintColor: COLORS.white,
+        headerTintColor: COLORS.ink.primary,
         headerTitleStyle: {
-          fontWeight: "bold",
+          fontFamily: FONTS.serif,
+          fontSize: 19,
         },
+        headerShadowVisible: false,
+        headerBackButtonDisplayMode: "minimal",
       }}
     >
       <Stack.Screen

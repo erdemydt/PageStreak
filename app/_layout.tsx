@@ -1,3 +1,10 @@
+import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular";
+import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium";
+import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
+import { Newsreader_400Regular } from "@expo-google-fonts/newsreader/400Regular";
+import { Newsreader_400Regular_Italic } from "@expo-google-fonts/newsreader/400Regular_Italic";
+import { Newsreader_500Medium } from "@expo-google-fonts/newsreader/500Medium";
+import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import { AppState, AppStateStatus, View } from "react-native";
@@ -13,6 +20,15 @@ export default function RootLayout() {
   // Nothing may touch the database before migrations finish, including
   // screens opened directly by a deep link (which skip app/index.tsx)
   const [dbAttempted, setDbAttempted] = useState(false);
+  // Only the weights the Folio type scale uses are bundled (themes/typography.ts)
+  const [fontsLoaded, fontError] = useFonts({
+    Newsreader_400Regular,
+    Newsreader_400Regular_Italic,
+    Newsreader_500Medium,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+  });
 
   useEffect(() => {
     initializeDatabase()
@@ -45,9 +61,10 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (!dbAttempted) {
+  // A font that fails to load falls back to the system font; don't block the app on it
+  if (!dbAttempted || (!fontsLoaded && !fontError)) {
     // Brief: the native splash screen is usually still covering this
-    return <View style={{ flex: 1, backgroundColor: COLORS.neutral[50] }} />;
+    return <View style={{ flex: 1, backgroundColor: COLORS.paper.base }} />;
   }
 
   return (

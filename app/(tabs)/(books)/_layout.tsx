@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { COLORS } from "../../../themes/colors";
+import { FONTS } from "../../../themes/typography";
 
 // When another tab navigates into this stack (with withAnchor), keep the
 // library index underneath so Back and the tab button lead somewhere
@@ -14,13 +15,15 @@ export default function BooksLayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: COLORS.surface.page,
+          backgroundColor: COLORS.paper.base,
         },
-        headerTintColor: COLORS.text.primary,
+        headerTintColor: COLORS.ink.primary,
         headerTitleStyle: {
-          fontWeight: "600",
+          fontFamily: FONTS.serif,
+          fontSize: 19,
         },
         headerShadowVisible: false,
+        headerBackButtonDisplayMode: "minimal",
       }}
     >
       <Stack.Screen

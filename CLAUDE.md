@@ -47,6 +47,8 @@ app/
     reading-growth.tsx   Growth Journey chart (hidden tab, opened from profile)
     settings.tsx         Language, notifications, backup/restore, logout (wipes all data)
 components/              Screens' building blocks (intro/ and profile/ hold those screens' parts + styles)
+  ui/                    Folio primitives: Button, Sheet (the one bottom sheet), BookCover, Eyebrow, Hairline,
+                         ProgressRule, StatRow, Screen. Build new UI from these
 db/db.tsx                SQLite handle, queryAll/queryFirst/execute, schema init
 db/repos/                Data layer. Screens/components use ONLY these (lint-enforced):
   books.ts               addBook, listBooksWithStats, getBook, setPageCount, updateBookStatus, ...
@@ -76,7 +78,8 @@ utils/
   toast.ts               showToast({message, actionLabel?, onAction?}): non-blocking feedback (ToastHost in root layout)
   genres.ts              Genre keys; stored as keys, legacy labels normalized on read
 i18n/index.ts            ALL strings, `en` and `tr` in one file
-themes/                  COLORS / SPACING / TYPE tokens (use them; no raw hex in screens)
+themes/                  COLORS / SPACING / TYPE / FONTS tokens (use them; no raw hex in screens). Folio design
+                         language: role tokens COLORS.paper/ink/line/accent/streak; legacy keys map onto them
 ```
 
 ## Data model (SQLite, `pagestreak.db`)
@@ -159,6 +162,9 @@ tables there and to the backup service. Test migrations against real DB files: s
   retry screen (never onboarding, which would overwrite an existing profile).
 - Backup import runs in `db.withExclusiveTransactionAsync`: every statement inside it must use `txn`
   (`runIn(txn, …)`); a global `execute` there fails with "database is locked".
+- **Fonts:** Newsreader (serif: headings, numbers) and Inter (UI text), loaded in `app/_layout.tsx` from per-weight
+  subpaths (`@expo-google-fonts/inter/500Medium`) so only those weights are bundled. Use `TYPE.*` / `FONTS.*`, which set
+  `fontFamily` per weight; never put `fontWeight` on Folio text (iOS would fall back to the system font).
 - Light mode is forced (app.json, Info.plist, Android theme) until real dark mode exists.
 
 ## Working agreement

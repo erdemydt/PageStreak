@@ -23,12 +23,14 @@ decides when to ship and tests on device first.
 4. Still open: an Android notification icon asset; choose Xcode Cloud vs EAS.
 
 **Next work, in order:**
-1. **Dark mode** (its own phase; owner chose "after the features"). Start by proposing a dark palette derived
-   from `themes/colors.ts` for owner approval, then move every screen to theme tokens and un-force light mode
-   (app.json, Info.plist, Android `styles.xml`).
-2. **Tests** (separate track, when the owner says): Jest for `utils/` (dates, streaks, goal math), the repos,
+1. **Phase 8: Structure + Folio redesign** (below). The owner chose design direction **A · Folio** from the
+   prototypes (https://claude.ai/artifact/23gdMca8CB6BvLTXN5yaaZ, Main + FolioBook artboards) and approved a new
+   navigation structure. Work through 8.0 → 8.6 in order; each sub-phase is shippable and committed.
+2. **Dark mode** (its own phase, after Phase 8). 8.0 names tokens by role, so dark mode becomes a second palette:
+   propose it for owner approval, then un-force light mode (app.json, Info.plist, Android `styles.xml`).
+3. **Tests** (separate track, when the owner says): Jest for `utils/` (dates, streaks, goal math), the repos,
    and `scripts/db-migration-check/` as a CI step.
-3. Optional: move Growth Journey into a stack under Profile (native back gesture); consider `expo-updates`.
+4. Optional: consider `expo-updates`.
 
 ## Unreleased user-visible changes (for release notes)
 Kept for the owner's release notes; clear it when a release ships.
@@ -159,3 +161,38 @@ Things users can feel are wrong today.
 - [ ] Real dark mode (L): owner wants it as its own phase after the Phase 7 features.
 - [ ] Consider `expo-updates` so JS-only fixes skip App Store review.
 - [ ] Tests (separate track, when we're ready).
+
+## Phase 8: Structure + Folio redesign
+Decided 2026-10-22 from two independent IA proposals (Claude + a fresh Plan agent) plus owner decisions. **No schema
+changes**: UI and routing only. Every old route keeps a `<Redirect>` stub for 2+ releases.
+
+**Target structure: 3 tabs, Today · Library · Progress.** Settings is a root route behind a gear icon. Push what you browse
+(book, growth, history, settings); use a sheet for quick tasks (log, edit session, add book, status, goal edits, backup).
+- **Today**: date + "Good evening, {name}", today's minutes/goal + streak (shown once), week strip (tap a day → History),
+  currently reading (the book with the most recent session, plus a switcher when 2+ are in progress), Log reading / Timer,
+  today's sessions (tap → edit), a yearly line. Cut: DailyProgressCard (merged), Reading-journey counts, Recent books, "See all" links.
+- **Log sheet**: one `LogSessionProvider` at the root (`openLogger({bookId?, date?, minutes?})`), used by Today, Book detail and History.
+- **Library**: one screen (my-books becomes the index): search, status segments, sort menu. `+` opens the **Add book sheet**
+  (Open Library search, manual fallback, "Start reading" toast). Long-press a card → status/delete menu.
+- **Book detail** (shared route, pushes inside the current tab): one status control ("Mark finished" while reading), progress +
+  finish estimate, log/timer for this book, **this book's sessions**, "About this book" collapsed, "…" menu (page count, delete).
+  Cut: the Logs/Library cross-tab buttons and the read-only notes. A **finish sheet** on marking a book read ("Book N of goal", next up).
+- **Progress**: streak + week strip, trimmed week stats (total, days met, avg/day, top book), Growth card → `growth`
+  (moved from the hidden tab), Year card (yearly goal edited here; `0` = unset → "Set a yearly goal"), `history`
+  (the readinglogs daily view + "add session" per day). Time-of-day and "insights" analytics are cut.
+- **Settings**: name row, language, notifications, backup, About (only useful rows), erase. The Profile tab is removed
+  (genres UI cut; the column and backup field stay).
+- **Entry points**: cold start, end of onboarding and **reminder taps** (new response listener) → Today. Empty states open the Add sheet.
+- **Onboarding**: name (+ restore) → daily goal → grow it? → reminder → optional first book. Genres and yearly-goal steps cut.
+
+- [x] **8.0 Folio foundation**: Newsreader + Inter fonts; semantic, dark-ready tokens (legacy keys mapped); `TYPE` scale;
+  `components/ui/` primitives (Screen, Eyebrow, Hairline, Button, Sheet, BookCover, ProgressRule, StatRow); Folio tab bar; haptics.
+- [ ] **8.1 Logging + Today**: LogSessionProvider, logger as a Folio sheet, Today rebuilt, most-recent-book query,
+  notification response listener (after DB init).
+- [ ] **8.2 Book detail**: shared route group `(home,books,progress)/book/[id]` (fallback: root-stack route), drop the
+  `withAnchor` jumps, per-book sessions, one status control, "…" menu with delete, finish sheet.
+- [ ] **8.3 Library merge**: one library screen, Add book sheet (search + manual), long-press menu, redirects.
+- [ ] **8.4 Progress tab**: `(progress)` stack with index / growth / history, trimmed weekly stats, yearly-goal sheet,
+  Profile tab → redirect, name → Settings.
+- [ ] **8.5 Settings to gear**: root `settings` route, 3 tabs, About cleanup.
+- [ ] **8.6 Onboarding**: new step order, `yearly_book_goal = 0` for new users, first-book step reuses the Add-sheet search.

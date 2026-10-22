@@ -3,28 +3,15 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Fragment, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-<<<<<<< HEAD
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-=======
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
->>>>>>> origin/xccBuild
 } from "react-native";
 import BookMenuSheet from "../../../components/book/BookMenuSheet";
 import BookStatusModal, {
-<<<<<<< HEAD
   BookStatus,
 } from "../../../components/BookStatusModal";
 import SessionRow from "../../../components/session/SessionRow";
@@ -45,16 +32,10 @@ import {
 } from "../../../db/repos/sessions";
 import { useBookStatusChange } from "../../../hooks/useBookStatusChange";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
-=======
-    BookStatus,
-} from "../../../components/books/BookStatusModal";
-import { EnhancedBook, execute, queryFirst } from "../../../db/db";
->>>>>>> origin/xccBuild
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { FONTS, TYPE } from "../../../themes/typography";
 import {
-<<<<<<< HEAD
   addDaysToDateString,
   getTodayDateString,
 } from "../../../utils/dateUtils";
@@ -70,10 +51,6 @@ import {
 import {
   estimateDaysToFinish,
   getEnhancedBookProgress,
-=======
-    getBookReadingTime,
-    getEnhancedBookProgress,
->>>>>>> origin/xccBuild
 } from "../../../utils/readingProgress";
 
 const SESSIONS_PREVIEW = 5;

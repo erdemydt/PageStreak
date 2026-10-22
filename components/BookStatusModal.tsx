@@ -1,24 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-<<<<<<< HEAD:components/BookStatusModal.tsx
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { COLORS } from "../themes/colors";
 import { SPACING } from "../themes/spacing";
 import { FONTS, TYPE } from "../themes/typography";
 import Sheet from "./ui/Sheet";
-=======
-import {
-    Animated,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
-import { COLORS } from "../../themes/colors";
-import { getStatusColor } from "../../utils/bookStatus";
->>>>>>> origin/xccBuild:components/books/BookStatusModal.tsx
 
 export type BookStatus = "want_to_read" | "currently_reading" | "read";
 
@@ -45,7 +32,6 @@ export default function BookStatusModal({
 }: BookStatusModalProps) {
   const { t } = useTranslation();
 
-<<<<<<< HEAD:components/BookStatusModal.tsx
   // Keep showing the book it was opened for while it animates closed (the
   // parent may clear its selection meanwhile)
   const shown = useRef({ bookTitle, currentStatus });
@@ -55,17 +41,6 @@ export default function BookStatusModal({
 
   const options: Record<BookStatus, { label: string; description: string }> = {
     want_to_read: {
-=======
-  const statusOptions: {
-    value: BookStatus;
-    label: string;
-    description: string;
-    emoji: string;
-    color: string;
-  }[] = [
-    {
-      value: "want_to_read",
->>>>>>> origin/xccBuild:components/books/BookStatusModal.tsx
       label: t("bookStatus.options.wantToRead.label"),
       description: t("bookStatus.options.wantToRead.description"),
     },

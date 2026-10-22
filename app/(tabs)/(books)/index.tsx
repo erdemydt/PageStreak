@@ -3,7 +3,6 @@ import { Stack, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-<<<<<<< HEAD
   Alert,
   Pressable,
   ScrollView,
@@ -64,44 +63,6 @@ const SORTS: Record<SortKey, (a: BookWithStats, b: BookWithStats) => number> = {
   time: (a, b) => (b.reading_time || 0) - (a.reading_time || 0),
   progress: (a, b) =>
     computeBookProgress(b).percentage - computeBookProgress(a).percentage,
-=======
-    Alert,
-    Animated,
-    FlatList,
-    Keyboard,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
-} from "react-native";
-import BookCard from "../../../components/books/BookCard";
-import BookStatusModal, {
-    BookStatus,
-} from "../../../components/books/BookStatusModal";
-import type { EnhancedBook } from "../../../db/db";
-import { execute } from "../../../db/db";
-import { useBooks } from "../../../hooks/useBooks";
-import { COLORS } from "../../../themes/colors";
-import { SPACING } from "../../../themes/spacing";
-import { TYPE } from "../../../themes/typography";
-type BooksearchProps = {
-  name: string;
-  setName: (name: string) => void;
-  author: string;
-  setAuthor: (author: string) => void;
-  page: string;
-  setPage: (page: string) => void;
-  selectedStatus: BookStatus;
-  onStatusChange: (status: BookStatus) => void;
-  loading: boolean;
-  error: string | null;
-  saveBook: () => void;
-  onClose: () => void;
-  fadeAnim: Animated.Value;
-  scaleAnim: Animated.Value;
->>>>>>> origin/xccBuild
 };
 
 /**
@@ -111,7 +72,6 @@ type BooksearchProps = {
 export default function LibraryScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-<<<<<<< HEAD
   const { openAddBook } = useSessionSheets();
   const setBookStatus = useBookStatusChange();
 
@@ -192,46 +152,6 @@ export default function LibraryScreen() {
       pathname: "/(tabs)/(books)/[id]",
       params: { id: String(book.id) },
     });
-=======
-  const { t } = useTranslation();
-  const [name, setName] = useState("");
-  const [author, setAuthor] = useState("");
-  const [page, setPage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isAddingManually, setIsAddingManually] = useState(false);
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [scaleAnim] = useState(new Animated.Value(0.8));
-  const [statusModalVisible, setStatusModalVisible] = useState(false);
-  const [selectedBook, setSelectedBook] = useState<EnhancedBook | null>(null);
-  const [statusModalFadeAnim] = useState(new Animated.Value(0));
-  const [statusModalScaleAnim] = useState(new Animated.Value(0.8));
-  const [manualBookStatus, setManualBookStatus] =
-    useState<BookStatus>("currently_reading");
-  const {
-    allBooksCount,
-    filterStatus,
-    setFilterStatus,
-    filteredBooks,
-    getStatusCount,
-    loadBooks,
-  } = useBooks({
-    onLoadingChange: setLoading,
-    onLoadError: setError,
-    loadErrorMessage: t("booksPage.failedToLoad"),
-  });
-
-  useEffect(() => {
-    // Database is already initialized by the main app entry point
-    loadBooks();
-  }, [loadBooks]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadBooks();
-    }, [loadBooks]),
-  );
->>>>>>> origin/xccBuild
 
   const confirmDelete = (book: BookWithStats) => {
     Alert.alert(
@@ -275,7 +195,6 @@ export default function LibraryScreen() {
     />
   );
 
-<<<<<<< HEAD
   if (loaded && books.length === 0 && !error) {
     return (
       <Screen>
@@ -294,11 +213,6 @@ export default function LibraryScreen() {
   }
 
   const resultCount = sections.reduce((n, s) => n + s.data.length, 0);
-=======
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
-  };
->>>>>>> origin/xccBuild
 
   return (
     <Screen>

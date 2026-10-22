@@ -1,8 +1,11 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import en from "./en.json";
+import tr from "./tr.json";
 
 const resources = {
   en: {
+<<<<<<< HEAD
     translation: {
       home: {
         timer: {
@@ -624,9 +627,12 @@ const resources = {
         },
       },
     },
+=======
+    translation: en,
+>>>>>>> origin/xccBuild
   },
-
   tr: {
+<<<<<<< HEAD
     translation: {
       home: {
         timer: {
@@ -1250,12 +1256,15 @@ const resources = {
         },
       },
     },
+=======
+    translation: tr,
+>>>>>>> origin/xccBuild
   },
 };
 
-i18n.use(initReactI18next).init({
+void i18n.use(initReactI18next).init({
   resources,
-  lng: "en", // default language
+  lng: "en",
   fallbackLng: "en",
   interpolation: {
     escapeValue: false,

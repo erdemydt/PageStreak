@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -115,6 +116,15 @@ export default function Index() {
     );
   }
 
+=======
+import { Image, StyleSheet, Text, View } from "react-native";
+import { useAppInit } from "../hooks/useAppInit";
+import { COLORS } from "../themes/colors";
+
+export default function Index() {
+  const { isLoading } = useAppInit();
+
+>>>>>>> origin/xccBuild
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>

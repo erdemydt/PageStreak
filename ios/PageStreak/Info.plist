@@ -19,7 +19,11 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
+<<<<<<< HEAD
     <string>1.1.0</string>
+=======
+    <string>1.0.4</string>
+>>>>>>> origin/xccBuild
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>

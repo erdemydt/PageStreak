@@ -1,3 +1,4 @@
+<<<<<<< HEAD:components/ReadingTimeLogger.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,6 +31,30 @@ import {
 import BookCover from "./ui/BookCover";
 import Button from "./ui/Button";
 import Sheet from "./ui/Sheet";
+=======
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+    Alert,
+    Dimensions,
+    findNodeHandle,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { EnhancedBook, execute, queryAll } from "../../db/db";
+import notificationService from "../../services/notificationService";
+import { COLORS } from "../../themes/colors";
+import { getTodayDateString } from "../../utils/dateUtils";
+import {
+    getEnhancedBookProgress,
+    syncBookCurrentPageFromSessions,
+} from "../../utils/readingProgress";
+import ModalShell from "../ui/ModalShell";
+>>>>>>> origin/xccBuild:components/reading/ReadingTimeLogger.tsx
 
 interface ReadingTimeLoggerProps {
   visible: boolean;
@@ -78,13 +103,7 @@ export default function ReadingTimeLogger({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  useEffect(() => {
-    if (selectedBook) {
-      calculateRemainingPages();
-    }
-  }, [selectedBook]);
-
-  const calculateRemainingPages = async () => {
+  const calculateRemainingPages = useCallback(async () => {
     if (!selectedBook) {
       setRemainingPages(0);
       return;
@@ -102,7 +121,13 @@ export default function ReadingTimeLogger({
       console.error("Error calculating remaining pages:", error);
       setRemainingPages(selectedBook.page - (selectedBook.current_page || 0));
     }
-  };
+  }, [selectedBook]);
+
+  useEffect(() => {
+    if (selectedBook) {
+      calculateRemainingPages();
+    }
+  }, [calculateRemainingPages, selectedBook]);
 
   const loadCurrentlyReadingBooks = async () => {
     try {
@@ -210,6 +235,25 @@ export default function ReadingTimeLogger({
         console.error("Error rescheduling the reminder:", error);
       }
 
+<<<<<<< HEAD:components/ReadingTimeLogger.tsx
+=======
+      // Handle book completion if finish book is checked
+      if (finishBook) {
+        const today = getTodayDateString();
+        await execute(
+          `UPDATE enhanced_books 
+           SET reading_status = 'read', 
+               date_finished = ?,
+               current_page = page
+           WHERE id = ?`,
+          [today, selectedBook.id],
+        );
+      }
+
+      // Check if daily goal is met and update notification schedule
+      await notificationService.checkAndScheduleNotification();
+
+>>>>>>> origin/xccBuild:components/reading/ReadingTimeLogger.tsx
       // Reset form
       setMinutes("");
       setPages("");
@@ -267,6 +311,7 @@ export default function ReadingTimeLogger({
   };
 
   return (
+<<<<<<< HEAD:components/ReadingTimeLogger.tsx
     <Sheet
       visible={visible}
       onClose={handleClose}
@@ -296,6 +341,28 @@ export default function ReadingTimeLogger({
           <View style={styles.noBooks}>
             <Text style={styles.noBooksText}>
               {t("components.readingTimeLogger.noBooksFound")}
+=======
+    <ModalShell visible={visible} onClose={handleClose}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>
+            {t("components.readingTimeLogger.title")}
+          </Text>
+        </View>
+
+        <KeyboardAwareScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          enableAutomaticScroll={true}
+          extraScrollHeight={30}
+          keyboardOpeningTime={0}
+          ref={scrollRef}
+        >
+          {/* Book Selection */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {t("components.readingTimeLogger.whichBook")}
+>>>>>>> origin/xccBuild:components/reading/ReadingTimeLogger.tsx
             </Text>
             {/* Not a dead end: start one of the want-to-read books here */}
             {wantToReadBooks.length > 0 && (
@@ -400,6 +467,7 @@ export default function ReadingTimeLogger({
         </FieldGroup>
       )}
 
+<<<<<<< HEAD:components/ReadingTimeLogger.tsx
       <NotesField
         value={notes}
         onChange={setNotes}
@@ -410,6 +478,23 @@ export default function ReadingTimeLogger({
         }
       />
     </Sheet>
+=======
+            <TouchableOpacity
+              onPress={handleSubmit}
+              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading
+                  ? t("components.readingTimeLogger.saving")
+                  : t("components.readingTimeLogger.save")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAwareScrollView>
+      </View>
+    </ModalShell>
+>>>>>>> origin/xccBuild:components/reading/ReadingTimeLogger.tsx
   );
 }
 

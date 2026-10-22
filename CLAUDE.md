@@ -187,8 +187,9 @@ tables there and to the backup service. Test migrations against real DB files: s
   retry screen (never onboarding, which would overwrite an existing profile).
 - Backup import runs in `db.withExclusiveTransactionAsync`: every statement inside it must use `txn`
   (`runIn(txn, …)`); a global `execute` there fails with "database is locked".
-- **Fonts:** Newsreader (serif: headings, numbers) and Inter (UI text), loaded in `app/_layout.tsx` from per-weight
-  subpaths (`@expo-google-fonts/inter/500Medium`) so only those weights are bundled. Use `TYPE.*` / `FONTS.*`, which set
+- **Fonts:** Newsreader (serif: headings, numbers) and Inter (UI text), loaded in `app/_layout.tsx`. Inter comes from per-weight
+  subpaths (`@expo-google-fonts/inter/500Medium`) so only those weights are bundled; Newsreader from `assets/fonts/`, copies
+  with a raised ascender (its stock one clips İ, Ö, Ğ on iOS). Regenerate them with `scripts/fonts/patch-newsreader.py`. Use `TYPE.*` / `FONTS.*`, which set
   `fontFamily` per weight; never put `fontWeight` on Folio text (iOS would fall back to the system font).
 - Light mode is forced (app.json, Info.plist, Android theme) until real dark mode exists.
 
@@ -314,3 +315,6 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   the chips say "Reading"); backups will always include everything (9.3). Status toasts have an Undo that restores the
   exact row (`restoreBookStatus`). Blank search covers were slow archive.org redirects: BookCover now draws its fallback
   under the image. Log/edit show one "Page N of T" line. Reminder copy is one calm sentence.
+- **Phase 9.2: serif accents.** Newsreader's ascender (1470/2000) sat below its capital marks (~1742), so iOS clipped
+  "İlerleme" to "Ilerleme". `assets/fonts/` now holds the three weights with ascent 1800 (script in `scripts/fonts/`);
+  serif text sits ~3 px lower, no block heights changed. Checked every main screen in both languages.

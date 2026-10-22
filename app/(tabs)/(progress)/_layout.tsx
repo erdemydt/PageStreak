@@ -4,7 +4,6 @@ import SettingsButton from "../../../components/ui/SettingsButton";
 import { COLORS } from "../../../themes/colors";
 import { FONTS } from "../../../themes/typography";
 
-
 export default function ProgressLayout() {
   const { t } = useTranslation();
   return (

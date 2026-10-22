@@ -22,7 +22,7 @@ decides when to ship and tests on device first.
 4. Still open: an Android notification icon asset; choose Xcode Cloud vs EAS.
 
 **Next work, in order:**
-1. **Phase 9: Folio QA** (below): 9.0–9.1 done; next 9.2 serif accents, 9.3 backup sheet, 9.4 polish.
+1. **Phase 9: Folio QA** (below): 9.0–9.2 done; next 9.3 backup sheet, 9.4 polish.
    Phase 8 history follows.
    **Phase 8: Structure + Folio redesign** (below). The owner chose design direction **A · Folio** from the
    prototypes (https://claude.ai/artifact/23gdMca8CB6BvLTXN5yaaZ, Main + FolioBook artboards) and approved a new
@@ -84,6 +84,7 @@ Kept for the owner's release notes; clear it when a release ships.
 - Changing a book's status can be undone from the toast. Book search no longer drops the last letter typed. Covers
   that load slowly show the drawn cover instead of a blank tile. Logging pages shows "Page 20 of 608" as you type.
   Reminders read as one calm sentence. The week's "per day" average counts the same days as "days met".
+- Turkish capitals in serif headings keep their accents (İlerleme, not Ilerleme).
 
 ---
 
@@ -248,8 +249,8 @@ backups always include everything (no per-table export switches).
   puts back status, start and finish dates); the status menu keeps its own names, in sentence case; one live
   "Page 20 of 608" line in log/edit; calm reminder copy (no emoji or exclamation marks); Progress "Per day" counts the
   same days as "Days met".
-- [ ] **9.2 Serif accents**: Newsreader clips Turkish capitals (İ, Ş, Ç) on iOS; bundle it with a raised ascender, then a
-  screenshot pass over every screen.
+- [x] **9.2 Serif accents**: Newsreader copies with ascent 1800 in `assets/fonts/` (`scripts/fonts/patch-newsreader.py`);
+  serif text moved ~3 px, layout otherwise unchanged; checked Today, Progress, Growth, Library, book page, sheets, Settings.
 - [ ] **9.3 Backup and restore on `Sheet`**: one "Create backup" (everything), picker first, merge/replace only when data
   exists, toasts. Test merge/replace against real backup JSONs, including an old-format one.
 - [ ] **9.4 Polish**: header/status-bar band, chips, gear styles, sheet close buttons, copy.

@@ -1,9 +1,6 @@
 import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular";
 import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium";
 import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
-import { Newsreader_400Regular } from "@expo-google-fonts/newsreader/400Regular";
-import { Newsreader_400Regular_Italic } from "@expo-google-fonts/newsreader/400Regular_Italic";
-import { Newsreader_500Medium } from "@expo-google-fonts/newsreader/500Medium";
 import { useFonts } from "expo-font";
 import { router, Stack } from "expo-router";
 import { useEffect, useState } from "react";
@@ -26,11 +23,13 @@ export default function RootLayout() {
   // Nothing may touch the database before migrations finish, including
   // screens opened directly by a deep link (which skip app/index.tsx)
   const [dbAttempted, setDbAttempted] = useState(false);
-  // Only the weights the Folio type scale uses are bundled (themes/typography.ts)
+  // Only the weights the Folio type scale uses are bundled (themes/typography.ts).
+  // Newsreader comes from assets/fonts: copies with a raised ascender, so iOS
+  // doesn't clip the marks on capitals like İ, Ö, Ğ (scripts/fonts/patch-newsreader.py)
   const [fontsLoaded, fontError] = useFonts({
-    Newsreader_400Regular,
-    Newsreader_400Regular_Italic,
-    Newsreader_500Medium,
+    Newsreader_400Regular: require("../assets/fonts/Newsreader_400Regular.ttf"),
+    Newsreader_400Regular_Italic: require("../assets/fonts/Newsreader_400Regular_Italic.ttf"),
+    Newsreader_500Medium: require("../assets/fonts/Newsreader_500Medium.ttf"),
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,

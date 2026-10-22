@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { COLORS } from "../../../themes/colors";
 import { FONTS } from "../../../themes/typography";
 
-
 export default function BooksLayout() {
   const { t } = useTranslation();
   return (

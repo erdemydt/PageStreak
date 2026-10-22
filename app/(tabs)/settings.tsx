@@ -15,7 +15,11 @@ import LanguageSelector from "../../components/LanguageSelector";
 import NotificationSettings from "../../components/NotificationSettings";
 import NotificationTester from "../../components/NotificationTester";
 import SettingsRow from "../../components/SettingsRow";
-import { getUserPreferences } from "../../db/repos/preferences";
+import FieldSheet from "../../components/ui/FieldSheet";
+import {
+  getUserPreferences,
+  updateUsername,
+} from "../../db/repos/preferences";
 import type { UserPreferences } from "../../types/models";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
@@ -31,6 +35,7 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [editingName, setEditingName] = useState(false);
 
   const loadUserPreferences = async () => {
     try {
@@ -100,10 +105,9 @@ export default function SettingsScreen() {
                 <SettingsRow
                   icon="person-circle-outline"
                   title={userPreferences?.username || "-"}
-                  subtitle={t("settings.goal", {
-                    goal: userPreferences?.yearly_book_goal || 0,
-                  })}
-                  onPress={() => router.push("/(tabs)/profile")}
+                  subtitle={t("settings.editName")}
+                  onPress={() => setEditingName(true)}
+                  isLast
                 />
               </View>
             </View>
@@ -200,6 +204,20 @@ export default function SettingsScreen() {
       <DataExportModal
         visible={showExportModal}
         onClose={() => setShowExportModal(false)}
+      />
+
+      <FieldSheet
+        visible={editingName}
+        title={t("settings.nameTitle")}
+        initialValue={userPreferences?.username || ""}
+        maxLength={50}
+        onSave={async (value) => {
+          const name = value.trim();
+          // Same rule as onboarding
+          if (name.length < 2 || name.length > 50) return t("settings.nameRequired");
+          await updateUsername(name);
+        }}
+        onClose={() => setEditingName(false)}
       />
 
       {/* Data Import Modal */}

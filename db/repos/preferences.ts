@@ -66,20 +66,20 @@ export async function saveOnboardingPreferences(
   emitDataChange("preferences");
 }
 
-/** Name, yearly goal and genres. Daily goals change via Growth Journey (goalSettings). */
-export async function updateProfile(basics: {
-  username: string;
-  yearlyBookGoal: number;
-  preferredGenres: string[];
-}): Promise<void> {
+/** Rename the user (Settings) */
+export async function updateUsername(username: string): Promise<void> {
   await execute(
-    `UPDATE user_preferences SET
-      username = ?,
-      yearly_book_goal = ?,
-      preferred_genres = ?,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = 1`,
-    [basics.username, basics.yearlyBookGoal, basics.preferredGenres.join(",")],
+    "UPDATE user_preferences SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1",
+    [username],
+  );
+  emitDataChange("preferences");
+}
+
+/** Books to finish this year; 0 means no goal set (Progress) */
+export async function setYearlyBookGoal(goal: number): Promise<void> {
+  await execute(
+    "UPDATE user_preferences SET yearly_book_goal = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1",
+    [goal],
   );
   emitDataChange("preferences");
 }

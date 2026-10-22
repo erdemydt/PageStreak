@@ -69,7 +69,11 @@ Kept for the owner's release notes; clear it when a release ships.
   the next book on your list.
 - One Library screen: search, filter by status, sort, and sections for Reading / Want to read / Read. Tap "+" to add a
   book (search Open Library or add it by hand; duplicates are flagged). Long-press a book to change its status or
-  delete it. The Books tab is now "Library". With nothing in progress, Today lets you pick the next book from your list.
+  delete it. The Books tab is now "Library".
+- New Progress tab: your streak (and longest), this week at a glance, your daily-goal plan, books finished this year
+  (set or change the yearly goal right there), and the full reading history, where you can add a session on any past
+  day. Growth Journey lives here now. The Profile tab is gone: change your name in Settings. The Analytics view and
+  genres are gone. With nothing in progress, Today lets you pick the next book from your list.
 
 ---
 
@@ -205,7 +209,8 @@ changes**: UI and routing only. Every old route keeps a `<Redirect>` stub for 2+
 - [x] **8.3 Library merge**: one Library screen (search, status chips, sections, sort sheet), Add book sheet (Open Library
   + manual, root-hosted so Today opens it in place), long-press menu (status, delete), `my-books`/`search` redirect stubs
   (remove after 2+ releases), shared `useBookStatusChange`. BookCard and ~65 i18n keys removed.
-- [ ] **8.4 Progress tab**: `(progress)` stack with index / growth / history, trimmed weekly stats, yearly-goal sheet,
-  Profile tab → redirect, name → Settings.
+- [x] **8.4 Progress tab**: `(progress)` stack with index (streak, week, week stats, daily-goal card, year card with a
+  yearly-goal sheet, 0 = unset) / growth (restyled, GoalSheet) / history (week view, "+" per day). WeeklyStatsView and
+  Profile deleted; `profile` / `reading-growth` redirect stubs; name edited in Settings. `(home)/readinglogs` re-exports history.
 - [ ] **8.5 Settings to gear**: root `settings` route, 3 tabs, About cleanup.
 - [ ] **8.6 Onboarding**: new step order, `yearly_book_goal = 0` for new users, first-book step reuses the Add-sheet search.

@@ -1,6 +1,7 @@
 import { execute, queryFirst, runInTransaction } from "../db/db";
 import { emitDataChange } from "./dataEvents";
 import { parseDbDate } from "./dateUtils";
+import type { UserPreferences } from "../types/models";
 import { recordGoalChange } from "./goalHistory";
 
 const MAX_DAILY_MINUTES = 480;
@@ -18,7 +19,9 @@ export type GrowthGoalValidationError =
   | "target_daily_required"
   | "current_daily_range"
   | "target_daily_range"
-  | "target_before_current";
+  | "target_before_current"
+  | "target_date_invalid"
+  | "target_date_past";
 
 export type GrowthGoalComputation = {
   weeklyReadingGoal: number;
@@ -94,6 +97,22 @@ export const validateGrowthGoals = (
 
   if (input.targetDailyGoal < input.currentDailyGoal) {
     return "target_before_current";
+  }
+
+  const dateText = input.targetDate?.trim();
+  if (dateText) {
+    const match = dateText.match(DD_MM_YYYY_PATTERN);
+    if (!match) return "target_date_invalid";
+    const [, day, month, year] = match.map(Number);
+    const date = new Date(year, month - 1, day, 23, 59, 59, 999);
+    // Rejects 31/02 and the like, which Date silently rolls over
+    if (date.getDate() !== day || date.getMonth() !== month - 1) {
+      return "target_date_invalid";
+    }
+    // A plan that still has to grow needs a date ahead of it
+    if (input.targetDailyGoal > input.currentDailyGoal && date.getTime() < Date.now()) {
+      return "target_date_past";
+    }
   }
 
   return null;
@@ -238,3 +257,19 @@ export const applyWeeklyGoalGrowth = async (): Promise<void> => {
     console.error("❌ Failed to apply weekly goal growth:", error);
   }
 };
+
+/** The plan still grows: a target above today's goal and a date not yet past */
+export function planState(
+  prefs: Pick<
+    UserPreferences,
+    | "current_reading_rate_minutes_per_day"
+    | "end_reading_rate_goal_minutes_per_day"
+    | "end_reading_rate_goal_date"
+  > | null,
+) {
+  const daily = prefs?.current_reading_rate_minutes_per_day || 0;
+  const target = prefs?.end_reading_rate_goal_minutes_per_day || daily;
+  const end = parseDbDate(prefs?.end_reading_rate_goal_date);
+  if (target <= daily) return "atTarget" as const;
+  return end && end.getTime() < Date.now() ? ("ended" as const) : ("growing" as const);
+}

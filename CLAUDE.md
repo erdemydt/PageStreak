@@ -39,18 +39,21 @@ app/
   (tabs)/
     (home)/index.tsx     Today (Folio): minutes vs goal + streak, week strip (→ readinglogs), the book read most
                          recently (switcher if several), Log reading / timer, today's sessions (tap → edit), yearly line
-    (home)/readinglogs.tsx  Week view of sessions, edit/delete sessions, WeeklyStatsView toggle
+    (home)/readinglogs.tsx  Re-export of (progress)/history, so Today's week strip keeps Back on Today
     (books)/index.tsx    Library: search, status chips, sort sheet, long-press menu (status, delete), "+" → Add sheet
     (books)/my-books.tsx, search.tsx  Redirect stubs to the Library (Phase 8.3; remove after 2+ releases)
     (books)/[id].tsx     Book page: status line, stats, actions, its sessions, About; "…" menu (re-exported in (home)/book)
-    profile.tsx          Edit name / yearly goal / daily + target goal / genres
-    reading-growth.tsx   Growth Journey chart (hidden tab, opened from profile)
-    settings.tsx         Language, notifications, backup/restore, logout (wipes all data)
+    (progress)/index.tsx Progress: streak, week strip + stats, daily-goal card (→ growth), year card (yearly-goal sheet)
+    (progress)/growth.tsx   Growth Journey chart; GoalSheet is the only editor of daily/target goal and date
+    (progress)/history.tsx  Sessions a week at a time; tap to edit, "+" logs on that day
+    profile.tsx, reading-growth.tsx  Redirect stubs (hidden tabs; Phase 8.4; remove after 2+ releases)
+    settings.tsx         Name, language, notifications, backup/restore, erase all data
 components/              Screens' building blocks (intro/ and profile/ hold those screens' parts + styles)
   today/                 Today's parts (WeekStrip)
   session/               SessionFields (log/edit sheet fields), SessionRow (one session in a list)
   book/                  AddBookSheet (Open Library + manual), LibraryRow, BookMenuSheet (page count, delete), FinishSheet
-  ui/                    Folio primitives: Button, Sheet (the one bottom sheet), OptionSheet, Chip, BookCover, Eyebrow, Hairline,
+  progress/              GoalSheet (daily goal, target, target date)
+  ui/                    Folio primitives: Button, Sheet (the one bottom sheet), OptionSheet, FieldSheet, Chip, BookCover, Eyebrow, Hairline,
                          ProgressRule, StatRow, Screen. Build new UI from these
 contexts/
   SessionSheetsContext.tsx  Hosts the shared sheets once at the root: useSessionSheets().openLogger({bookId?, date?,
@@ -59,7 +62,7 @@ db/db.tsx                SQLite handle, queryAll/queryFirst/execute, schema init
 db/repos/                Data layer. Screens/components use ONLY these (lint-enforced):
   books.ts               addBook, listBooksWithStats, getBook, setPageCount, updateBookStatus, ...
   sessions.ts            logSession, updateSession, deleteSession, listSessionsWithBooks, daily totals
-  preferences.ts         getUserPreferences, getDailyGoal, saveOnboardingPreferences, updateProfile
+  preferences.ts         getUserPreferences, getDailyGoal, saveOnboardingPreferences, updateUsername, setYearlyBookGoal
   notificationPrefs.ts   Reminder settings row (read / ensure / write)
   appUsage.ts            App open/close tracking (times the "after I leave" reminder)
 hooks/useFocusRefresh.ts Load on focus + on data-change events (+ optional deps)
@@ -130,8 +133,10 @@ tables there and to the backup service. Test migrations against real DB files: s
 - **Book writes** go through `db/repos/books.ts` (`addBook`, `updateBookStatus`, `deleteBookWithSessions`).
   Lists come from `listBooksWithStats` (one JOIN carrying `reading_time` and `pages_from_sessions`);
   `BookCard` derives progress from those props via `computeBookProgress`.
-- **Goals** (daily/target minutes, target date) are edited only in Growth Journey; Profile edits name, yearly goal and genres.
-- **Yearly goal** counts books with status `read` whose `date_finished` is in the current year.
+- **Goals** (daily/target minutes, target date) are edited only in Growth Journey (GoalSheet); the yearly goal on Progress;
+  the name in Settings. Genres are still stored and backed up but have no UI.
+- **Yearly goal** counts books with status `read` whose `date_finished` is in the current year. `yearly_book_goal = 0`
+  means no goal: Today hides the yearly line and Progress offers "Set a goal".
 - **Session sheets**: never mount ReadingTimeLogger / EditSessionModal in a screen; call `useSessionSheets()`.
   The logger preselects `bookId` only if that book is currently being read, else the most recently read book.
   Status changes from UI go through `useBookStatusChange()`; marking a book read calls `celebrateFinish(bookId)`; when another sheet is closing, delay it ~450 ms
@@ -214,8 +219,8 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
    Dates use `toLocaleDateString()` (device locale), not the app language.
 5. Notification permission is requested on first launch before onboarding (`app/index.tsx`), not at a contextual moment.
 6. Merge-import skips sessions whose book isn't in the backup file (e.g. a sessions-only export).
-7. Growth goal: `goalSettings.validateGrowthGoals` error `target_before_current` shows a generic message;
-   profile save recomputes the weekly increase from the old goal date even when it has passed.
+7. (Fixed in 8.4: goal-form errors each have their own message, a past target date is rejected, and the form no
+   longer shifts the target date a day west of UTC.)
 
 ## Journey log
 
@@ -283,4 +288,7 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   failed finish-sheet load can't block later ones, dates outside this year show the year. 8.3 one Library (search, status
   chips, sections, sort), a root-hosted Add book sheet (Open Library + manual), long-press menu, `useBookStatusChange`;
   Today's "Choose a book" is a sheet of want-to-read books (no cross-tab navigation). Dropped on purpose: sort direction,
-  publisher search, title/author-only Open Library search, per-card buttons.
+  publisher search, title/author-only Open Library search, per-card buttons. 8.4 the Progress tab (index, growth, history),
+  yearly goal 0 = unset, name in Settings; Profile, WeeklyStatsView (Analytics) and ~92 keys removed. Review fixes: the
+  goal form showed (and re-saved) the UTC date, a day late west of UTC; an expired plan said "Growing"; "most read"
+  grouped by title; "days met" counted today before it was met; the name rule now matches onboarding (2–50).

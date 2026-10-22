@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router, Stack, Tabs } from "expo-router";
+import { Stack, Tabs } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { COLORS } from "../../themes/colors";
 import { FONTS } from "../../themes/typography";
 
@@ -54,42 +54,22 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="profile"
+          name="(progress)"
           options={{
-            title: t("navigation.profile"),
+            title: t("navigation.progress"),
+            headerShown: false,
             tabBarIcon: ({ color, focused }) => (
               <Ionicons
-                name={focused ? "person" : "person-outline"}
-                size={23}
+                name={focused ? "stats-chart" : "stats-chart-outline"}
+                size={22}
                 color={color}
               />
             ),
-            headerShown: false,
           }}
         />
-        <Tabs.Screen
-          name="reading-growth"
-          options={{
-            href: null,
-            title: t("growthJourney.title"),
-            headerShown: true,
-            headerLeft: () => (
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel={t("a11y.back")}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                onPress={() => router.replace("/(tabs)/profile")}
-                style={styles.headerBackButton}
-              >
-                <Ionicons
-                  name="chevron-back"
-                  size={24}
-                  color={COLORS.ink.primary}
-                />
-              </TouchableOpacity>
-            ),
-          }}
-        />
+        {/* Redirect stubs for retired routes (Phase 8.4) */}
+        <Tabs.Screen name="profile" options={{ href: null }} />
+        <Tabs.Screen name="reading-growth" options={{ href: null }} />
         <Tabs.Screen
           name="settings"
           options={{
@@ -135,9 +115,5 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.serif,
     fontSize: 19,
     color: COLORS.ink.primary,
-  },
-  headerBackButton: {
-    marginLeft: 8,
-    padding: 6,
   },
 });

@@ -45,7 +45,7 @@ export default function HomeLayout() {
       <Stack.Screen
         name="readinglogs"
         options={{
-          title: t("components.readingLogs.title"),
+          title: t("history.title"),
         }}
       />
     </Stack>

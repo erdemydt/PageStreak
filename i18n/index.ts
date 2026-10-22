@@ -117,6 +117,42 @@ const resources = {
         started: "Started {{title}}",
       },
 
+      progress: {
+        streakOne: "day in a row",
+        streakOther: "days in a row",
+        longest: "longest {{count}}",
+        thisWeek: "This week",
+        daysMet: "Days met",
+        perDay: "Per day",
+        mostRead: "Most read this week: {{title}} ({{time}})",
+        dailyGoal: "Daily goal",
+        minutesPerDay: "{{count}} min a day",
+        growingTo: "Growing to {{target}} min by {{date}}",
+        growingToNoDate: "Growing to {{target}} min",
+        atTarget: "At your target",
+        planEnded: "Your plan ended on {{date}}. Edit it to keep growing.",
+        openGrowth: "Opens your growth journey",
+        year: "{{year}} in books",
+        booksOfGoal: "{{count}} of {{goal}} books",
+        booksFinished: "{{count}} books finished",
+        booksFinishedOne: "1 book finished",
+        edit: "Edit",
+        setGoal: "Set a goal",
+        editYearly: "Edit your yearly goal",
+        yearlyHint: "Set a goal for the year to see how you're tracking.",
+        yearlyTitle: "Books in {{year}}",
+        yearlySheetHint: "How many books do you want to finish this year? Enter 0 for no goal.",
+        yearlyInvalid: "Please enter a whole number between 0 and 999.",
+        history: "Reading history",
+      },
+      history: {
+        title: "History",
+        thisWeekTotal: "{{time}} this week",
+        weekTotal: "{{time}} that week",
+        backToThisWeek: "Go back to this week",
+        addSession: "Log reading for {{day}}",
+        noReading: "No reading",
+      },
       today: {
         greetingMorning: "Good morning,",
         greetingAfternoon: "Good afternoon,",
@@ -223,13 +259,7 @@ const resources = {
 
         readingLogsEditModal: {
           title: "Edit session",
-          cancel: "Cancel",
           save: "Save",
-          saving: "Saving...",
-          book: "Book",
-          by: "by",
-          readingTimeLabel: "Reading Time (minutes)",
-          readingTimePlaceholder: "Enter minutes",
           notesLabel: "Notes",
           notesPlaceholder: "Optional notes about your reading session",
           deleteSession: "Delete",
@@ -250,25 +280,7 @@ const resources = {
         },
 
         readingLogs: {
-          title: "Reading Logs",
-          loadingText: "Loading reading logs...",
-          minutesThisWeek: "minutes this week",
-          noSessionsText: "No reading sessions",
-          errorTitle: "Error",
           errorMessage: "Failed to load reading logs",
-          dailyView: "Daily View",
-          analytics: "Analytics",
-          weekdays: {
-            sun: "Sun",
-            mon: "Mon",
-            tue: "Tue",
-            wed: "Wed",
-            thu: "Thu",
-            fri: "Fri",
-            sat: "Sat",
-          },
-          sessionCardBy: "by",
-          minutesSuffix: "m",
         },
 
         notificationTester: {
@@ -302,41 +314,6 @@ const resources = {
           cancelled: "🚫 Cancelled",
           allNotificationsCancelled: "All scheduled notifications cancelled!",
           failedToCancelNotifications: "Failed to cancel notifications",
-        },
-
-        weeklyStats: {
-          weeklyAnalytics: "Weekly Analytics",
-          totalReading: "Total Reading",
-          activeDays: "Active Days",
-          streakDays: "Streak Days",
-          booksRead: "Books",
-          sessions: "sessions",
-          session: "session",
-          dailyBreakdown: "Daily Reading Breakdown",
-          readingTime: "Reading Time",
-          goalMet: "Goal Met",
-          dailyGoal: "Daily Goal",
-          progressStats: "Progress Statistics",
-          weeklyGoalProgress: "Weekly Goal",
-          averagePerDay: "Average/Day",
-          day: "day",
-          days: "days",
-          currentStreak: "Current Streak",
-          totalSessions: "Total Sessions",
-          topBookThisWeek: "Top Book This Week",
-          readingTimeDistribution: "Reading Time by Hour",
-          timeMorning: "Morning (6-12)",
-          timeAfternoon: "Afternoon (12-17)",
-          timeEvening: "Evening (17-21)",
-          timeNight: "Night (21-6)",
-          insights: "Weekly Insights",
-          weeklyGoalAchieved:
-            "🎉 Congratulations! You achieved your weekly reading goal!",
-          greatStreak: "🔥 Amazing! You have a {{streak}}-day reading streak!",
-          consistentReader:
-            "⭐ Excellent consistency! You read almost every day this week.",
-          diverseReader:
-            "📚 Great variety! You read from {{count}} different books this week.",
         },
 
         bookDetailModal: {
@@ -396,10 +373,12 @@ const resources = {
         hoursMinutes: "{{hours}} h {{minutes}} min",
       },
       settings: {
+        editName: "Edit your name",
+        nameTitle: "Your name",
+        nameRequired: "Please enter a name of 2 to 50 characters.",
         title: "⚙️ Settings",
         subtitle: "Manage your PageStreak preferences",
         profile: "Profile",
-        goal: "📖 Goal: {{goal}} books this year",
         language: "Language",
         about: "About",
         appName: "PageStreak",
@@ -606,9 +585,9 @@ const resources = {
       },
 
       navigation: {
+        progress: "Progress",
         home: "Home",
         books: "Library",
-        profile: "Profile",
         settings: "Settings",
         bookDetails: "Book Details",
         notFoundTitle: "This screen doesn't exist.",
@@ -775,62 +754,9 @@ const resources = {
       },
 
       profile: {
-        subtitle: "Manage your preferences",
-        edit: "Edit Profile",
-        sections: {
-          personal: "👤 Personal Information",
-          goals: "🎯 Reading Goals",
-          preferredGenres: "🎭 Preferred Genres",
-          statistics: "📊 Statistics",
-          account: "ℹ️ Account Information",
-        },
         fields: {
-          username: "Username",
-          yearlyGoal: "Yearly Book Goal",
           currentDailyGoal: "Current Daily Reading (minutes)",
           targetDailyGoal: "Target Daily Reading (minutes)",
-          favoriteGenres: "Favorite Genres",
-        },
-        labels: {
-          username: "Username",
-          weeklyGoal: "Weekly Goal",
-        },
-        growth: {
-          title: "Weekly Minutes Growth",
-          subtitle: "Visualize and edit your gradual reading goal",
-        },
-        goalsEditedInGrowth: "Edit your daily and target minutes and the target date here",
-        discardChangesTitle: "Discard changes?",
-        discardChangesMessage: "Your unsaved profile changes will be lost.",
-        discardChanges: "Discard",
-        units: {
-          minutes: "minutes",
-          minPerDay: "min/day",
-        },
-        placeholders: {
-          username: "Enter your username",
-          yearlyGoal: "e.g., 24",
-          dailyGoal: "e.g., 30",
-          targetGoal: "e.g., 60",
-        },
-        stats: {
-          totalIncrease: "Total Increase",
-          currentRate: "Current Rate",
-          startingRate: "Starting Rate",
-          goalTargetDate: "Goal Target Date",
-          noGenres: "No genres selected",
-        },
-        buttons: {
-          cancel: "Cancel",
-          saveChanges: "Save Changes",
-          saving: "Saving...",
-        },
-        account: {
-          memberSince: "Member Since",
-          lastUpdated: "Last Updated",
-        },
-        success: {
-          message: "Your profile has been updated!",
         },
         error: {
           title: "Error",
@@ -838,22 +764,23 @@ const resources = {
           loadFailed: "Failed to load profile data. Please try again.",
         },
         validation: {
-          usernameRequired: "Username is required (2-50 characters)",
-          yearlyGoalRequired: "Yearly goal must be between 1 and 1000",
           dailyGoalRequired: "Daily goal must be between 1 and 480 minutes",
           targetGoalRequired:
             "Target goal must be between current goal and 480 minutes",
+          targetBelowCurrent: "Your target can't be lower than your current daily goal.",
+          dateInvalid: "Please enter the target date as DD/MM/YYYY.",
+          datePast: "The target date has to be in the future.",
         },
       },
 
       growthJourney: {
+        plan: "Your plan",
+        planGrowing: "+{{increase}} min each week, up to {{target}} min by {{date}}",
+        weekA11y: "Week of {{date}}: {{actual}} of {{target}} minutes",
         title: "Reading Growth Journey",
-        subtitle:
-          "Track target vs actual weekly minutes with adjustable goals.",
         loading: "Loading weekly growth...",
         success: "Growth goals updated successfully!",
         controls: {
-          range: "Range",
           weeks: "{{count}}w",
           prev: "Older",
           next: "Newer",
@@ -1016,6 +943,42 @@ const resources = {
         started: "{{title}} okunmaya başlandı",
       },
 
+      progress: {
+        streakOne: "gün üst üste",
+        streakOther: "gün üst üste",
+        longest: "en uzun {{count}}",
+        thisWeek: "Bu hafta",
+        daysMet: "Hedefe ulaşılan gün",
+        perDay: "Günlük",
+        mostRead: "Bu hafta en çok okunan: {{title}} ({{time}})",
+        dailyGoal: "Günlük hedef",
+        minutesPerDay: "Günde {{count}} dk",
+        growingTo: "{{date}} tarihine kadar {{target}} dk'ya çıkıyor",
+        growingToNoDate: "{{target}} dk'ya çıkıyor",
+        atTarget: "Hedefinizdesiniz",
+        planEnded: "Planınız {{date}} tarihinde sona erdi. Büyümeye devam etmek için düzenleyin.",
+        openGrowth: "Gelişim yolculuğunuzu açar",
+        year: "{{year}} yılında kitaplar",
+        booksOfGoal: "{{goal}} kitaptan {{count}}",
+        booksFinished: "{{count}} kitap bitirildi",
+        booksFinishedOne: "1 kitap bitirildi",
+        edit: "Düzenleyin",
+        setGoal: "Hedef belirleyin",
+        editYearly: "Yıllık hedefinizi düzenleyin",
+        yearlyHint: "Gidişatınızı görmek için bu yıl için bir hedef belirleyin.",
+        yearlyTitle: "{{year}} yılında kitaplar",
+        yearlySheetHint: "Bu yıl kaç kitap bitirmek istiyorsunuz? Hedef istemiyorsanız 0 girin.",
+        yearlyInvalid: "Lütfen 0 ile 999 arasında bir tam sayı girin.",
+        history: "Okuma geçmişi",
+      },
+      history: {
+        title: "Geçmiş",
+        thisWeekTotal: "Bu hafta {{time}}",
+        weekTotal: "O hafta {{time}}",
+        backToThisWeek: "Bu haftaya dönün",
+        addSession: "{{day}} için okuma kaydedin",
+        noReading: "Okuma yok",
+      },
       today: {
         greetingMorning: "Günaydın,",
         greetingAfternoon: "İyi günler,",
@@ -1121,13 +1084,7 @@ const resources = {
 
         readingLogsEditModal: {
           title: "Seansı düzenle",
-          cancel: "İptal",
           save: "Kaydet",
-          saving: "Kaydediliyor...",
-          book: "Kitap",
-          by: "Yazar",
-          readingTimeLabel: "Okuma Süresi (dakika)",
-          readingTimePlaceholder: "Dakika girin",
           notesLabel: "Notlar",
           notesPlaceholder: "Okuma seansınız hakkında isteğe bağlı notlar",
           deleteSession: "Sil",
@@ -1148,25 +1105,7 @@ const resources = {
         },
 
         readingLogs: {
-          title: "Okuma Kayıtları",
-          loadingText: "Okuma kayıtları yükleniyor...",
-          minutesThisWeek: "dakika bu hafta",
-          noSessionsText: "Okuma seansı yok",
-          errorTitle: "Hata",
           errorMessage: "Okuma kayıtları yüklenemedi",
-          dailyView: "Günlük Görünüm",
-          analytics: "Analitik",
-          weekdays: {
-            sun: "Paz",
-            mon: "Pzt",
-            tue: "Sal",
-            wed: "Çar",
-            thu: "Per",
-            fri: "Cum",
-            sat: "Cmt",
-          },
-          sessionCardBy: "yazan",
-          minutesSuffix: "dk",
         },
 
         notificationTester: {
@@ -1202,41 +1141,6 @@ const resources = {
           allNotificationsCancelled:
             "Tüm zamanlanmış bildirimler iptal edildi!",
           failedToCancelNotifications: "Bildirimler iptal edilemedi",
-        },
-
-        weeklyStats: {
-          weeklyAnalytics: "Haftalık Analiz",
-          totalReading: "Toplam Okuma",
-          activeDays: "Aktif Günler",
-          streakDays: "Seri Günleri",
-          booksRead: "Kitaplar",
-          sessions: "seans",
-          session: "seans",
-          dailyBreakdown: "Günlük Okuma Dağılımı",
-          readingTime: "Okuma Süresi",
-          goalMet: "Hedef Tutturuldu",
-          dailyGoal: "Günlük Hedef",
-          progressStats: "İlerleme İstatistikleri",
-          weeklyGoalProgress: "Haftalık Hedef",
-          averagePerDay: "Günlük Ort.",
-          day: "gün",
-          days: "gün",
-          currentStreak: "Mevcut Seri",
-          totalSessions: "Toplam Seans",
-          topBookThisWeek: "Bu Haftanın En Çok Okunan Kitabı",
-          readingTimeDistribution: "Saate Göre Okuma Dağılımı",
-          timeMorning: "Sabah (6-12)",
-          timeAfternoon: "Öğleden Sonra (12-17)",
-          timeEvening: "Akşam (17-21)",
-          timeNight: "Gece (21-6)",
-          insights: "Haftalık İçgörüler",
-          weeklyGoalAchieved:
-            "🎉 Tebrikler! Haftalık okuma hedefinizi başardınız!",
-          greatStreak: "🔥 Harika! {{streak}} günlük okuma seriniz var!",
-          consistentReader:
-            "⭐ Mükemmel tutarlılık! Bu hafta neredeyse her gün okudunuz.",
-          diverseReader:
-            "📚 Harika çeşitlilik! Bu hafta {{count}} farklı kitaptan okudunuz.",
         },
 
         bookDetailModal: {
@@ -1297,10 +1201,12 @@ const resources = {
         hoursMinutes: "{{hours}} sa {{minutes}} dk",
       },
       settings: {
+        editName: "Adınızı düzenleyin",
+        nameTitle: "Adınız",
+        nameRequired: "Lütfen 2 ile 50 karakter arasında bir ad girin.",
         title: "⚙️ Ayarlar",
         subtitle: "PageStreak tercihlerinizi yönetin",
         profile: "Profil",
-        goal: "📖 Hedef: Bu yıl {{goal}} kitap",
         language: "Dil",
         about: "Hakkında",
         appName: "PageStreak",
@@ -1507,9 +1413,9 @@ const resources = {
       },
 
       navigation: {
+        progress: "İlerleme",
         home: "Ana Sayfa",
         books: "Kitaplık",
-        profile: "Profil",
         settings: "Ayarlar",
         bookDetails: "Kitap Detayları",
         notFoundTitle: "Bu ekran mevcut değil.",
@@ -1672,62 +1578,9 @@ const resources = {
       },
 
       profile: {
-        subtitle: "Tercihlerinizi yönetin",
-        edit: "Profili Düzenle",
-        sections: {
-          personal: "👤 Kişisel Bilgiler",
-          goals: "🎯 Okuma Hedefleri",
-          preferredGenres: "🎭 Tercih Edilen Türler",
-          statistics: "📊 İstatistikler",
-          account: "ℹ️ Hesap Bilgileri",
-        },
         fields: {
-          username: "Kullanıcı Adı",
-          yearlyGoal: "Yıllık Kitap Hedefi",
           currentDailyGoal: "Mevcut Günlük Okuma (dakika)",
           targetDailyGoal: "Hedef Günlük Okuma (dakika)",
-          favoriteGenres: "Favori Türler",
-        },
-        labels: {
-          username: "Kullanıcı Adı",
-          weeklyGoal: "Haftalık Hedef",
-        },
-        growth: {
-          title: "Haftalık Dakika Artışı",
-          subtitle: "Kademeli okuma hedefinizi görselleştirin ve düzenleyin",
-        },
-        goalsEditedInGrowth: "Günlük ve hedef dakikalarınızı ve hedef tarihini buradan düzenleyin",
-        discardChangesTitle: "Değişiklikler silinsin mi?",
-        discardChangesMessage: "Kaydedilmemiş profil değişiklikleriniz kaybolacak.",
-        discardChanges: "Sil",
-        units: {
-          minutes: "dakika",
-          minPerDay: "dk/gün",
-        },
-        placeholders: {
-          username: "Kullanıcı adınızı girin",
-          yearlyGoal: "örn. 24",
-          dailyGoal: "örn. 30",
-          targetGoal: "örn. 60",
-        },
-        stats: {
-          totalIncrease: "Toplam Artış",
-          currentRate: "Mevcut Oran",
-          startingRate: "Başlangıç Oranı",
-          goalTargetDate: "Hedef Tarih",
-          noGenres: "Tür seçilmedi",
-        },
-        buttons: {
-          cancel: "İptal",
-          saveChanges: "Değişiklikleri Kaydet",
-          saving: "Kaydediliyor...",
-        },
-        account: {
-          memberSince: "Üye Olma Tarihi",
-          lastUpdated: "Son Güncelleme",
-        },
-        success: {
-          message: "Profiliniz güncellendi!",
         },
         error: {
           title: "Hata",
@@ -1735,22 +1588,23 @@ const resources = {
           loadFailed: "Profil verileri yüklenemedi. Lütfen tekrar deneyin.",
         },
         validation: {
-          usernameRequired: "Kullanıcı adı gerekli (2-50 karakter)",
-          yearlyGoalRequired: "Yıllık hedef 1 ile 1000 arasında olmalıdır",
           dailyGoalRequired: "Günlük hedef 1 ile 480 dakika arasında olmalıdır",
           targetGoalRequired:
             "Hedef, mevcut hedef ile 480 dakika arasında olmalıdır",
+          targetBelowCurrent: "Hedefiniz mevcut günlük hedefinizden düşük olamaz.",
+          dateInvalid: "Lütfen hedef tarihini GG/AA/YYYY biçiminde girin.",
+          datePast: "Hedef tarihi ileri bir tarih olmalıdır.",
         },
       },
 
       growthJourney: {
+        plan: "Planınız",
+        planGrowing: "Her hafta +{{increase}} dk, {{date}} tarihine kadar {{target}} dk",
+        weekA11y: "{{date}} haftası: {{target}} dakikanın {{actual}} dakikası",
         title: "Okuma Artış Yolculuğu",
-        subtitle:
-          "Hedef ve gerçek haftalık dakikaları karşılaştırın, hedeflerinizi düzenleyin.",
         loading: "Haftalık artış yükleniyor...",
         success: "Artış hedefleri başarıyla güncellendi!",
         controls: {
-          range: "Aralık",
           weeks: "{{count}}h",
           prev: "Daha Eski",
           next: "Daha Yeni",

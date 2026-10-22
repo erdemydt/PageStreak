@@ -20,6 +20,7 @@ import {
   validateBackupFile,
 } from "../services/dataBackupService";
 import { COLORS } from "../themes/colors";
+import { formatDate, LONG_DATE } from "../utils/format";
 
 interface DataImportModalProps {
   visible: boolean;
@@ -293,10 +294,10 @@ export default function DataImportModal({
       <View style={styles.stepHeader}>
         <Ionicons name="checkmark-circle" size={48} color={COLORS.success} />
         <Text style={styles.stepTitle}>
-          {t("dataBackup.import.steps.validate.valid")}
+          {t("dataBackup.import.steps.validate.validTitle")}
         </Text>
         <Text style={styles.stepDescription}>
-          Your backup file is valid and ready to import
+          {t("dataBackup.import.steps.validate.valid")}
         </Text>
       </View>
 
@@ -311,7 +312,7 @@ export default function DataImportModal({
               {t("dataBackup.import.steps.validate.backupInfo.created")}
             </Text>
             <Text style={styles.infoValue}>
-              {new Date(backupInfo.createdAt).toLocaleDateString()}
+              {formatDate(backupInfo.createdAt, LONG_DATE)}
             </Text>
           </View>
 
@@ -433,7 +434,7 @@ export default function DataImportModal({
                 ]}
               >
                 {t("dataBackup.import.steps.configure.options.merge")}{" "}
-                (Recommended)
+                {t("dataBackup.import.steps.configure.options.recommended")}
               </Text>
             </View>
             <Text style={styles.optionDescription}>

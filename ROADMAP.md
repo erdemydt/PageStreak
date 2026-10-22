@@ -22,7 +22,7 @@ decides when to ship and tests on device first.
 4. Still open: an Android notification icon asset; choose Xcode Cloud vs EAS.
 
 **Next work, in order:**
-1. **Phase 9: Folio QA** (below): 9.0 done; next 9.1 quick bugs, 9.2 serif accents, 9.3 backup sheet, 9.4 polish.
+1. **Phase 9: Folio QA** (below): 9.0–9.1 done; next 9.2 serif accents, 9.3 backup sheet, 9.4 polish.
    Phase 8 history follows.
    **Phase 8: Structure + Folio redesign** (below). The owner chose design direction **A · Folio** from the
    prototypes (https://claude.ai/artifact/23gdMca8CB6BvLTXN5yaaZ, Main + FolioBook artboards) and approved a new
@@ -81,6 +81,9 @@ Kept for the owner's release notes; clear it when a release ships.
 - New onboarding: your name, how long you read today (quick presets), whether to grow that goal toward a target (with
   a live preview of the weekly step), a reminder, and optionally the book you're reading now. No genre or yearly-goal
   questions; set a yearly goal any time in Progress.
+- Changing a book's status can be undone from the toast. Book search no longer drops the last letter typed. Covers
+  that load slowly show the drawn cover instead of a blank tile. Logging pages shows "Page 20 of 608" as you type.
+  Reminders read as one calm sentence. The week's "per day" average counts the same days as "days met".
 
 ---
 
@@ -239,9 +242,12 @@ backups always include everything (no per-table export switches).
 - [x] **9.0 Blocker + first fixes**: launch skipped boot (`unstable_settings.initialRouteName` in tab layouts); Turkish
   uppercase (`toAppUpperCase`); week strip "before you started" days; Growth rebuilt (planned bars, paging, full-week
   summary, axis labels); reminder options under their own mode. Time-zone checked (LA, Istanbul, Auckland, UTC), reviewed.
-- [ ] **9.1 Quick bug batch**: restore text in i18n with `formatDate`; stale search submit; blank covers
-  (`?default=false`); status toast with Undo; log/edit helper text ("Page 20 of 608"); calmer reminder copy; Progress
-  "Per day" and "Days met" counting the same days.
+- [x] **9.1 Quick bug batch**: restore preview text in i18n, its date via `formatDate`, honest merge description; search
+  submits the field's own text; the drawn cover sits under loading images (blank tiles were slow archive.org redirects,
+  not placeholders, so `?default=false` wouldn't have helped); status toasts with an exact Undo (`restoreBookStatus`
+  puts back status, start and finish dates); the status menu keeps its own names, in sentence case; one live
+  "Page 20 of 608" line in log/edit; calm reminder copy (no emoji or exclamation marks); Progress "Per day" counts the
+  same days as "Days met".
 - [ ] **9.2 Serif accents**: Newsreader clips Turkish capitals (İ, Ş, Ç) on iOS; bundle it with a raised ascender, then a
   screenshot pass over every screen.
 - [ ] **9.3 Backup and restore on `Sheet`**: one "Create backup" (everything), picker first, merge/replace only when data

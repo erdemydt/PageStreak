@@ -166,6 +166,30 @@ export async function updateBookStatus(
   emitDataChange("books");
 }
 
+/** A book's status and its dates, as saved before a change (for Undo) */
+export type BookStatusSnapshot = Pick<
+  EnhancedBook,
+  "reading_status" | "date_started" | "date_finished"
+>;
+
+/** Put back a status exactly as it was, dates included (Undo of updateBookStatus) */
+export async function restoreBookStatus(
+  bookId: number,
+  snapshot: BookStatusSnapshot,
+): Promise<void> {
+  await execute(
+    "UPDATE enhanced_books SET reading_status = ?, date_started = ?, date_finished = ? WHERE id = ?",
+    [
+      snapshot.reading_status,
+      snapshot.date_started ?? null,
+      snapshot.date_finished ?? null,
+      bookId,
+    ],
+  );
+  await syncBookCurrentPageFromSessions(bookId);
+  emitDataChange("books");
+}
+
 /**
  * Delete a book together with its reading sessions
  */

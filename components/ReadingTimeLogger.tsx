@@ -259,11 +259,6 @@ export default function ReadingTimeLogger({
     onClose();
   };
   const scrollRef = useRef<ScrollView>(null);
-  const pagesValid =
-    pages.trim() !== "" &&
-    !isNaN(Number(pages)) &&
-    Number(pages) > 0 &&
-    Number(pages) <= remainingPages;
 
   const selectBook = (book: EnhancedBook) => {
     setSelectedBook(book);
@@ -376,23 +371,7 @@ export default function ReadingTimeLogger({
             ? t("components.readingTimeLogger.noPagesToLog")
             : t("components.readingTimeLogger.selectBookFirst")
         }
-        remainingText={
-          selectedBook
-            ? t("components.readingTimeLogger.remainingPages", {
-                remaining: remainingPages,
-                total: selectedBook.page,
-              })
-            : undefined
-        }
-        preview={
-          selectedBook && pagesValid
-            ? t("components.readingTimeLogger.progressPreview", {
-                pages: Number(pages),
-                bookName: selectedBook.name,
-                total: selectedBook.page,
-              })
-            : undefined
-        }
+        total={selectedBook?.page}
       />
 
       {selectedBook && (

@@ -18,7 +18,9 @@ type Props = {
 /**
  * A book cover with Folio's book-object shadow. Books without a cover image (or
  * whose image fails to load) get a drawn cover: a spine color picked from the
- * title, the title in serif italic, and the author in spaced capitals.
+ * title, the title in serif italic, and the author in spaced capitals. The drawn
+ * cover also sits under a loading image (Open Library covers redirect to
+ * archive.org and can take seconds), so a slow cover never shows a blank tile.
  */
 export default function BookCover({ uri, title, author, width, style }: Props) {
   const [failed, setFailed] = useState(false);
@@ -31,6 +33,36 @@ export default function BookCover({ uri, title, author, width, style }: Props) {
       accessibilityRole="image"
       accessibilityLabel={title}
     >
+      <View
+        style={[
+          styles.drawn,
+          size,
+          {
+            backgroundColor: spineColor(title),
+            paddingVertical: width * 0.14,
+            paddingHorizontal: width * 0.09,
+          },
+        ]}
+      >
+        <Text
+          style={[styles.drawnTitle, { fontSize: Math.max(10, width * 0.19) }]}
+          numberOfLines={3}
+          adjustsFontSizeToFit
+        >
+          {title}
+        </Text>
+        {author ? (
+          <Text
+            style={[
+              styles.drawnAuthor,
+              { fontSize: Math.max(5, width * 0.075) },
+            ]}
+            numberOfLines={2}
+          >
+            {toAppUpperCase(author)}
+          </Text>
+        ) : null}
+      </View>
       {uri && !failed ? (
         <Image
           source={{ uri }}
@@ -40,35 +72,7 @@ export default function BookCover({ uri, title, author, width, style }: Props) {
           transition={150}
           onError={() => setFailed(true)}
         />
-      ) : (
-        <View
-          style={[
-            styles.drawn,
-            size,
-            {
-              backgroundColor: spineColor(title),
-              paddingVertical: width * 0.14,
-              paddingHorizontal: width * 0.09,
-            },
-          ]}
-        >
-          <Text
-            style={[styles.drawnTitle, { fontSize: Math.max(10, width * 0.19) }]}
-            numberOfLines={3}
-            adjustsFontSizeToFit
-          >
-            {title}
-          </Text>
-          {author ? (
-            <Text
-              style={[styles.drawnAuthor, { fontSize: Math.max(5, width * 0.075) }]}
-              numberOfLines={2}
-            >
-              {toAppUpperCase(author)}
-            </Text>
-          ) : null}
-        </View>
-      )}
+      ) : null}
       <View style={styles.spineHighlight} pointerEvents="none" />
     </View>
   );
@@ -96,6 +100,9 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   image: {
+    position: "absolute",
+    top: 0,
+    left: 0,
     borderTopLeftRadius: RADIUS.cover - 1,
     borderBottomLeftRadius: RADIUS.cover - 1,
     borderTopRightRadius: RADIUS.cover + 2,

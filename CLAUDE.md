@@ -81,7 +81,7 @@ utils/
   dateUtils.ts           Local-date helpers + parseDbDate (use these, see Gotchas)
   week.ts                Monday-first week dates, weekday labels, loadWeek (each day vs its own goal)
   readingProgress.ts     Session aggregates, streaks, page-progress sync
-  bookStatus.ts          Status colors/labels + updateBookStatus / deleteBookWithSessions
+  bookStatus.ts          Status colors
   goalSettings.ts        Growth-goal validation and derived fields
   goalHistory.ts         Goal timeline: recordGoalChange, loadGoalForDate, backfill
   logger.ts              Dev-only log/warn
@@ -310,3 +310,7 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   measured from the window end, full-week-only summary, axis labels anchored on this week); reminder controls sit under
   their own mode. Date logic checked under LA, Istanbul, Auckland and UTC; paging over 195 range/history combinations.
   The reviewer found unreachable past weeks, a partial-week trend, projection a day late, a stranding redirect.
+- **Phase 9.1: quick bugs.** Owner decisions: status names stay context-specific (the menu keeps "Currently reading",
+  the chips say "Reading"); backups will always include everything (9.3). Status toasts have an Undo that restores the
+  exact row (`restoreBookStatus`). Blank search covers were slow archive.org redirects: BookCover now draws its fallback
+  under the image. Log/edit show one "Page N of T" line. Reminder copy is one calm sentence.

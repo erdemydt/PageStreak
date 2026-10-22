@@ -85,8 +85,9 @@ export default function AddBookSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const search = async () => {
-    const q = query.trim();
+  // Submit passes the field's own text: `query` can still be a keystroke behind
+  const search = async (text: string) => {
+    const q = text.trim();
     if (!q) return;
     Keyboard.dismiss();
     const id = ++searchId.current;
@@ -240,7 +241,7 @@ export default function AddBookSheet({
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
-              onSubmitEditing={search}
+              onSubmitEditing={(e) => search(e.nativeEvent.text)}
               placeholder={t("addBook.searchPlaceholder")}
               placeholderTextColor={COLORS.ink.disabled}
               returnKeyType="search"

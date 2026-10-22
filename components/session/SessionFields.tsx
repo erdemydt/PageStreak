@@ -97,18 +97,16 @@ export function PagesField({
   value,
   onChange,
   remaining,
-  /** e.g. "112 of 272 pages left" */
-  remainingText,
-  /** Shown when the value is valid, e.g. "You'll be on page 154 of 272" */
-  preview,
+  total,
   enabled,
   disabledHint,
 }: {
   value: string;
   onChange: (pages: string) => void;
+  /** Pages this session can still add (an edited session's own pages count as free) */
   remaining: number;
-  remainingText?: string;
-  preview?: string;
+  /** The book's page count; leave it out when no book is chosen */
+  total?: number;
   enabled: boolean;
   disabledHint?: string;
 }) {
@@ -116,10 +114,24 @@ export function PagesField({
   const entered = Number(value);
   const hasValue = value.trim() !== "" && !Number.isNaN(entered) && entered > 0;
   const tooMany = hasValue && entered > remaining;
+  // One line that follows the typing: "Page 20 of 608"
+  const startPage = total ? total - remaining : 0;
+  const pageLine = !total
+    ? null
+    : hasValue || startPage > 0
+      ? t("components.readingTimeLogger.pageOfTotal", {
+          page: startPage + (hasValue && !tooMany ? entered : 0),
+          total,
+        })
+      : t("components.readingTimeLogger.totalPages", { total });
 
   return (
     <FieldGroup label={t("components.readingTimeLogger.pagesRead")} optional>
-      {remainingText ? <Text style={styles.meta}>{remainingText}</Text> : null}
+      {pageLine ? (
+        <Text style={[styles.meta, hasValue && !tooMany && styles.preview]}>
+          {pageLine}
+        </Text>
+      ) : null}
       {enabled && remaining > 0 && (
         <View style={styles.chipWrap}>
           {QUICK_PAGES.filter((pages) => pages <= remaining).map((pages) => (
@@ -140,13 +152,7 @@ export function PagesField({
           onChangeText={onChange}
           keyboardType="number-pad"
           editable={enabled}
-          placeholder={
-            enabled
-              ? t("components.readingTimeLogger.enterPagesPlaceholder", {
-                  max: remaining,
-                })
-              : disabledHint
-          }
+          placeholder={enabled ? undefined : disabledHint}
           placeholderTextColor={COLORS.ink.disabled}
           maxLength={5}
           accessibilityLabel={t("components.readingTimeLogger.pagesRead")}
@@ -166,8 +172,6 @@ export function PagesField({
         <Text style={styles.warning}>
           {t("components.readingTimeLogger.tooManyPagesWarning", { remaining })}
         </Text>
-      ) : hasValue && preview ? (
-        <Text style={styles.preview}>{preview}</Text>
       ) : null}
     </FieldGroup>
   );

@@ -92,12 +92,14 @@ export default function ProgressScreen() {
   useFocusRefresh(load, ["sessions", "books", "preferences"]);
 
   // This week so far, from the user's first day. Today counts toward "days met"
-  // only once it's met, so the week doesn't start at 0/1 every Monday morning
+  // and "per day" only once it's met, so the week doesn't start at 0/1 every
+  // Monday morning and a half-read today doesn't drag the average down
   const elapsed = week.filter((d) => d.state !== "upcoming" && d.state !== "before");
   const judged = elapsed.filter((d) => d.state !== "today" || d.metToday);
   const weekMinutes = elapsed.reduce((sum, d) => sum + d.minutes, 0);
   const daysMet = judged.filter((d) => d.state === "met" || d.metToday).length;
-  const average = elapsed.length ? Math.round(weekMinutes / elapsed.length) : 0;
+  const judgedMinutes = judged.reduce((sum, d) => sum + d.minutes, 0);
+  const average = judged.length ? Math.round(judgedMinutes / judged.length) : 0;
 
   const dailyGoal = prefs?.current_reading_rate_minutes_per_day || 0;
   const startGoal = prefs?.initial_reading_rate_minutes_per_day || dailyGoal;

@@ -122,9 +122,7 @@ export async function generateReminderMessage(firesToday: boolean = true): Promi
       });
     }
     return i18n.t(`${key}.goalRemaining`, {
-      baseMessage,
       remainingTime: formatDuration(remainingMinutes, 'long'),
-      dailyGoal: goal.dailyGoal,
     });
   } catch (error) {
     console.error('❌ Error generating notification message:', error);

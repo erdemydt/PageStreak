@@ -191,13 +191,6 @@ export default function EditSessionModal({
 
   if (!session) return null;
 
-  const previousPages = session.pages_read || 0;
-  const pagesValid =
-    pages.trim() !== "" &&
-    !isNaN(Number(pages)) &&
-    Number(pages) > 0 &&
-    Number(pages) <= remainingPages;
-
   return (
     <Sheet
       visible={visible}
@@ -247,36 +240,7 @@ export default function EditSessionModal({
             ? t("components.readingTimeLogger.noPagesToLog")
             : t("components.readingTimeLogger.selectBookFirst")
         }
-        remainingText={
-          bookData
-            ? previousPages > 0
-              ? t("components.readingTimeLogger.remainingPagesForEdit", {
-                  remaining: remainingPages,
-                  total: bookData.page,
-                  current: previousPages,
-                })
-              : t("components.readingTimeLogger.remainingPages", {
-                  remaining: remainingPages,
-                  total: bookData.page,
-                })
-            : undefined
-        }
-        preview={
-          bookData && pagesValid
-            ? previousPages > 0
-              ? t("components.readingTimeLogger.progressPreviewForEdit", {
-                  pages: Number(pages),
-                  oldPages: previousPages,
-                  bookName: bookData.name,
-                  total: bookData.page,
-                })
-              : t("components.readingTimeLogger.progressPreview", {
-                  pages: Number(pages),
-                  bookName: bookData.name,
-                  total: bookData.page,
-                })
-            : undefined
-        }
+        total={bookData?.page}
       />
 
       <NotesField

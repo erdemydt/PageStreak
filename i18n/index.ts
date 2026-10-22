@@ -186,13 +186,6 @@ const resources = {
         percent: "{{percent}}%",
       },
       components: {
-        bookCard: {
-          currentlyReading: "Currently Reading",
-          read: "Read",
-          wantToRead: "Want to Read",
-          unknown: "Unknown",
-        },
-
         sessionDate: {
           title: "Date",
           today: "Today",
@@ -218,19 +211,12 @@ const resources = {
           optional: "optional",
           trackPagesDescription:
             "Track your page progress to see completion percentage",
-          remainingPages: "{{remaining}} of {{total}} pages remaining",
-          remainingPagesForEdit:
-            "You can enter up to {{remaining}} pages (includes {{current}} already logged in this session)",
           pagesShort: "p",
-          enterPagesPlaceholder: "e.g., {{max}} pages max",
           selectBookFirst: "Select a book first",
           noPagesToLog: "No pages left to log for this book",
-          progressPreview:
-            '📊 Adding {{pages}} pages to "{{bookName}}" ({{total}} pages total)',
-          progressPreviewForEdit:
-            '📊 Changing from {{oldPages}} to {{pages}} pages for "{{bookName}}" ({{total}} pages total)',
-          tooManyPagesWarning:
-            "⚠️ Only {{remaining}} pages remaining in this book",
+          pageOfTotal: "Page {{page}} of {{total}}",
+          totalPages: "{{total}} pages",
+          tooManyPagesWarning: "Only {{remaining}} pages left in this book",
           enterValidPages: "Please enter a valid number of pages",
           tooManyPages: "Too Many Pages",
           tooManyPagesMessage:
@@ -349,7 +335,8 @@ const resources = {
           deleteTitle: "Delete Book",
           cancel: "Cancel",
           delete: "Delete",
-          bookStatusUpdated: "Book status has been updated to {{statusText}}.",
+          movedToWantToRead: "Moved to your reading list",
+          movedToReading: "Marked as reading",
           failedUpdate: "Failed to update book status. Please try again.",
           deleteWithSessionsMessage:
             'Are you sure you want to delete "{{title}}"? This will also remove all reading session data for this book.',
@@ -357,6 +344,7 @@ const resources = {
         },
       },
       error: "Error",
+      undo: "Undo",
       a11y: {
         back: "Back",
         close: "Close",
@@ -409,14 +397,11 @@ const resources = {
         permissionRequired: "Permission Required",
         notificationMessages: {
           streakAtRisk:
-            "Read {{remainingTime}} more to keep your {{streak}}-day streak! 🔥",
-          goalCompleted:
-            "Congratulations! You've already reached your daily reading goal! 🎉",
-          goalRemaining:
-            "{{baseMessage}} You have {{remainingTime}} left to reach your daily goal of {{dailyGoal}} minutes.",
-          defaultTitle: "Time to read! 📚",
-          defaultMessage:
-            "You haven't reached your daily reading goal yet. Keep your streak going!",
+            "{{remainingTime}} left today to keep your {{streak}}-day streak.",
+          goalCompleted: "You've met today's goal.",
+          goalRemaining: "{{remainingTime}} left to today's goal.",
+          defaultTitle: "Time to read",
+          defaultMessage: "A few pages today keeps the habit going.",
           timeMinute: "{{count}} minute",
           timeMinutes: "{{count}} minutes",
           timeHour: "{{count}} hour",
@@ -503,6 +488,7 @@ const resources = {
             },
             validate: {
               validating: "Validating backup file...",
+              validTitle: "Backup ready",
               valid: "Your backup file is valid and ready to import",
               invalid: "Invalid Backup File",
               warnings: "Backup Warnings",
@@ -525,9 +511,10 @@ const resources = {
               importMode: "Import Mode",
               options: {
                 merge: "Merge Data",
+                recommended: "(Recommended)",
                 replace: "Replace Data",
                 mergeDescription:
-                  "Add backup data to your existing data. Duplicate entries will be updated.",
+                  "Add the backup to your existing data. Nothing already here is overwritten; duplicate sessions are skipped.",
                 replaceDescription:
                   "Delete all current data and replace with backup. This cannot be undone.",
               },
@@ -743,11 +730,11 @@ const resources = {
         title: "Reading status",
         options: {
           wantToRead: {
-            label: "Want to Read",
+            label: "Want to read",
             description: "Add to your reading list",
           },
           currentlyReading: {
-            label: "Currently Reading",
+            label: "Currently reading",
             description: "You are reading this book",
           },
           read: {
@@ -943,13 +930,6 @@ const resources = {
         percent: "%{{percent}}",
       },
       components: {
-        bookCard: {
-          currentlyReading: "Okunmakta",
-          read: "Okundu",
-          wantToRead: "Okuma Listesinde",
-          unknown: "Bilinmiyor",
-        },
-
         sessionDate: {
           title: "Tarih",
           today: "Bugün",
@@ -975,18 +955,12 @@ const resources = {
           optional: "isteğe bağlı",
           trackPagesDescription:
             "Tamamlanma yüzdesini görmek için sayfa ilerlemenizi takip edin",
-          remainingPages: "{{total}} sayfanın {{remaining}} sayfası kaldı",
-          remainingPagesForEdit:
-            "En fazla {{remaining}} sayfa girebilirsiniz (bu oturumda kaydedilmiş {{current}} sayfa dahil)",
           pagesShort: "s",
-          enterPagesPlaceholder: "örn., en fazla {{max}} sayfa",
           selectBookFirst: "Önce bir kitap seçin",
           noPagesToLog: "Bu kitap için kaydedilecek sayfa kalmadı",
-          progressPreview:
-            '📊 "{{bookName}}" kitabına {{pages}} sayfa ekleniyor (toplam {{total}} sayfa)',
-          progressPreviewForEdit:
-            '📊 "{{bookName}}" için {{oldPages}} sayfadan {{pages}} sayfaya değiştiriliyor (toplam {{total}} sayfa)',
-          tooManyPagesWarning: "⚠️ Bu kitapta sadece {{remaining}} sayfa kaldı",
+          pageOfTotal: "Sayfa {{page}} / {{total}}",
+          totalPages: "{{total}} sayfa",
+          tooManyPagesWarning: "Bu kitapta yalnızca {{remaining}} sayfa kaldı",
           enterValidPages: "Lütfen geçerli bir sayfa sayısı girin",
           tooManyPages: "Çok Fazla Sayfa",
           tooManyPagesMessage:
@@ -1108,7 +1082,8 @@ const resources = {
           deleteTitle: "Kitabı Sil",
           cancel: "İptal",
           delete: "Sil",
-          bookStatusUpdated: "Kitap durumu {{statusText}} olarak güncellendi.",
+          movedToWantToRead: "Okuma listenize taşındı",
+          movedToReading: "Okunuyor olarak işaretlendi",
           failedUpdate: "Kitap durumu güncellenemedi. Lütfen tekrar deneyin.",
           deleteWithSessionsMessage:
             '"{{title}}" kitabını silmek istediğinizden emin misiniz? Bu kitaba ait tüm okuma seansları da silinecek.',
@@ -1116,6 +1091,7 @@ const resources = {
         },
       },
       error: "Hata",
+      undo: "Geri al",
       a11y: {
         back: "Geri",
         close: "Kapat",
@@ -1168,14 +1144,11 @@ const resources = {
         permissionRequired: "İzin Gerekli",
         notificationMessages: {
           streakAtRisk:
-            "{{remainingTime}} daha okuyarak {{streak}} günlük serinizi koruyun! 🔥",
-          goalCompleted:
-            "Tebrikler! Günlük okuma hedefinize zaten ulaştınız! 🎉",
-          goalRemaining:
-            "{{baseMessage}} Günlük {{dailyGoal}} dakikalık hedefinize ulaşmak için {{remainingTime}} kaldı.",
-          defaultTitle: "Okuma zamanı! 📚",
-          defaultMessage:
-            "Henüz günlük okuma hedefinize ulaşamadınız. Serinizi sürdürün!",
+            "{{streak}} günlük seriniz için bugün {{remainingTime}} kaldı.",
+          goalCompleted: "Bugünkü hedefinize ulaştınız.",
+          goalRemaining: "Bugünkü hedefinize {{remainingTime}} kaldı.",
+          defaultTitle: "Okuma zamanı",
+          defaultMessage: "Bugün birkaç sayfa okumak alışkanlığınızı sürdürür.",
           timeMinute: "{{count}} dakika",
           timeMinutes: "{{count}} dakika",
           timeHour: "{{count}} saat",
@@ -1262,6 +1235,7 @@ const resources = {
             },
             validate: {
               validating: "Yedek dosya doğrulanıyor...",
+              validTitle: "Yedek hazır",
               valid: "Yedek dosyanız geçerli ve içe aktarılmaya hazır",
               invalid: "Geçersiz Yedek Dosyası",
               warnings: "Yedek Uyarıları",
@@ -1284,9 +1258,10 @@ const resources = {
               importMode: "İçe Aktarma Modu",
               options: {
                 merge: "Veri Birleştir",
+                recommended: "(Önerilen)",
                 replace: "Veri Değiştir",
                 mergeDescription:
-                  "Yedek verilerini mevcut verilerinize ekleyin. Tekrarlanan girişler güncellenecek.",
+                  "Yedeği mevcut verilerinize ekler. Var olan hiçbir şeyin üzerine yazılmaz; tekrarlanan seanslar atlanır.",
                 replaceDescription:
                   "Tüm mevcut verileri silin ve yedekle değiştirin. Bu geri alınamaz.",
               },

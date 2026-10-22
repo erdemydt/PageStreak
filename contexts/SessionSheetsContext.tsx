@@ -9,7 +9,9 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert } from "react-native";
+import AddBookSheet from "../components/book/AddBookSheet";
 import FinishSheet from "../components/book/FinishSheet";
+import { BookStatus } from "../components/BookStatusModal";
 import EditSessionModal from "../components/EditSessionModal";
 import ReadingTimeLogger from "../components/ReadingTimeLogger";
 import { SHEET_HANDOFF_MS } from "../components/ui/Sheet";
@@ -34,19 +36,27 @@ export type LoggerOptions = {
   onClose?: () => void;
 };
 
+export type AddBookOptions = {
+  /** Preselected status (default want_to_read) */
+  status?: BookStatus;
+  /** Close after one book (e.g. Today's "add the book you're reading") */
+  closeOnAdd?: boolean;
+};
+
 type SessionSheets = {
   openLogger: (options?: LoggerOptions) => void;
   editSession: (session: SessionWithBook) => void;
   /** After a book is marked read: its place in the year and what to read next */
   celebrateFinish: (bookId: number) => void;
+  openAddBook: (options?: AddBookOptions) => void;
 };
 
 const SessionSheetsContext = createContext<SessionSheets | null>(null);
 
 /**
- * Hosts the session sheets once, at the root, so any screen can log a session
- * (Today, a book's page, History), edit one, or celebrate a finished book
- * without mounting its own copy.
+ * Hosts the shared sheets once, at the root, so any screen can log a session
+ * (Today, a book's page, History), edit one, celebrate a finished book or add
+ * a book without mounting its own copy.
  */
 export function SessionSheetsProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -56,6 +66,8 @@ export function SessionSheetsProvider({ children }: { children: ReactNode }) {
   const [editVisible, setEditVisible] = useState(false);
   const [finishedBookId, setFinishedBookId] = useState<number | null>(null);
   const [finishVisible, setFinishVisible] = useState(false);
+  const [addOptions, setAddOptions] = useState<AddBookOptions>({});
+  const [addVisible, setAddVisible] = useState(false);
 
   const openLogger = useCallback((options: LoggerOptions = {}) => {
     setLoggerOptions(options);
@@ -73,6 +85,11 @@ export function SessionSheetsProvider({ children }: { children: ReactNode }) {
     );
     setFinishedBookId(bookId);
     setFinishVisible(true);
+  }, []);
+
+  const openAddBook = useCallback((options: AddBookOptions = {}) => {
+    setAddOptions(options);
+    setAddVisible(true);
   }, []);
 
   // Finished from the log sheet: celebrate once that sheet has slid away
@@ -121,8 +138,8 @@ export function SessionSheetsProvider({ children }: { children: ReactNode }) {
   };
 
   const value = useMemo(
-    () => ({ openLogger, editSession, celebrateFinish }),
-    [openLogger, editSession, celebrateFinish],
+    () => ({ openLogger, editSession, celebrateFinish, openAddBook }),
+    [openLogger, editSession, celebrateFinish, openAddBook],
   );
 
   return (
@@ -148,6 +165,12 @@ export function SessionSheetsProvider({ children }: { children: ReactNode }) {
         bookId={finishedBookId}
         visible={finishVisible}
         onClose={() => setFinishVisible(false)}
+      />
+      <AddBookSheet
+        visible={addVisible}
+        onClose={() => setAddVisible(false)}
+        initialStatus={addOptions.status}
+        closeOnAdd={addOptions.closeOnAdd}
       />
     </SessionSheetsContext.Provider>
   );

@@ -40,9 +40,8 @@ app/
     (home)/index.tsx     Today (Folio): minutes vs goal + streak, week strip (→ readinglogs), the book read most
                          recently (switcher if several), Log reading / timer, today's sessions (tap → edit), yearly line
     (home)/readinglogs.tsx  Week view of sessions, edit/delete sessions, WeeklyStatsView toggle
-    (books)/index.tsx    Library preview (10 books, status filter), manual add form
-    (books)/my-books.tsx Full library: search/sort/filter
-    (books)/search.tsx   Open Library search → add book with status
+    (books)/index.tsx    Library: search, status chips, sort sheet, long-press menu (status, delete), "+" → Add sheet
+    (books)/my-books.tsx, search.tsx  Redirect stubs to the Library (Phase 8.3; remove after 2+ releases)
     (books)/[id].tsx     Book page: status line, stats, actions, its sessions, About; "…" menu (re-exported in (home)/book)
     profile.tsx          Edit name / yearly goal / daily + target goal / genres
     reading-growth.tsx   Growth Journey chart (hidden tab, opened from profile)
@@ -50,12 +49,12 @@ app/
 components/              Screens' building blocks (intro/ and profile/ hold those screens' parts + styles)
   today/                 Today's parts (WeekStrip)
   session/               SessionFields (log/edit sheet fields), SessionRow (one session in a list)
-  book/                  BookMenuSheet (page count, delete), FinishSheet (the finish moment)
-  ui/                    Folio primitives: Button, Sheet (the one bottom sheet), BookCover, Eyebrow, Hairline,
+  book/                  AddBookSheet (Open Library + manual), LibraryRow, BookMenuSheet (page count, delete), FinishSheet
+  ui/                    Folio primitives: Button, Sheet (the one bottom sheet), OptionSheet, Chip, BookCover, Eyebrow, Hairline,
                          ProgressRule, StatRow, Screen. Build new UI from these
 contexts/
-  SessionSheetsContext.tsx  Hosts the log, edit and finish sheets once at the root: useSessionSheets()
-                         .openLogger({bookId?, date?, minutes?, onSuccess?}) / editSession(s) / celebrateFinish(bookId)
+  SessionSheetsContext.tsx  Hosts the shared sheets once at the root: useSessionSheets().openLogger({bookId?, date?,
+                         minutes?, onSuccess?}) / editSession(s) / celebrateFinish(bookId) / openAddBook({status?, closeOnAdd?})
 db/db.tsx                SQLite handle, queryAll/queryFirst/execute, schema init
 db/repos/                Data layer. Screens/components use ONLY these (lint-enforced):
   books.ts               addBook, listBooksWithStats, getBook, setPageCount, updateBookStatus, ...
@@ -64,6 +63,7 @@ db/repos/                Data layer. Screens/components use ONLY these (lint-enf
   notificationPrefs.ts   Reminder settings row (read / ensure / write)
   appUsage.ts            App open/close tracking (times the "after I leave" reminder)
 hooks/useFocusRefresh.ts Load on focus + on data-change events (+ optional deps)
+hooks/useBookStatusChange.ts  The one way to change a status from UI (confirms leaving "read", finish sheet, toast)
 types/models.ts          Row types (EnhancedBook, ReadingSession, UserPreferences, ...)
 services/
   notificationService.ts Reminder entry point (facade): permissions, prefs, app-state lifecycle
@@ -134,7 +134,7 @@ tables there and to the backup service. Test migrations against real DB files: s
 - **Yearly goal** counts books with status `read` whose `date_finished` is in the current year.
 - **Session sheets**: never mount ReadingTimeLogger / EditSessionModal in a screen; call `useSessionSheets()`.
   The logger preselects `bookId` only if that book is currently being read, else the most recently read book.
-  Marking a book read anywhere calls `celebrateFinish(bookId)`; when another sheet is closing, delay it ~450 ms
+  Status changes from UI go through `useBookStatusChange()`; marking a book read calls `celebrateFinish(bookId)`; when another sheet is closing, delay it ~450 ms
   (iOS can't present a modal while one is dismissing).
 - **Reminder taps** land on Today (`NotificationService.onReminderTapped` in the root layout, `router.dismissTo` so Today
   isn't pushed twice), only for onboarded users and only after boot (`utils/boot.ts`; a launching tap is left to app/index.tsx).
@@ -280,4 +280,7 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   root-hosted session sheets, reminder taps open Today; 8.2 the book page as the book's home (log for this book, its
   sessions, one status control, "…" menu for page count and delete, finish sheet). Review fixes in 8.2: leaving "read"
   asks first (it clears the finish date), finished books show full pages, no "not found" flash on delete, a
-  failed finish-sheet load can't block later ones, dates outside this year show the year.
+  failed finish-sheet load can't block later ones, dates outside this year show the year. 8.3 one Library (search, status
+  chips, sections, sort), a root-hosted Add book sheet (Open Library + manual), long-press menu, `useBookStatusChange`;
+  Today's "Choose a book" is a sheet of want-to-read books (no cross-tab navigation). Dropped on purpose: sort direction,
+  publisher search, title/author-only Open Library search, per-card buttons.

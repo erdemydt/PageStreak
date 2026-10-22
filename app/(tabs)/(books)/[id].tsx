@@ -4,7 +4,6 @@ import { Fragment, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,12 +18,11 @@ import SessionRow from "../../../components/session/SessionRow";
 import BookCover from "../../../components/ui/BookCover";
 import Button from "../../../components/ui/Button";
 import Hairline from "../../../components/ui/Hairline";
-import { SHEET_HANDOFF_MS } from "../../../components/ui/Sheet";
 import ProgressRule from "../../../components/ui/ProgressRule";
 import StatRow, { Stat } from "../../../components/ui/StatRow";
 import { useSessionSheets } from "../../../contexts/SessionSheetsContext";
 import { EnhancedBook } from "../../../db/db";
-import { getBook, updateBookStatus } from "../../../db/repos/books";
+import { getBook } from "../../../db/repos/books";
 import { getDailyGoal } from "../../../db/repos/preferences";
 import {
   getAverageMinutesPerDay,
@@ -32,11 +30,11 @@ import {
   listSessionsForBook,
   SessionWithBook,
 } from "../../../db/repos/sessions";
+import { useBookStatusChange } from "../../../hooks/useBookStatusChange";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { FONTS, TYPE } from "../../../themes/typography";
-import { getStatusText } from "../../../utils/bookStatus";
 import {
   addDaysToDateString,
   getTodayDateString,
@@ -53,7 +51,6 @@ import {
   estimateDaysToFinish,
   getEnhancedBookProgress,
 } from "../../../utils/readingProgress";
-import { showToast } from "../../../utils/toast";
 
 const SESSIONS_PREVIEW = 5;
 
@@ -67,7 +64,8 @@ export default function BookDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
-  const { openLogger, editSession, celebrateFinish } = useSessionSheets();
+  const { openLogger, editSession } = useSessionSheets();
+  const setBookStatus = useBookStatusChange();
 
   const [book, setBook] = useState<EnhancedBook | null>(null);
   const [sessions, setSessions] = useState<SessionWithBook[]>([]);
@@ -157,47 +155,8 @@ export default function BookDetailsScreen() {
 
   useFocusRefresh(loadData, ["books", "sessions"], [loadData]);
 
-  // fromSheet: the status sheet is still sliding away, and iOS can't present
-  // the finish sheet until it's gone
   const changeStatus = (status: BookStatus, fromSheet = false) => {
-    if (!book || status === book.reading_status) return;
-    if (book.reading_status === "read") {
-      // Leaving "read" clears the finish date (the book drops out of the
-      // year's count), so ask first
-      const ask = () =>
-        Alert.alert(t("bookPage.unfinishTitle"), t("bookPage.unfinishMessage"), [
-          { text: t("booksPage.alert.cancel"), style: "cancel" },
-          { text: t("bookPage.unfinishConfirm"), onPress: () => applyStatus(status) },
-        ]);
-      if (fromSheet) setTimeout(ask, SHEET_HANDOFF_MS);
-      else ask();
-      return;
-    }
-    applyStatus(status, fromSheet);
-  };
-
-  const applyStatus = async (status: BookStatus, fromSheet = false) => {
-    if (!book) return;
-    try {
-      await updateBookStatus(book.id, status);
-      if (status === "read") {
-        const bookId = book.id;
-        if (fromSheet) {
-          setTimeout(() => celebrateFinish(bookId), SHEET_HANDOFF_MS);
-        } else {
-          celebrateFinish(bookId);
-        }
-      } else {
-        showToast({
-          message: t("booksPage.alert.bookStatusUpdated", {
-            statusText: getStatusText(t, status),
-          }),
-        });
-      }
-    } catch (e) {
-      console.error("Failed to update status:", e);
-      Alert.alert(t("error"), t("booksPage.alert.failedUpdate"));
-    }
+    if (book) setBookStatus(book, status, { fromSheet });
   };
 
   const openMenu = (mode: "menu" | "pages") => {

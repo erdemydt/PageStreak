@@ -18,6 +18,7 @@ import BookCover from "../../../components/ui/BookCover";
 import Button from "../../../components/ui/Button";
 import Eyebrow from "../../../components/ui/Eyebrow";
 import Hairline from "../../../components/ui/Hairline";
+import OptionSheet from "../../../components/ui/OptionSheet";
 import ProgressRule from "../../../components/ui/ProgressRule";
 import { useSessionSheets } from "../../../contexts/SessionSheetsContext";
 import { BookWithStats, listBooksWithStats } from "../../../db/repos/books";
@@ -26,6 +27,7 @@ import {
   listSessionsWithBooks,
   SessionWithBook,
 } from "../../../db/repos/sessions";
+import { useBookStatusChange } from "../../../hooks/useBookStatusChange";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
@@ -65,7 +67,9 @@ const MAX_SPINES = 60;
 export default function TodayScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { openLogger, editSession } = useSessionSheets();
+  const { openLogger, editSession, openAddBook } = useSessionSheets();
+  const setBookStatus = useBookStatusChange();
+  const [choosing, setChoosing] = useState(false);
 
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
   const [books, setBooks] = useState<BookWithStats[]>([]);
@@ -112,6 +116,9 @@ export default function TodayScreen() {
   const reading = books.filter(
     (book) => book.reading_status === "currently_reading",
   );
+  // With nothing in progress: pick from the want-to-read list, else add one
+  const upNext = books.filter((book) => book.reading_status === "want_to_read");
+  const hasUpNext = upNext.length > 0;
   // A timer is always shown under the book it's timing
   const shownBook =
     reading.find((book) => book.id === timer?.bookId) ??
@@ -385,17 +392,12 @@ export default function TodayScreen() {
                 : t("today.noBooksYet")}
             </Text>
             <Button
-              title={
-                books.length > 0 ? t("today.chooseBook") : t("today.addBook")
-              }
+              title={hasUpNext ? t("today.chooseBook") : t("today.addBook")}
               variant="secondary"
               onPress={() =>
-                router.push(
-                  books.length > 0
-                    ? "/(tabs)/(books)/my-books"
-                    : "/(tabs)/(books)",
-                  { withAnchor: true },
-                )
+                hasUpNext
+                  ? setChoosing(true)
+                  : openAddBook({ status: "currently_reading", closeOnAdd: true })
               }
             />
           </View>
@@ -470,6 +472,21 @@ export default function TodayScreen() {
           )}
         </View>
       )}
+
+      <OptionSheet
+        visible={choosing}
+        title={t("today.chooseBook")}
+        options={upNext.map((book) => ({
+          key: String(book.id),
+          label: book.author ? `${book.name} · ${book.author}` : book.name,
+        }))}
+        selected=""
+        onSelect={(key) => {
+          const book = upNext.find((b) => String(b.id) === key);
+          if (book) setBookStatus(book, "currently_reading", { fromSheet: true });
+        }}
+        onClose={() => setChoosing(false)}
+      />
     </ScrollView>
   );
 }

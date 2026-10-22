@@ -15,6 +15,8 @@ interface BookStatusModalProps {
   currentStatus: BookStatus;
   onStatusChange: (status: BookStatus) => void;
   onClose: () => void;
+  /** Adds a "Delete book" row (the Library's long-press menu) */
+  onDelete?: () => void;
 }
 
 const STATUS_ORDER: BookStatus[] = ["want_to_read", "currently_reading", "read"];
@@ -26,6 +28,7 @@ export default function BookStatusModal({
   currentStatus,
   onStatusChange,
   onClose,
+  onDelete,
 }: BookStatusModalProps) {
   const { t } = useTranslation();
 
@@ -85,6 +88,19 @@ export default function BookStatusModal({
           </Pressable>
         );
       })}
+      {onDelete && (
+        <Pressable
+          onPress={() => {
+            onClose();
+            onDelete();
+          }}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.deleteRow, pressed && styles.pressed]}
+        >
+          <Ionicons name="trash-outline" size={20} color={COLORS.destructive.ink} />
+          <Text style={styles.deleteLabel}>{t("bookPage.delete")}</Text>
+        </Pressable>
+      )}
     </Sheet>
   );
 }
@@ -115,4 +131,16 @@ const styles = StyleSheet.create({
     color: COLORS.ink.primary,
   },
   optionDescription: TYPE.meta,
+  deleteRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING[3],
+    minHeight: 56,
+    borderTopWidth: StyleSheet.hairlineWidth * 2,
+    borderTopColor: COLORS.line.hairline,
+  },
+  deleteLabel: {
+    ...TYPE.label,
+    color: COLORS.destructive.ink,
+  },
 });

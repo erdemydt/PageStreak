@@ -33,20 +33,6 @@ export default function BooksLayout() {
         }}
       />
       <Stack.Screen
-        name="search"
-        options={{
-          title: t("navigation.searchBooks"),
-          presentation: "card",
-        }}
-      />
-      <Stack.Screen
-        name="my-books"
-        options={{
-          title: t("navigation.myBooks"),
-          presentation: "card",
-        }}
-      />
-      <Stack.Screen
         name="[id]"
         options={{
           title: t("navigation.bookDetails"),

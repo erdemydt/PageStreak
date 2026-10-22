@@ -67,6 +67,9 @@ Kept for the owner's release notes; clear it when a release ships.
 - Book page: log reading for that book, see and fix its sessions, change status from one control, edit the page
   count or delete the book from the "…" menu. Finishing a book shows where it lands in your yearly goal and offers
   the next book on your list.
+- One Library screen: search, filter by status, sort, and sections for Reading / Want to read / Read. Tap "+" to add a
+  book (search Open Library or add it by hand; duplicates are flagged). Long-press a book to change its status or
+  delete it. The Books tab is now "Library". With nothing in progress, Today lets you pick the next book from your list.
 
 ---
 
@@ -199,7 +202,9 @@ changes**: UI and routing only. Every old route keeps a `<Redirect>` stub for 2+
 - [x] **8.2 Book detail**: per-book sessions, one status control, "…" menu (page count, delete), finish sheet; the
   Logs/Library `withAnchor` jumps are gone. Kept per-stack re-export routes instead of a shared route group (the
   group can't be verified without a device); 8.4 adds `(progress)/book/[id]`.
-- [ ] **8.3 Library merge**: one library screen, Add book sheet (search + manual), long-press menu, redirects.
+- [x] **8.3 Library merge**: one Library screen (search, status chips, sections, sort sheet), Add book sheet (Open Library
+  + manual, root-hosted so Today opens it in place), long-press menu (status, delete), `my-books`/`search` redirect stubs
+  (remove after 2+ releases), shared `useBookStatusChange`. BookCard and ~65 i18n keys removed.
 - [ ] **8.4 Progress tab**: `(progress)` stack with index / growth / history, trimmed weekly stats, yearly-goal sheet,
   Profile tab → redirect, name → Settings.
 - [ ] **8.5 Settings to gear**: root `settings` route, 3 tabs, About cleanup.

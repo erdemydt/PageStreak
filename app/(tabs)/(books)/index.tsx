@@ -1,299 +1,173 @@
-import { Link, Stack, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
-  Animated,
-  FlatList,
-  Keyboard,
+  Pressable,
+  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
-import BookCard from "../../../components/BookCard";
 import BookStatusModal, {
   BookStatus,
 } from "../../../components/BookStatusModal";
-import { EnhancedBook } from "../../../db/db";
+import LibraryRow from "../../../components/book/LibraryRow";
+import Button from "../../../components/ui/Button";
+import Chip from "../../../components/ui/Chip";
+import Eyebrow from "../../../components/ui/Eyebrow";
+import Hairline from "../../../components/ui/Hairline";
+import OptionSheet from "../../../components/ui/OptionSheet";
+import Screen from "../../../components/ui/Screen";
+import { SHEET_HANDOFF_MS } from "../../../components/ui/Sheet";
+import { useSessionSheets } from "../../../contexts/SessionSheetsContext";
 import {
-  addBook,
   BookWithStats,
-  countBooksByStatus,
   deleteBookWithSessions,
   listBooksWithStats,
-  updateBookStatus,
 } from "../../../db/repos/books";
-import { COLORS } from "../../../themes/colors";
-import { SPACING } from "../../../themes/spacing";
-import { TYPE } from "../../../themes/typography";
-import { getStatusText } from "../../../utils/bookStatus";
+import { useBookStatusChange } from "../../../hooks/useBookStatusChange";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
+import { COLORS } from "../../../themes/colors";
+import { RADIUS, SPACING } from "../../../themes/spacing";
+import { FONTS, TYPE } from "../../../themes/typography";
+import { parseDbDate } from "../../../utils/dateUtils";
+import { computeBookProgress } from "../../../utils/readingProgress";
 import { showToast } from "../../../utils/toast";
-type BooksearchProps = {
-  name: string;
-  setName: (name: string) => void;
-  author: string;
-  setAuthor: (author: string) => void;
-  page: string;
-  setPage: (page: string) => void;
-  selectedStatus: BookStatus;
-  onStatusChange: (status: BookStatus) => void;
-  loading: boolean;
-  error: string | null;
-  saveBook: () => void;
-  onClose: () => void;
-  fadeAnim: Animated.Value;
-  scaleAnim: Animated.Value;
+
+type Filter = BookStatus | "all";
+type SortKey = "recent" | "title" | "author" | "time" | "progress";
+
+const FILTERS: Filter[] = ["all", "currently_reading", "want_to_read", "read"];
+const SECTION_ORDER: BookStatus[] = ["currently_reading", "want_to_read", "read"];
+
+const compareText = (a: string, b: string) =>
+  a.localeCompare(b, undefined, { sensitivity: "base" });
+
+const SORTS: Record<SortKey, (a: BookWithStats, b: BookWithStats) => number> = {
+  recent: (a, b) =>
+    (parseDbDate(b.date_added)?.getTime() ?? 0) -
+    (parseDbDate(a.date_added)?.getTime() ?? 0),
+  title: (a, b) => compareText(a.name, b.name),
+  // Books without an author (manual adds) go last
+  author: (a, b) =>
+    !a.author !== !b.author
+      ? a.author
+        ? -1
+        : 1
+      : compareText(a.author || "", b.author || ""),
+  time: (a, b) => (b.reading_time || 0) - (a.reading_time || 0),
+  progress: (a, b) =>
+    computeBookProgress(b).percentage - computeBookProgress(a).percentage,
 };
 
-function ManualBookEntry(props: BooksearchProps) {
+/**
+ * The one library: search, status filter, sort. "+" opens the Add book sheet;
+ * long-press a book for its status and delete.
+ */
+export default function LibraryScreen() {
   const { t } = useTranslation();
-  const getStatusColor = (status: BookStatus) => {
-    switch (status) {
-      case "currently_reading":
-        return COLORS.info;
-      case "read":
-        return COLORS.success;
-      case "want_to_read":
-        return COLORS.warning;
-      default:
-        return COLORS.neutral[500];
-    }
-  };
-  const getStatusText = (status: BookStatus) => {
-    switch (status) {
-      case "currently_reading":
-        return t("components.bookCard.currentlyReading");
-      case "read":
-        return t("components.bookCard.read");
-      case "want_to_read":
-        return t("components.bookCard.wantToRead");
-      default:
-        return t("components.bookCard.unknown");
-    }
-  };
-
-  return (
-    <View style={styles.modalOverlay}>
-      <Animated.View
-        style={[
-          styles.modalCard,
-          {
-            opacity: props.fadeAnim,
-            transform: [{ scale: props.scaleAnim }],
-          },
-        ]}
-      >
-        <View style={styles.modalHeader}>
-          <Text style={styles.cardTitle}>{t("booksPage.addManualButton")}</Text>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel={t("a11y.close")}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={styles.closeButton}
-            onPress={props.onClose}
-            disabled={props.loading}
-          >
-            <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder={t("booksPage.input.title")}
-            placeholderTextColor={COLORS.neutral[400]}
-            value={props.name}
-            onChangeText={props.setName}
-            editable={!props.loading}
-            autoCapitalize="words"
-            returnKeyType="next"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={t("booksPage.input.author")}
-            placeholderTextColor={COLORS.neutral[400]}
-            value={props.author}
-            onChangeText={props.setAuthor}
-            editable={!props.loading}
-            autoCapitalize="words"
-            returnKeyType="next"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={t("booksPage.input.pageCount")}
-            placeholderTextColor={COLORS.neutral[400]}
-            value={props.page}
-            onChangeText={props.setPage}
-            editable={!props.loading}
-            keyboardType="numeric"
-            returnKeyType="done"
-            onSubmitEditing={props.saveBook}
-          />
-
-          <View style={styles.statusSelectionContainer}>
-            <Text style={styles.statusSelectionLabel}>
-              {t("components.bookDetailModal.status")}
-            </Text>
-            <View style={styles.statusButtons}>
-              {(
-                ["want_to_read", "currently_reading", "read"] as BookStatus[]
-              ).map((status) => (
-                <TouchableOpacity
-                  key={status}
-                  style={[
-                    styles.statusButton,
-                    props.selectedStatus === status && [
-                      styles.statusButtonActive,
-                      { borderColor: getStatusColor(status) },
-                    ],
-                  ]}
-                  onPress={() => props.onStatusChange(status)}
-                  disabled={props.loading}
-                >
-                  <Text
-                    style={[
-                      styles.statusButtonText,
-                      props.selectedStatus === status && [
-                        styles.statusButtonTextActive,
-                        { color: getStatusColor(status) },
-                      ],
-                    ]}
-                  >
-                    {getStatusText(status)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.saveBtn,
-              (!props.name.trim() ||
-                !props.author.trim() ||
-                !props.page.trim() ||
-                props.loading) &&
-                styles.saveBtnDisabled,
-            ]}
-            onPress={props.saveBook}
-            disabled={
-              props.loading ||
-              !props.name.trim() ||
-              !props.author.trim() ||
-              !props.page.trim()
-            }
-          >
-            <Text style={styles.saveBtnText}>
-              {props.loading ? t("booksPage.saving") : t("booksPage.addBook")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
-      </Animated.View>
-    </View>
-  );
-}
-
-export default function HomeScreen() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [author, setAuthor] = useState("");
-  const [page, setPage] = useState("");
+  const { openAddBook } = useSessionSheets();
+  const setBookStatus = useBookStatusChange();
+
   const [books, setBooks] = useState<BookWithStats[]>([]);
-  const [allBooksCount, setAllBooksCount] = useState(0);
-  const [statusCounts, setStatusCounts] = useState({
-    want_to_read: 0,
-    currently_reading: 0,
-    read: 0,
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isAddingManually, setIsAddingManually] = useState(false);
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [scaleAnim] = useState(new Animated.Value(0.8));
-  const [statusModalVisible, setStatusModalVisible] = useState(false);
-  const [selectedBook, setSelectedBook] = useState<EnhancedBook | null>(null);
-  const [manualBookStatus, setManualBookStatus] =
-    useState<BookStatus>("currently_reading");
-  const [filterStatus, setFilterStatus] = useState<BookStatus | "all">("all");
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [sort, setSort] = useState<SortKey>("recent");
+  const [sortOpen, setSortOpen] = useState(false);
+  const [menuBook, setMenuBook] = useState<BookWithStats | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const { t } = useTranslation();
-  const loadBooks = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
     try {
-      const { total, ...counts } = await countBooksByStatus();
-      setAllBooksCount(total);
-      setStatusCounts(counts);
-
-      // Preview of books for the active filter; filtering happens in SQL so
-      // the preview isn't limited to whichever statuses made the first 10 rows
-      const booksWithReadingTime = await listBooksWithStats({
-        status: filterStatus === "all" ? undefined : filterStatus,
-        limit: 10,
-      });
-
-      setBooks(booksWithReadingTime);
+      setBooks(await listBooksWithStats());
+      setError(false);
     } catch (e) {
-      setError(t("booksPage.failedToLoad"));
       console.error("Load books error:", e);
+      setError(true);
     } finally {
-      setLoading(false);
+      setLoaded(true);
     }
-  }, [filterStatus, t]);
+  }, []);
+  useFocusRefresh(load, ["books", "sessions"]);
 
-  useFocusRefresh(loadBooks, ["books", "sessions"], [loadBooks]);
+  const counts = useMemo(() => {
+    const c: Record<Filter, number> = {
+      all: books.length,
+      currently_reading: 0,
+      want_to_read: 0,
+      read: 0,
+    };
+    books.forEach((b) => {
+      const status = b.reading_status as BookStatus;
+      if (status in c) c[status] += 1;
+    });
+    return c;
+  }, [books]);
 
-  const getStatusCount = (status: BookStatus) => {
-    return statusCounts[status] || 0;
-  };
-
-  const saveManualBook = async () => {
-    if (!name.trim() || !author.trim() || !page.trim() || isNaN(Number(page)))
-      return;
-    setLoading(true);
-    setError(null);
-    try {
-      await addBook(
-        { name: name.trim(), author: author.trim(), page: Number(page) },
-        manualBookStatus,
-      );
-
-      setName("");
-      setAuthor("");
-      setPage("");
-      setManualBookStatus("currently_reading");
-      Keyboard.dismiss();
-      toggleManualForm();
-    } catch (e) {
-      setError(t("booksPage.failedToSave"));
-      console.error("Save manual book error:", e);
-    } finally {
-      setLoading(false);
+  const sections = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase();
+    const matching = books
+      .filter((b) => filter === "all" || b.reading_status === filter)
+      .filter(
+        (b) =>
+          !q ||
+          b.name.toLocaleLowerCase().includes(q) ||
+          (b.author || "").toLocaleLowerCase().includes(q),
+      )
+      .sort(SORTS[sort]);
+    if (filter !== "all") {
+      return matching.length ? [{ key: filter, data: matching }] : [];
     }
-  };
+    return SECTION_ORDER.map((status) => ({
+      key: status,
+      data: matching.filter((b) => b.reading_status === status),
+    })).filter((s) => s.data.length > 0);
+  }, [books, filter, query, sort]);
 
-  const deleteBook = async (bookId: number, bookTitle: string) => {
+  const filterLabels: Record<Filter, string> = {
+    all: t("library.all"),
+    currently_reading: t("library.reading"),
+    want_to_read: t("library.wantToRead"),
+    read: t("library.read"),
+  };
+  const sortOptions: { key: SortKey; label: string }[] = [
+    { key: "recent", label: t("library.sort.recent") },
+    { key: "title", label: t("library.sort.title") },
+    { key: "author", label: t("library.sort.author") },
+    { key: "time", label: t("library.sort.time") },
+    { key: "progress", label: t("library.sort.progress") },
+  ];
+  const sortLabel = sortOptions.find((o) => o.key === sort)?.label ?? "";
+
+  const openBook = (book: BookWithStats) =>
+    router.push({
+      pathname: "/(tabs)/(books)/[id]",
+      params: { id: String(book.id) },
+    });
+
+  const confirmDelete = (book: BookWithStats) => {
     Alert.alert(
       t("booksPage.alert.deleteTitle"),
-      t("booksPage.alert.deleteWithSessionsMessage", { title: bookTitle }),
+      t("booksPage.alert.deleteWithSessionsMessage", { title: book.name }),
       [
         { text: t("booksPage.alert.cancel"), style: "cancel" },
         {
           text: t("booksPage.alert.delete"),
           style: "destructive",
           onPress: async () => {
-            setLoading(true);
-            setError(null);
             try {
-              await deleteBookWithSessions(bookId);
+              await deleteBookWithSessions(book.id);
+              showToast({ message: t("bookPage.deleted", { title: book.name }) });
             } catch (e) {
-              setError(t("booksPage.alert.failedDelete"));
               console.error("Delete book error:", e);
-            } finally {
-              setLoading(false);
+              Alert.alert(t("error"), t("booksPage.alert.failedDelete"));
             }
           },
         },
@@ -301,566 +175,242 @@ export default function HomeScreen() {
     );
   };
 
-  const toggleManualForm = () => {
-    if (!isAddingManually) {
-      setIsAddingManually(true);
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.8,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setIsAddingManually(false);
-        setName("");
-        setAuthor("");
-        setPage("");
-        setManualBookStatus("currently_reading");
-        setError(null);
-      });
-    }
-  };
-
-  const openStatusModal = (book: EnhancedBook) => {
-    setSelectedBook(book);
-    setStatusModalVisible(true);
-  };
-
-  const closeStatusModal = () => {
-    setStatusModalVisible(false);
-    setSelectedBook(null);
-  };
-
-  const handleStatusChange = async (newStatus: BookStatus) => {
-    if (!selectedBook) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      await updateBookStatus(selectedBook.id, newStatus);
-
-      showToast({
-        message: t("booksPage.alert.bookStatusUpdated", {
-          statusText: getStatusText(t, newStatus),
-        }),
-      });
-    } catch (e) {
-      setError(t("booksPage.alert.failedUpdate"));
-      console.error("Update status error:", e);
-      Alert.alert(t("error"), t("booksPage.alert.failedUpdate"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const renderBook = ({ item }: { item: BookWithStats }) => (
-    <BookCard
-      book={item}
-      showDeleteButton={true}
-      showStatusButton={true}
-      showReadingTime={true}
-      readingTimeMinutes={item.reading_time || 0}
-      onPress={() =>
-        router.push({
-          pathname: "/(tabs)/(books)/[id]",
-          params: { id: item.id.toString() },
-        })
-      }
-      onDelete={() => deleteBook(item.id, item.name)}
-      onStatusChange={() => openStatusModal(item)}
+  const header = (
+    <Stack.Screen
+      options={{
+        title: t("navigation.books"),
+        headerRight: () => (
+          <Pressable
+            onPress={() => openAddBook()}
+            accessibilityRole="button"
+            accessibilityLabel={t("addBook.title")}
+            hitSlop={12}
+            style={styles.headerButton}
+          >
+            <Ionicons name="add" size={28} color={COLORS.ink.primary} />
+          </Pressable>
+        ),
+      }}
     />
   );
 
-  const filteredBooks = books;
+  if (loaded && books.length === 0 && !error) {
+    return (
+      <Screen>
+        {header}
+        <View style={styles.emptyLibrary}>
+          <Text style={styles.emptyTitle}>{t("library.emptyTitle")}</Text>
+          <Text style={styles.emptyText}>{t("library.emptyHint")}</Text>
+          <Button
+            title={t("addBook.title")}
+            icon="add"
+            onPress={() => openAddBook()}
+          />
+        </View>
+      </Screen>
+    );
+  }
 
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
-  };
+  const resultCount = sections.reduce((n, s) => n + s.data.length, 0);
 
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
-      <View style={{ flex: 1 }}>
-        <Stack.Screen options={{ title: t("navigation.books") }} />
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{t("booksPage.title")}</Text>
-            <Text style={styles.subtitle}>{t("booksPage.subtitle")}</Text>
-          </View>
-
-          {isAddingManually && (
-            <ManualBookEntry
-              name={name}
-              setName={setName}
-              author={author}
-              setAuthor={setAuthor}
-              page={page}
-              setPage={setPage}
-              selectedStatus={manualBookStatus}
-              onStatusChange={setManualBookStatus}
-              loading={loading}
-              error={error}
-              saveBook={saveManualBook}
-              onClose={toggleManualForm}
-              fadeAnim={fadeAnim}
-              scaleAnim={scaleAnim}
-            />
-          )}
-
-          <BookStatusModal
-            visible={statusModalVisible}
-            bookTitle={selectedBook?.name || ""}
-            currentStatus={
-              (selectedBook?.reading_status ||
-                "currently_reading") as BookStatus
-            }
-            onStatusChange={handleStatusChange}
-            onClose={closeStatusModal}
-          />
-
-          <View style={styles.actionButtons}>
-            <Link href="./search" asChild style={styles.actionBtn}>
-              <TouchableOpacity
-                style={isAddingManually && styles.nonVisibleBtn}
-                disabled={loading || isAddingManually}
-              >
-                <Text style={styles.actionBtnText}>
-                  {t("booksPage.searchButton")}
-                </Text>
-              </TouchableOpacity>
-            </Link>
-
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                styles.secondaryBtn,
-                isAddingManually && styles.nonVisibleBtn,
-              ]}
-              onPress={toggleManualForm}
-              disabled={loading || isAddingManually}
+    <Screen>
+      {header}
+      <SectionList
+        sections={sections}
+        keyExtractor={(book) => String(book.id)}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={
+          <View style={styles.controls}>
+            <View style={styles.searchRow}>
+              <Ionicons name="search" size={18} color={COLORS.ink.secondary} />
+              <TextInput
+                style={styles.searchInput}
+                value={query}
+                onChangeText={setQuery}
+                placeholder={t("library.searchPlaceholder")}
+                placeholderTextColor={COLORS.ink.disabled}
+                autoCorrect={false}
+                returnKeyType="search"
+                clearButtonMode="while-editing"
+                accessibilityLabel={t("library.searchPlaceholder")}
+              />
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filters}
             >
-              <Text style={[styles.actionBtnText, styles.secondaryBtnText]}>
-                {t("booksPage.addBookManually")}
+              {FILTERS.map((f) => (
+                <Chip
+                  key={f}
+                  label={`${filterLabels[f]} ${counts[f]}`}
+                  selected={filter === f}
+                  onPress={() => setFilter(f)}
+                />
+              ))}
+            </ScrollView>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summary}>
+                {t(
+                  resultCount === 1
+                    ? "booksPage.empty.bookCountOne"
+                    : "booksPage.empty.bookCountOther",
+                  { count: resultCount },
+                )}
               </Text>
-            </TouchableOpacity>
+              <Pressable
+                onPress={() => setSortOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t("library.sortedBy", { sort: sortLabel })}
+                hitSlop={8}
+                style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}
+              >
+                <Text style={styles.sortText}>{sortLabel}</Text>
+                <Ionicons name="chevron-down" size={14} color={COLORS.ink.secondary} />
+              </Pressable>
+            </View>
+            {error && <Text style={styles.error}>{t("booksPage.failedToLoad")}</Text>}
           </View>
-
-          <View style={styles.filterSection}>
-            <Text style={styles.filterTitle}>
-              {t("booksPage.filter.title")}
+        }
+        renderSectionHeader={({ section }) =>
+          filter === "all" ? (
+            <Eyebrow style={styles.sectionHeader}>
+              {`${filterLabels[section.key as Filter]} · ${section.data.length}`}
+            </Eyebrow>
+          ) : null
+        }
+        ItemSeparatorComponent={Hairline}
+        renderItem={({ item }) => (
+          <LibraryRow
+            book={item}
+            onPress={() => openBook(item)}
+            onLongPress={() => {
+              setMenuBook(item);
+              setMenuOpen(true);
+            }}
+          />
+        )}
+        ListEmptyComponent={
+          loaded ? (
+            <Text style={styles.noMatch}>
+              {query.trim()
+                ? t("library.noMatch", { query: query.trim() })
+                : t("library.noneInFilter")}
             </Text>
-            <View style={styles.filterButtons}>
-              <TouchableOpacity
-                style={[
-                  styles.filterBtn,
-                  filterStatus === "all" && styles.filterBtnActive,
-                ]}
-                onPress={() => setFilterStatus("all")}
-              >
-                <Text
-                  style={[
-                    styles.filterBtnText,
-                    filterStatus === "all" && styles.filterBtnTextActive,
-                  ]}
-                >
-                  {t("booksPage.filter.all")} ({allBooksCount})
-                </Text>
-              </TouchableOpacity>
+          ) : null
+        }
+      />
 
-              <TouchableOpacity
-                style={[
-                  styles.filterBtn,
-                  filterStatus === "want_to_read" && styles.filterBtnActive,
-                ]}
-                onPress={() => setFilterStatus("want_to_read")}
-              >
-                <Text
-                  style={[
-                    styles.filterBtnText,
-                    filterStatus === "want_to_read" &&
-                      styles.filterBtnTextActive,
-                  ]}
-                >
-                  {t("booksPage.filter.want_to_read")} (
-                  {getStatusCount("want_to_read")})
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.filterBtn,
-                  filterStatus === "currently_reading" &&
-                    styles.filterBtnActive,
-                ]}
-                onPress={() => setFilterStatus("currently_reading")}
-              >
-                <Text
-                  style={[
-                    styles.filterBtnText,
-                    filterStatus === "currently_reading" &&
-                      styles.filterBtnTextActive,
-                  ]}
-                >
-                  {t("booksPage.filter.currently_reading")} (
-                  {getStatusCount("currently_reading")})
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.filterBtn,
-                  filterStatus === "read" && styles.filterBtnActive,
-                ]}
-                onPress={() => setFilterStatus("read")}
-              >
-                <Text
-                  style={[
-                    styles.filterBtnText,
-                    filterStatus === "read" && styles.filterBtnTextActive,
-                  ]}
-                >
-                  {t("booksPage.filter.read")} ({getStatusCount("read")})
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.listSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                {t("booksPage.listHeader.myBooks")} ({filteredBooks.length}/
-                {allBooksCount})
-              </Text>
-              <Link href="./my-books" asChild>
-                <TouchableOpacity style={styles.viewAllButton}>
-                  <Text style={styles.viewAllButtonText}>
-                    {t("booksPage.listHeader.viewAll")}
-                  </Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
-            <FlatList
-              data={filteredBooks}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderBook}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyIcon}>📚</Text>
-                  <Text style={styles.emptyTitle}>
-                    {filterStatus === "all"
-                      ? t("booksPage.empty.noBooks")
-                      : t("booksPage.empty.noFilteredBooks", {
-                          status: getStatusText(t, filterStatus),
-                        })}
-                  </Text>
-                  <Text style={styles.emptySubtitle}>
-                    {filterStatus === "all"
-                      ? t("booksPage.empty.searchOrAdd")
-                      : t("booksPage.empty.tryChangingFilter")}
-                  </Text>
-                </View>
-              }
-              style={styles.list}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        </View>
-      </View>
-    </TouchableWithoutFeedback>
+      <OptionSheet
+        visible={sortOpen}
+        title={t("library.sortTitle")}
+        options={sortOptions}
+        selected={sort}
+        onSelect={setSort}
+        onClose={() => setSortOpen(false)}
+      />
+      <BookStatusModal
+        visible={menuOpen}
+        bookTitle={menuBook?.name ?? ""}
+        currentStatus={(menuBook?.reading_status as BookStatus) ?? "want_to_read"}
+        onStatusChange={(status) => {
+          if (menuBook) setBookStatus(menuBook, status, { fromSheet: true });
+        }}
+        onDelete={() => {
+          const book = menuBook;
+          if (book) setTimeout(() => confirmDelete(book), SHEET_HANDOFF_MS);
+        }}
+        // menuBook stays set so the sheet keeps its content while it slides away
+        onClose={() => setMenuOpen(false)}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface.page,
+  headerButton: {
+    paddingHorizontal: SPACING[1],
   },
-  header: {
-    paddingHorizontal: SPACING[4],
-    paddingTop: SPACING[4],
-    paddingBottom: SPACING[3],
-    alignItems: "flex-start",
+  content: {
+    paddingHorizontal: SPACING[5],
+    paddingBottom: SPACING[8],
   },
-  title: {
-    ...TYPE.pageTitle,
-    marginBottom: 2,
+  controls: {
+    gap: SPACING[3],
+    paddingTop: SPACING[2],
+    paddingBottom: SPACING[2],
   },
-  subtitle: {
-    ...TYPE.body,
-  },
-  actionButtons: {
+  searchRow: {
     flexDirection: "row",
-    paddingHorizontal: SPACING[4],
+    alignItems: "center",
     gap: SPACING[2],
-    marginBottom: SPACING[3],
-  },
-  actionBtn: {
-    flex: 1,
-    backgroundColor: COLORS.accent.primary,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  secondaryBtn: {
-    backgroundColor: COLORS.surface.interactive,
+    minHeight: 44,
+    paddingHorizontal: SPACING[3],
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.accent.soft,
+    borderColor: COLORS.line.strong,
+    backgroundColor: COLORS.paper.raised,
   },
-  actionBtnText: {
-    color: COLORS.text.inverse,
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  secondaryBtnText: {
-    color: COLORS.accent.strong,
-  },
-  nonVisibleBtn: {
-    backgroundColor: COLORS.transparent,
-    shadowOpacity: 0,
-    opacity: 0,
-    elevation: 0,
-  },
-  cardTitle: {
-    ...TYPE.cardTitle,
-    marginBottom: SPACING[3],
-  },
-  inputContainer: {
-    gap: 12,
-  },
-  input: {
-    minHeight: 48,
-    borderColor: COLORS.neutral[200],
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.white,
+  searchInput: {
+    flex: 1,
+    fontFamily: FONTS.sans,
     fontSize: 16,
-    color: COLORS.neutral[800],
+    color: COLORS.ink.primary,
+    paddingVertical: SPACING[2],
   },
-  saveBtn: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    justifyContent: "center",
+  filters: {
+    gap: SPACING[2],
+  },
+  summaryRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    justifyContent: "space-between",
   },
-  saveBtnDisabled: {
-    backgroundColor: COLORS.neutral[300],
-    shadowOpacity: 0,
-    elevation: 0,
+  summary: TYPE.meta,
+  sortButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    minHeight: 32,
   },
-  saveBtnText: {
-    color: COLORS.white,
-    fontWeight: "bold",
-    fontSize: 16,
+  sortText: {
+    ...TYPE.meta,
+    color: COLORS.ink.primary,
+  },
+  pressed: {
+    opacity: 0.6,
   },
   error: {
-    color: COLORS.danger,
-    marginTop: 12,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  listSection: {
-    marginTop: SPACING[2],
-    flex: 1,
-    paddingHorizontal: SPACING[4],
+    ...TYPE.meta,
+    color: COLORS.destructive.ink,
   },
   sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    marginTop: SPACING[5],
+    marginBottom: SPACING[1],
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.text.primary,
+  noMatch: {
+    ...TYPE.meta,
+    paddingVertical: SPACING[6],
+    textAlign: "center",
+  },
+  emptyLibrary: {
     flex: 1,
-  },
-  viewAllButton: {
-    backgroundColor: COLORS.surface.interactive,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  viewAllButtonText: {
-    color: COLORS.accent.strong,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  list: {
-    flex: 1,
-  },
-  emptyState: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+    gap: SPACING[3],
+    paddingHorizontal: SPACING[6],
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.neutral[500],
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: COLORS.neutral[400],
+    ...TYPE.title,
     textAlign: "center",
   },
-  // Modal styles
-  modalOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.overlay,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-    paddingHorizontal: 20,
-  },
-  modalCard: {
-    backgroundColor: COLORS.surface.raised,
-    width: "100%",
-    maxWidth: 400,
-    padding: SPACING[5],
-    borderRadius: 16,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.neutral[100],
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  closeButtonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: COLORS.neutral[500],
-  },
-  statusSelectionContainer: {
-    marginBottom: 16,
-  },
-  statusSelectionLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.neutral[800],
-    marginBottom: 12,
-  },
-  statusButtons: {
-    gap: 8,
-  },
-  statusButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.neutral[200],
-    backgroundColor: COLORS.white,
-  },
-  statusButtonActive: {
-    backgroundColor: COLORS.neutral[50],
-    borderWidth: 2,
-  },
-  statusButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: COLORS.neutral[500],
+  emptyText: {
+    ...TYPE.byline,
     textAlign: "center",
-  },
-  statusButtonTextActive: {
-    fontWeight: "600",
-  },
-  filterSection: {
-    paddingHorizontal: SPACING[4],
-    paddingVertical: SPACING[3],
-    backgroundColor: COLORS.surface.raised,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.neutral[200],
-  },
-  filterTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.text.secondary,
     marginBottom: SPACING[2],
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-  },
-  filterButtons: {
-    flexDirection: "row",
-    gap: SPACING[2],
-  },
-  filterBtn: {
-    flex: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: COLORS.neutral[200],
-    backgroundColor: COLORS.surface.page,
-  },
-  filterBtnActive: {
-    backgroundColor: COLORS.accent.soft,
-    borderColor: COLORS.accent.primary,
-  },
-  filterBtnText: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: COLORS.text.secondary,
-    textAlign: "center",
-  },
-  filterBtnTextActive: {
-    color: COLORS.accent.strong,
-    fontWeight: "600",
   },
 });

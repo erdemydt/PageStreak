@@ -2,8 +2,8 @@
 # set -euxo pipefail
 
 # # Always start from the repo root in Xcode Cloud
-# REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(pwd)}"
-# cd "$REPO_ROOT"
+REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(pwd)}"
+cd "$REPO_ROOT"
 
 # # Install Volta (Node toolchain manager) and add to PATH
 # export VOLTA_HOME="$HOME/.volta"

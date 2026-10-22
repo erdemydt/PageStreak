@@ -74,6 +74,8 @@ Kept for the owner's release notes; clear it when a release ships.
   (set or change the yearly goal right there), and the full reading history, where you can add a session on any past
   day. Growth Journey lives here now. The Profile tab is gone: change your name in Settings. The Analytics view and
   genres are gone. With nothing in progress, Today lets you pick the next book from your list.
+- Three tabs: Today, Library, Progress. Settings opens from the gear on Today and Progress, with a calmer layout; the
+  reminder options sit right under its switch, and About shows the real app version.
 
 ---
 
@@ -212,5 +214,10 @@ changes**: UI and routing only. Every old route keeps a `<Redirect>` stub for 2+
 - [x] **8.4 Progress tab**: `(progress)` stack with index (streak, week, week stats, daily-goal card, year card with a
   yearly-goal sheet, 0 = unset) / growth (restyled, GoalSheet) / history (week view, "+" per day). WeeklyStatsView and
   Profile deleted; `profile` / `reading-growth` redirect stubs; name edited in Settings. `(home)/readinglogs` re-exports history.
-- [ ] **8.5 Settings to gear**: root `settings` route, 3 tabs, About cleanup.
+- [x] **8.5 Settings to gear**: root `app/settings.tsx` pushed from a gear on Today and Progress; 3 tabs. No redirect
+  stub for the old tab: groups don't add to the URL, so `(tabs)/settings` and `/settings` would be the same path (and
+  nothing links to the old tab from outside the app). Restyled in Folio (hairline rows, `components/settings/`);
+  LanguageSelector → an OptionSheet; About = real version (expo-application, from Info.plist; it was already linked via
+  expo-notifications, now a direct dependency) + Open Library credit. Erase now dismisses the whole stack before onboarding.
+  Left as they were: the export/import modals (page sheets, legacy styling mapped onto Folio tokens).
 - [ ] **8.6 Onboarding**: new step order, `yearly_book_goal = 0` for new users, first-book step reuses the Add-sheet search.

@@ -20,6 +20,7 @@ import Eyebrow from "../../../components/ui/Eyebrow";
 import Hairline from "../../../components/ui/Hairline";
 import OptionSheet from "../../../components/ui/OptionSheet";
 import ProgressRule from "../../../components/ui/ProgressRule";
+import SettingsButton from "../../../components/ui/SettingsButton";
 import { useSessionSheets } from "../../../contexts/SessionSheetsContext";
 import { BookWithStats, listBooksWithStats } from "../../../db/repos/books";
 import { getUserPreferences } from "../../../db/repos/preferences";
@@ -288,13 +289,16 @@ export default function TodayScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Eyebrow>
-          {formatDate(new Date(), {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        </Eyebrow>
+        <View style={styles.headerTop}>
+          <Eyebrow style={styles.date}>
+            {formatDate(new Date(), {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </Eyebrow>
+          <SettingsButton />
+        </View>
         <Text style={styles.greeting} accessibilityRole="header">
           {greeting}{" "}
           {prefs?.username ? (
@@ -557,6 +561,17 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: SPACING[2],
+  },
+  // The gear's 40pt box overlaps the space above and below the eyebrow
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginVertical: -SPACING[2],
+    marginRight: -SPACING[2],
+  },
+  date: {
+    flexShrink: 1,
   },
   greeting: TYPE.display,
   greetingName: {

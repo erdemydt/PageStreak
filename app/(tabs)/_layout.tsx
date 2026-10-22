@@ -70,20 +70,6 @@ export default function TabLayout() {
         {/* Redirect stubs for retired routes (Phase 8.4) */}
         <Tabs.Screen name="profile" options={{ href: null }} />
         <Tabs.Screen name="reading-growth" options={{ href: null }} />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: t("navigation.settings"),
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? "settings" : "settings-outline"}
-                size={23}
-                color={color}
-              />
-            ),
-            headerShown: false,
-          }}
-        />
       </Tabs>
     </View>
   );

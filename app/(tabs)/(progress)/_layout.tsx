@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { useTranslation } from "react-i18next";
+import SettingsButton from "../../../components/ui/SettingsButton";
 import { COLORS } from "../../../themes/colors";
 import { FONTS } from "../../../themes/typography";
 
@@ -20,7 +21,13 @@ export default function ProgressLayout() {
         headerBackButtonDisplayMode: "minimal",
       }}
     >
-      <Stack.Screen name="index" options={{ title: t("navigation.progress") }} />
+      <Stack.Screen
+        name="index"
+        options={{
+          title: t("navigation.progress"),
+          headerRight: () => <SettingsButton />,
+        }}
+      />
       <Stack.Screen name="growth" options={{ title: t("growthJourney.title") }} />
       <Stack.Screen name="history" options={{ title: t("history.title") }} />
     </Stack>

@@ -376,17 +376,17 @@ const resources = {
         editName: "Edit your name",
         nameTitle: "Your name",
         nameRequired: "Please enter a name of 2 to 50 characters.",
-        title: "⚙️ Settings",
-        subtitle: "Manage your PageStreak preferences",
-        profile: "Profile",
+        you: "You",
+        name: "Name",
         language: "Language",
+        reminders: "Reminder",
+        dailyReminder: "Daily reminder",
+        exportBackup: "Export a backup",
+        restoreBackup: "Restore from a backup",
+        bookData: "Book data",
         about: "About",
-        appName: "PageStreak",
-        version: "Version 1.0.0",
-        trackReading: "Track Your Reading",
-        builtForBookLovers: "Built for book lovers",
-        account: "Account",
-        logout: "Erase All Data",
+        version: "Version",
+        logout: "Erase all data",
         logoutDescription: "Delete all books, sessions and settings",
         logoutConfirmMessage:
           "This permanently deletes all your books, reading sessions and settings. Export a backup first if you might want them back.",
@@ -397,27 +397,14 @@ const resources = {
         reminderTimeLabel: "Reminder time",
         reminderAtTimeDescription:
           "Remind me at {{time}} if I haven't reached my daily goal",
-        madeWithLove: "Made with ❤️ for book lovers",
-        notifications: "Notifications",
+        madeWithLove: "Made with care for book lovers.",
         notificationPermissionDenied:
           "Notifications are disabled in your device settings. Please enable them to receive reading reminders.",
         dailyReadingReminders: "Daily Reading Reminders",
         dailyReadingRemindersDescription: "Remind me if I haven't reached my daily goal",
-        reminderTiming: "Reminder Timing",
         reminderTimingDescription:
-          "Send reminder {{hours}} hours after I close the app",
-        hourSelectionDescription:
-          "Choose when to receive reading reminders after closing the app",
-        hourSingular: "hour",
-        hourPlural: "hours",
-        sendTest: "Send Test",
-        sendTestDev: "Send Test (1 min)",
-        loadingNotificationSettings: "Loading notification settings...",
-        devTestScheduled: "Dev Test Scheduled",
-        devTestScheduledMessage: "Test notification will appear in 1 minute!",
-        testScheduled: "Test Scheduled",
-        testScheduledMessage:
-          "Test notification scheduled for {{hours}} hours from now!",
+          "Remind me {{hours}} hours after I leave the app",
+        reminderTimingDescriptionOne: "Remind me an hour after I leave the app",
         permissionRequired: "Permission Required",
         notificationMessages: {
           streakAtRisk:
@@ -440,7 +427,6 @@ const resources = {
           "Failed to update notification settings",
         cancel: "Cancel",
         openSettings: "Open Settings",
-        failedToSendTestNotification: "Failed to send test notification",
         notificationsDisabledInSystem:
           "Notifications are disabled in system settings.",
         dataBackup: "Data Backup & Restore",
@@ -498,7 +484,7 @@ const resources = {
         },
         import: {
           title: "Import Data",
-          buttonSubtitle: "Restore from a backup file",
+          buttonSubtitle: "Bring back books, sessions and goals from a file",
           steps: {
             select: {
               title: "Select Backup File",
@@ -1204,17 +1190,17 @@ const resources = {
         editName: "Adınızı düzenleyin",
         nameTitle: "Adınız",
         nameRequired: "Lütfen 2 ile 50 karakter arasında bir ad girin.",
-        title: "⚙️ Ayarlar",
-        subtitle: "PageStreak tercihlerinizi yönetin",
-        profile: "Profil",
+        you: "Siz",
+        name: "Ad",
         language: "Dil",
+        reminders: "Hatırlatıcı",
+        dailyReminder: "Günlük hatırlatıcı",
+        exportBackup: "Yedek oluştur",
+        restoreBackup: "Yedekten geri yükle",
+        bookData: "Kitap verileri",
         about: "Hakkında",
-        appName: "PageStreak",
-        version: "Sürüm 1.0.0",
-        trackReading: "Okumalarınızı Takip Edin",
-        builtForBookLovers: "Kitap severler için yapıldı",
-        account: "Hesap",
-        logout: "Tüm Verileri Sil",
+        version: "Sürüm",
+        logout: "Tüm verileri sil",
         logoutDescription: "Tüm kitapları, seansları ve ayarları sil",
         logoutConfirmMessage:
           "Bu işlem tüm kitaplarınızı, okuma seanslarınızı ve ayarlarınızı kalıcı olarak siler. Geri isteyebilecekseniz önce bir yedek alın.",
@@ -1225,27 +1211,14 @@ const resources = {
         reminderTimeLabel: "Hatırlatma saati",
         reminderAtTimeDescription:
           "Günlük hedefime ulaşmadıysam şu saatte hatırlat: {{time}}",
-        madeWithLove: "Kitap severler için ❤️ ile yapıldı",
-        notifications: "Bildirimler",
+        madeWithLove: "Kitap severler için özenle yapıldı.",
         notificationPermissionDenied:
           "Cihaz ayarlarınızda bildirimler devre dışı. Okuma hatırlatıcıları almak için lütfen etkinleştirin.",
         dailyReadingReminders: "Günlük Okuma Hatırlatıcıları",
         dailyReadingRemindersDescription: "Günlük hedefime ulaşmadıysam bana hatırlat",
-        reminderTiming: "Hatırlatıcı Zamanlaması",
         reminderTimingDescription:
-          "Uygulamayı kapattıktan {{hours}} saat sonra hatırlatıcı gönder",
-        hourSelectionDescription:
-          "Uygulamayı kapattıktan sonra okuma hatırlatıcılarını ne zaman alacağınızı seçin",
-        hourSingular: "saat",
-        hourPlural: "saat",
-        sendTest: "Test Gönder",
-        sendTestDev: "Test Gönder (1 dk)",
-        loadingNotificationSettings: "Bildirim ayarları yükleniyor...",
-        devTestScheduled: "Geliştirici Testi Zamanlandı",
-        devTestScheduledMessage: "Test bildirimi 1 dakika içinde görünecek!",
-        testScheduled: "Test Zamanlandı",
-        testScheduledMessage:
-          "Test bildirimi {{hours}} saat sonra için zamanlandı!",
+          "Uygulamadan çıktıktan {{hours}} saat sonra hatırlat",
+        reminderTimingDescriptionOne: "Uygulamadan çıktıktan bir saat sonra hatırlat",
         permissionRequired: "İzin Gerekli",
         notificationMessages: {
           streakAtRisk:
@@ -1267,7 +1240,6 @@ const resources = {
         failedToUpdateNotificationSettings: "Bildirim ayarları güncellenemedi",
         cancel: "İptal",
         openSettings: "Ayarları Aç",
-        failedToSendTestNotification: "Test bildirimi gönderilemedi",
         notificationsDisabledInSystem:
           "Sistem ayarlarında bildirimler devre dışı.",
         dataBackup: "Veri Yedekleme ve Geri Yükleme",
@@ -1326,7 +1298,7 @@ const resources = {
         },
         import: {
           title: "Veri İçe Aktar",
-          buttonSubtitle: "Yedek dosyadan geri yükle",
+          buttonSubtitle: "Kitapları, seansları ve hedefleri bir dosyadan geri getirin",
           steps: {
             select: {
               title: "Yedek Dosya Seç",

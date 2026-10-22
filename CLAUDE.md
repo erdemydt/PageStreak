@@ -36,6 +36,7 @@ app/
   _layout.tsx            Root stack + LanguageProvider; forwards AppState to NotificationService
   index.tsx              Boot: init DB → notification prefs → grow daily goal → route to intro/home
   intro.tsx              5-step onboarding; writes user_preferences row id=1
+  settings.tsx           Root screen pushed from the gear (Today, Progress): name, language, reminder, backup, About, erase
   (tabs)/
     (home)/index.tsx     Today (Folio): minutes vs goal + streak, week strip (→ readinglogs), the book read most
                          recently (switcher if several), Log reading / timer, today's sessions (tap → edit), yearly line
@@ -47,14 +48,14 @@ app/
     (progress)/growth.tsx   Growth Journey chart; GoalSheet is the only editor of daily/target goal and date
     (progress)/history.tsx  Sessions a week at a time; tap to edit, "+" logs on that day
     profile.tsx, reading-growth.tsx  Redirect stubs (hidden tabs; Phase 8.4; remove after 2+ releases)
-    settings.tsx         Name, language, notifications, backup/restore, erase all data
 components/              Screens' building blocks (intro/ and profile/ hold those screens' parts + styles)
   today/                 Today's parts (WeekStrip)
   session/               SessionFields (log/edit sheet fields), SessionRow (one session in a list)
   book/                  AddBookSheet (Open Library + manual), LibraryRow, BookMenuSheet (page count, delete), FinishSheet
   progress/              GoalSheet (daily goal, target, target date)
+  settings/              SettingsRow (hairline row), ReminderSettings (switch, mode, hours/time)
   ui/                    Folio primitives: Button, Sheet (the one bottom sheet), OptionSheet, FieldSheet, Chip, BookCover, Eyebrow, Hairline,
-                         ProgressRule, StatRow, Screen. Build new UI from these
+                         ProgressRule, StatRow, Screen, SettingsButton (the gear). Build new UI from these
 contexts/
   SessionSheetsContext.tsx  Hosts the shared sheets once at the root: useSessionSheets().openLogger({bookId?, date?,
                          minutes?, onSuccess?}) / editSession(s) / celebrateFinish(bookId) / openAddBook({status?, closeOnAdd?})
@@ -292,3 +293,5 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   yearly goal 0 = unset, name in Settings; Profile, WeeklyStatsView (Analytics) and ~92 keys removed. Review fixes: the
   goal form showed (and re-saved) the UTC date, a day late west of UTC; an expired plan said "Growing"; "most read"
   grouped by title; "days met" counted today before it was met; the name rule now matches onboarding (2–50).
+  8.5 three tabs; Settings is a root screen behind a gear on Today and Progress (no redirect stub: `(tabs)/settings`
+  and `/settings` are the same URL), restyled with hairline rows; About shows the native version (expo-application).

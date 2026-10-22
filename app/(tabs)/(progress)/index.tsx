@@ -91,9 +91,9 @@ export default function ProgressScreen() {
   };
   useFocusRefresh(load, ["sessions", "books", "preferences"]);
 
-  // This week so far. Today counts toward "days met" only once it's met, so
-  // the week doesn't start at 0/1 every Monday morning
-  const elapsed = week.filter((d) => d.state !== "upcoming");
+  // This week so far, from the user's first day. Today counts toward "days met"
+  // only once it's met, so the week doesn't start at 0/1 every Monday morning
+  const elapsed = week.filter((d) => d.state !== "upcoming" && d.state !== "before");
   const judged = elapsed.filter((d) => d.state !== "today" || d.metToday);
   const weekMinutes = elapsed.reduce((sum, d) => sum + d.minutes, 0);
   const daysMet = judged.filter((d) => d.state === "met" || d.metToday).length;

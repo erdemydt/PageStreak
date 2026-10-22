@@ -15,6 +15,16 @@ export const getAppLocale = (): string =>
   i18n.language === "tr" ? "tr-TR" : "en-US";
 
 /**
+ * Uppercase in the app language. Use this instead of `textTransform: "uppercase"`,
+ * which ignores the locale and turns Turkish "i" into "I" instead of "İ".
+ * The Turkish pairs are mapped by hand so the result doesn't depend on Hermes' Intl.
+ */
+export const toAppUpperCase = (text: string): string =>
+  i18n.language === "tr"
+    ? text.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase()
+    : text.toUpperCase();
+
+/**
  * "45 min", "2 h", "1 h 30 min" (short, for UI).
  * "45 minutes", "1h 30m" (long, for notification sentences).
  */

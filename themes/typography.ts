@@ -75,7 +75,7 @@ export const TYPE = {
     fontSize: 11,
     lineHeight: 14,
     letterSpacing: 1.5,
-    textTransform: "uppercase" as const,
+    // Uppercase the text with toAppUpperCase (textTransform isn't locale-aware)
     color: COLORS.ink.secondary,
   },
 

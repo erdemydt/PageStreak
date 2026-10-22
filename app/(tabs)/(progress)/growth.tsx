@@ -1,7 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleProp,
+  StyleSheet,
+  Text,
+  View,
+  ViewStyle,
+} from "react-native";
 import GoalSheet from "../../../components/progress/GoalSheet";
 import Button from "../../../components/ui/Button";
 import Chip from "../../../components/ui/Chip";
@@ -9,299 +18,204 @@ import Eyebrow from "../../../components/ui/Eyebrow";
 import Screen from "../../../components/ui/Screen";
 import StatRow from "../../../components/ui/StatRow";
 import { getUserPreferences } from "../../../db/repos/preferences";
-import {
-  getFirstSessionDate,
-  listSessionMinutes,
-} from "../../../db/repos/sessions";
+import { listSessionMinutes } from "../../../db/repos/sessions";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
 import { COLORS } from "../../../themes/colors";
 import { SPACING } from "../../../themes/spacing";
 import { FONTS, TYPE } from "../../../themes/typography";
 import type { UserPreferences } from "../../../types/models";
-import { parseDbDate, parseLocalDateString } from "../../../utils/dateUtils";
+import {
+  addDaysToDateString,
+  dateToLocalDateString,
+  getTodayDateString,
+  parseDbDate,
+  parseLocalDateString,
+} from "../../../utils/dateUtils";
 import { formatDate, formatDuration, LONG_DATE } from "../../../utils/format";
-import { loadGoalForDate } from "../../../utils/goalHistory";
-import { planState } from "../../../utils/goalSettings";
+import {
+  getTrackingStartDate,
+  GoalForDate,
+  loadGoalForDate,
+} from "../../../utils/goalHistory";
+import { planState, projectDailyGoal } from "../../../utils/goalSettings";
+import { getWeekDates } from "../../../utils/week";
 
-type WeeklyPoint = {
+type WeekPoint = {
+  /** Monday, YYYY-MM-DD */
   key: string;
-  weekStart: Date;
-  targetMinutes: number;
-  actualMinutes: number;
-  applicable: boolean;
+  /** The week's goal: each judged day's goal, summed */
+  goalMinutes: number;
+  readMinutes: number;
+  /** Starts after this week: only the planned goal is drawn */
+  future: boolean;
 };
 
-const MS_PER_WEEK = 1000 * 60 * 60 * 24 * 7;
+type Loaded = {
+  prefs: UserPreferences | null;
+  start: string;
+  goalForDate: GoalForDate;
+  minutesByDate: Map<string, number>;
+};
+
 const RANGE_OPTIONS = [4, 12, 24] as const;
+/** Full weeks of data before the summary means anything */
+const SUMMARY_MIN_WEEKS = 3;
+const SHORT_DAY_MONTH: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
 
-const toDateKey = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
-
-const getWeekStart = (baseDate: Date) => {
-  const date = new Date(baseDate);
-  const dayOffset = (date.getDay() + 6) % 7;
-  date.setDate(date.getDate() - dayOffset);
-  date.setHours(0, 0, 0, 0);
-  return date;
-};
-
-const addWeeks = (baseDate: Date, weeks: number) => {
-  const date = new Date(baseDate);
-  date.setDate(date.getDate() + weeks * 7);
-  return date;
-};
-
-const diffWeeks = (laterDate: Date, earlierDate: Date) =>
-  Math.floor((laterDate.getTime() - earlierDate.getTime()) / MS_PER_WEEK);
-
-const getTimelineStartDate = (
-  createdAt?: string,
-  firstReadingDate?: string | null,
-) => {
-  if (firstReadingDate) {
-    return parseLocalDateString(firstReadingDate);
-  }
-
-  const created = parseDbDate(createdAt);
-  if (created) {
-    return created;
-  }
-
-  return new Date();
-};
+const weekLabel = (monday: string) =>
+  formatDate(parseLocalDateString(monday), SHORT_DAY_MONTH);
+const weeksBetween = (later: string, earlier: string) =>
+  Math.round(
+    (parseLocalDateString(later).getTime() - parseLocalDateString(earlier).getTime()) /
+      (7 * 24 * 60 * 60 * 1000),
+  );
 
 /**
- * Growth Journey: each week's reading against that week's goals, and the one
- * place to change the daily goal plan (GoalSheet).
+ * Growth Journey: each week's reading against that week's goal, the plan's
+ * coming weeks, and the one place to change the plan (GoalSheet).
  */
 export default function GrowthScreen() {
   const { t } = useTranslation();
-  const [weeklyData, setWeeklyData] = useState<WeeklyPoint[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<Loaded | null>(null);
   const [offsetWeeks, setOffsetWeeks] = useState(0);
-  const [rangeWeeks, setRangeWeeks] =
-    useState<(typeof RANGE_OPTIONS)[number]>(12);
-  const [selectedWeekKey, setSelectedWeekKey] = useState<string>("");
-  const [timelineStartWeek, setTimelineStartWeek] = useState<Date | null>(null);
-  const [prefs, setPrefs] = useState<UserPreferences | null>(null);
+  const [rangeWeeks, setRangeWeeks] = useState<(typeof RANGE_OPTIONS)[number]>(12);
+  const [selectedKey, setSelectedKey] = useState("");
   const [editing, setEditing] = useState(false);
 
-  const currentWeekStart = useMemo(() => getWeekStart(new Date()), []);
+  const today = getTodayDateString();
+  const thisWeek = getWeekDates(today)[0];
 
-  const weekWindow = useMemo(() => {
-    const endWeekStart = addWeeks(currentWeekStart, -offsetWeeks);
-    const startWeekStart = addWeeks(endWeekStart, -(rangeWeeks - 1));
-
-    const weeks: Date[] = [];
-    for (let index = 0; index < rangeWeeks; index++) {
-      weeks.push(addWeeks(startWeekStart, index));
-    }
-
-    return {
-      weeks,
-      startWeekStart,
-      endWeekStart,
-    };
-  }, [currentWeekStart, offsetWeeks, rangeWeeks]);
-
-  const maxOffsetWeeks = useMemo(() => {
-    if (!timelineStartWeek) {
-      return 0;
-    }
-
-    const totalWeeksSinceStart = Math.max(
-      0,
-      diffWeeks(currentWeekStart, timelineStartWeek),
-    );
-    return Math.max(0, totalWeeksSinceStart - (rangeWeeks - 1));
-  }, [currentWeekStart, rangeWeeks, timelineStartWeek]);
-
-  useEffect(() => {
-    setOffsetWeeks((previous) => Math.min(previous, maxOffsetWeeks));
-  }, [maxOffsetWeeks]);
-
-  const loadGrowthData = useCallback(async () => {
+  const load = async () => {
     try {
-      setLoading(true);
-
-      const userPrefs = await getUserPreferences();
-      const firstReadingDate = await getFirstSessionDate();
-
-      const derivedTimelineStart = getWeekStart(
-        getTimelineStartDate(userPrefs?.created_at, firstReadingDate),
-      );
-      const effectiveStartWeek =
-        weekWindow.startWeekStart.getTime() < derivedTimelineStart.getTime()
-          ? derivedTimelineStart
-          : weekWindow.startWeekStart;
-
-      setTimelineStartWeek(derivedTimelineStart);
-
-      const startDateKey = toDateKey(effectiveStartWeek);
-      const endDate = new Date(weekWindow.endWeekStart);
-      endDate.setDate(endDate.getDate() + 6);
-      const endDateKey = toDateKey(endDate);
-
-      const rows = await listSessionMinutes(startDateKey, endDateKey);
-
-      const actualByWeek = new Map<string, number>();
-      for (const row of rows) {
-        const sessionDate = parseLocalDateString(row.date);
-        const sessionWeek = getWeekStart(sessionDate);
-        const weekKey = toDateKey(sessionWeek);
-        actualByWeek.set(
-          weekKey,
-          (actualByWeek.get(weekKey) || 0) + row.minutes_read,
-        );
+      const [prefs, start, goalForDate, sessions] = await Promise.all([
+        getUserPreferences(),
+        getTrackingStartDate(),
+        loadGoalForDate(),
+        listSessionMinutes("0000-01-01", today),
+      ]);
+      const minutesByDate = new Map<string, number>();
+      for (const row of sessions) {
+        minutesByDate.set(row.date, (minutesByDate.get(row.date) ?? 0) + row.minutes_read);
       }
-
-      const goalForDate = await loadGoalForDate();
-
-      const renderedWeeks: Date[] = [];
-      for (
-        let weekCursor = new Date(effectiveStartWeek);
-        weekCursor.getTime() <= weekWindow.endWeekStart.getTime();
-        weekCursor = addWeeks(weekCursor, 1)
-      ) {
-        renderedWeeks.push(new Date(weekCursor));
-      }
-
-      const points = renderedWeeks.map((weekStart) => {
-        const weekKey = toDateKey(weekStart);
-        // The week's target is the sum of each day's goal as it was then
-        let targetMinutes = 0;
-        for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-          const day = new Date(weekStart);
-          day.setDate(day.getDate() + dayOffset);
-          targetMinutes += goalForDate(toDateKey(day));
-        }
-
-        return {
-          key: weekKey,
-          weekStart,
-          targetMinutes,
-          actualMinutes: actualByWeek.get(weekKey) || 0,
-          applicable: true,
-        } as WeeklyPoint;
-      });
-
-      setWeeklyData(points);
-      setPrefs(userPrefs);
-
-      const latestApplicable = [...points]
-        .reverse()
-        .find((point) => point.applicable);
-      setSelectedWeekKey((current) =>
-        points.some((point) => point.key === current)
-          ? current
-          : latestApplicable?.key || points[points.length - 1]?.key || "",
-      );
+      setData({ prefs, start: start ?? today, goalForDate, minutesByDate });
     } catch (error) {
       console.error("Failed to load growth data:", error);
       Alert.alert(t("profile.error.title"), t("profile.error.loadFailed"));
-    } finally {
-      setLoading(false);
     }
-  }, [t, weekWindow.endWeekStart, weekWindow.startWeekStart]);
-
-  useFocusRefresh(
-    loadGrowthData,
-    ["sessions", "preferences"],
-    [loadGrowthData],
-  );
-
-  const maxChartValue = useMemo(() => {
-    const maxPoint = weeklyData.reduce(
-      (max, point) => Math.max(max, point.actualMinutes, point.targetMinutes),
-      1,
-    );
-    return Math.max(60, maxPoint);
-  }, [weeklyData]);
-
-  const selectedWeek = useMemo(
-    () => weeklyData.find((point) => point.key === selectedWeekKey) || null,
-    [selectedWeekKey, weeklyData],
-  );
-
-  const goalHitWeeks = useMemo(
-    () =>
-      weeklyData.filter(
-        (point) =>
-          point.applicable && point.actualMinutes >= point.targetMinutes,
-      ).length,
-    [weeklyData],
-  );
-
-  const averageVariance = useMemo(() => {
-    const applicable = weeklyData.filter((point) => point.applicable);
-    if (applicable.length === 0) {
-      return 0;
-    }
-
-    const totalVariance = applicable.reduce(
-      (sum, point) => sum + (point.actualMinutes - point.targetMinutes),
-      0,
-    );
-    return Math.round(totalVariance / applicable.length);
-  }, [weeklyData]);
-
-  const trendDirection = useMemo(() => {
-    const applicable = weeklyData.filter((point) => point.applicable);
-    if (applicable.length < 2) {
-      return "flat";
-    }
-
-    const firstHalf = applicable.slice(0, Math.floor(applicable.length / 2));
-    const secondHalf = applicable.slice(Math.floor(applicable.length / 2));
-
-    const firstAverage =
-      firstHalf.reduce((sum, point) => sum + point.actualMinutes, 0) /
-      Math.max(1, firstHalf.length);
-    const secondAverage =
-      secondHalf.reduce((sum, point) => sum + point.actualMinutes, 0) /
-      Math.max(1, secondHalf.length);
-
-    if (secondAverage > firstAverage + 5) {
-      return "up";
-    }
-    if (secondAverage < firstAverage - 5) {
-      return "down";
-    }
-    return "flat";
-  }, [weeklyData]);
-
-  const formatWeekLabel = (date: Date) => {
-    return `${String(date.getDate()).padStart(2, "0")}/${String(
-      date.getMonth() + 1,
-    ).padStart(2, "0")}`;
   };
+  useFocusRefresh(load, ["sessions", "preferences"]);
 
-  const onRangeChange = (range: (typeof RANGE_OPTIONS)[number]) => {
-    setRangeWeeks(range);
-    setOffsetWeeks((previous) => Math.min(previous, maxOffsetWeeks));
-  };
+  const prefs = data?.prefs ?? null;
+  const plan = planState(prefs);
+  const firstWeek = data ? getWeekDates(data.start)[0] : thisWeek;
+  // Weeks of history, this one included
+  const historyWeeks = weeksBetween(thisWeek, firstWeek) + 1;
 
-  const xAxisLabelStep = useMemo(() => {
-    if (weeklyData.length >= 18) {
-      return 4;
+  // The latest view gives the plan's coming weeks some room (all the room the
+  // history doesn't need yet), so it shows only `pastAtLatest` past weeks
+  const goalEnd = parseDbDate(prefs?.end_reading_rate_goal_date);
+  const weeksToGoalDate =
+    plan === "growing" && goalEnd
+      ? Math.max(0, weeksBetween(getWeekDates(dateToLocalDateString(goalEnd))[0], thisWeek))
+      : 0;
+  // A plan that isn't growing gets a few flat planned weeks, not a chart full of them
+  const emptyColumns = Math.max(0, rangeWeeks - historyWeeks);
+  const reserve = Math.floor(rangeWeeks / 3);
+  const futureAtLatest =
+    plan === "growing"
+      ? Math.max(emptyColumns, Math.min(weeksToGoalDate, reserve))
+      : Math.min(emptyColumns, reserve);
+  const pastAtLatest = rangeWeeks - futureAtLatest;
+
+  // offset: how many weeks before this one the window ends (0 = the latest view).
+  // Paging steps from the oldest week on screen, so no week is ever skipped
+  const maxOffset =
+    historyWeeks > pastAtLatest ? Math.max(pastAtLatest, historyWeeks - rangeWeeks) : 0;
+  const offset = Math.min(offsetWeeks, maxOffset);
+  const futureWeeks = offset > 0 ? 0 : futureAtLatest;
+  const olderOffset =
+    offset === 0 ? Math.min(maxOffset, pastAtLatest) : Math.min(maxOffset, offset + rangeWeeks);
+  const newerOffset =
+    offset <= pastAtLatest ? 0 : Math.max(offset - rangeWeeks, pastAtLatest);
+
+  const weeks = useMemo<WeekPoint[]>(() => {
+    if (!data) return [];
+    const lastWeek = addDaysToDateString(thisWeek, 7 * (futureWeeks - offset));
+    return Array.from({ length: rangeWeeks }, (_, index) => {
+      const key = addDaysToDateString(lastWeek, -7 * (rangeWeeks - 1 - index));
+      let goalMinutes = 0;
+      let readMinutes = 0;
+      for (let day = 0; day < 7; day++) {
+        const date = addDaysToDateString(key, day);
+        if (date < data.start) continue;
+        readMinutes += data.minutesByDate.get(date) ?? 0;
+        goalMinutes +=
+          date > today
+            ? projectDailyGoal(data.prefs, parseLocalDateString(date))
+            : data.goalForDate(date);
+      }
+      return {
+        key,
+        goalMinutes,
+        readMinutes,
+        future: key > thisWeek,
+      };
+    }).filter((week) => addDaysToDateString(week.key, 6) >= firstWeek);
+  }, [data, firstWeek, futureWeeks, offset, rangeWeeks, thisWeek, today]);
+
+  const selected =
+    weeks.find((week) => week.key === selectedKey) ??
+    weeks.find((week) => week.key === thisWeek) ??
+    weeks[weeks.length - 1];
+
+  const chartMax = Math.max(
+    60,
+    ...weeks.map((week) => Math.max(week.goalMinutes, week.readMinutes)),
+  );
+
+  // Summary over every full week since the first day, not just the visible ones
+  const summary = useMemo(() => {
+    if (!data) return null;
+    const complete: WeekPoint[] = [];
+    // Full weeks only: a first week that began mid-week would skew the trend
+    const firstFullWeek =
+      firstWeek === data.start ? firstWeek : addDaysToDateString(firstWeek, 7);
+    for (let key = firstFullWeek; key < thisWeek; key = addDaysToDateString(key, 7)) {
+      let goalMinutes = 0;
+      let readMinutes = 0;
+      for (let day = 0; day < 7; day++) {
+        const date = addDaysToDateString(key, day);
+        if (date < data.start) continue;
+        readMinutes += data.minutesByDate.get(date) ?? 0;
+        goalMinutes += data.goalForDate(date);
+      }
+      complete.push({ key, goalMinutes, readMinutes, future: false });
     }
-    if (weeklyData.length >= 10) {
-      return 2;
-    }
-    return 1;
-  }, [weeklyData.length]);
+    if (complete.length < SUMMARY_MIN_WEEKS) return null;
 
+    const onGoal = complete.filter((w) => w.readMinutes >= w.goalMinutes).length;
+    const averageGap = Math.round(
+      complete.reduce((sum, w) => sum + w.readMinutes - w.goalMinutes, 0) / complete.length,
+    );
+    const half = Math.floor(complete.length / 2);
+    const mean = (list: WeekPoint[]) =>
+      list.reduce((sum, w) => sum + w.readMinutes, 0) / Math.max(1, list.length);
+    const change = mean(complete.slice(half)) - mean(complete.slice(0, half));
+    const trend = change > 5 ? "up" : change < -5 ? "down" : "flat";
+    return { weeks: complete.length, onGoal, averageGap, trend };
+  }, [data, firstWeek, thisWeek]);
 
   const dailyGoal = prefs?.current_reading_rate_minutes_per_day || 0;
   const targetGoal = prefs?.end_reading_rate_goal_minutes_per_day || dailyGoal;
   const weeklyIncrease = prefs?.weekly_reading_rate_increase_minutes || 0;
   const goalDate = prefs?.end_reading_rate_goal_date;
-  const plan = planState(prefs);
-  const applicableWeeks = weeklyData.filter((point) => point.applicable).length;
+  const labelStep = weeks.length >= 18 ? 4 : weeks.length >= 10 ? 2 : 1;
+  // Count label slots from this week when it's in view, so its label never lands beside another.
+  const labelAnchor = Math.max(0, weeks.findIndex((week) => week.key === thisWeek));
+  const showPlanned = weeks.some((week) => week.future);
+
+  const signedDuration = (minutes: number) =>
+    `${minutes > 0 ? "+" : minutes < 0 ? "−" : ""}${formatDuration(Math.abs(minutes))}`;
 
   return (
     <Screen>
@@ -315,14 +229,14 @@ export default function GrowthScreen() {
             {plan === "ended"
               ? t("progress.planEnded", { date: formatDate(goalDate, LONG_DATE) })
               : plan === "growing"
-              ? goalDate
-                ? t("growthJourney.planGrowing", {
-                    increase: weeklyIncrease,
-                    target: targetGoal,
-                    date: formatDate(goalDate, LONG_DATE),
-                  })
-                : t("progress.growingToNoDate", { target: targetGoal })
-              : t("progress.atTarget")}
+                ? goalDate
+                  ? t("growthJourney.planGrowing", {
+                      increase: weeklyIncrease,
+                      target: targetGoal,
+                      date: formatDate(goalDate, LONG_DATE),
+                    })
+                  : t("progress.growingToNoDate", { target: targetGoal })
+                : t("progress.atTarget")}
           </Text>
           <Button
             title={t("growthJourney.edit.title")}
@@ -334,179 +248,204 @@ export default function GrowthScreen() {
         </View>
 
         <View style={styles.section}>
+          <Eyebrow>{t("growthJourney.chart.title")}</Eyebrow>
           <View style={styles.rangeRow}>
             {RANGE_OPTIONS.map((range) => (
               <Chip
                 key={range}
                 label={t("growthJourney.controls.weeks", { count: range })}
                 selected={rangeWeeks === range}
-                onPress={() => onRangeChange(range)}
+                onPress={() => {
+                  setRangeWeeks(range);
+                  setOffsetWeeks(0);
+                }}
                 grow
               />
             ))}
           </View>
 
-          <View style={styles.legendRow}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, styles.targetBar]} />
-              <Text style={styles.meta}>{t("growthJourney.chart.target")}</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, styles.actualBar]} />
-              <Text style={styles.meta}>{t("growthJourney.chart.actual")}</Text>
-            </View>
-          </View>
-
-          {loading && weeklyData.length === 0 ? (
+          {!data ? (
             <Text style={styles.meta}>{t("growthJourney.loading")}</Text>
           ) : (
             <>
               <View style={styles.chartRow}>
-                {weeklyData.map((point) => {
-                  const targetHeight = Math.max(
-                    2,
-                    (point.targetMinutes / maxChartValue) * CHART_HEIGHT,
-                  );
-                  const actualHeight = Math.max(
-                    2,
-                    (point.actualMinutes / maxChartValue) * CHART_HEIGHT,
-                  );
-                  const isSelected = selectedWeekKey === point.key;
+                {weeks.map((week) => {
+                  const goalHeight = Math.max(2, (week.goalMinutes / chartMax) * CHART_HEIGHT);
+                  const readHeight = (week.readMinutes / chartMax) * CHART_HEIGHT;
+                  const isSelected = selected?.key === week.key;
                   return (
                     <Pressable
-                      key={point.key}
+                      key={week.key}
                       style={styles.weekColumn}
-                      onPress={() => setSelectedWeekKey(point.key)}
+                      onPress={() => setSelectedKey(week.key)}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isSelected }}
-                      accessibilityLabel={t("growthJourney.weekA11y", {
-                        date: formatWeekLabel(point.weekStart),
-                        actual: Math.round(point.actualMinutes),
-                        target: Math.round(point.targetMinutes),
-                      })}
+                      accessibilityLabel={
+                        week.future
+                          ? t("growthJourney.weekPlannedA11y", {
+                              date: weekLabel(week.key),
+                              target: Math.round(week.goalMinutes),
+                            })
+                          : t("growthJourney.weekA11y", {
+                              date: weekLabel(week.key),
+                              actual: Math.round(week.readMinutes),
+                              target: Math.round(week.goalMinutes),
+                            })
+                      }
                     >
-                      <View
-                        style={[styles.barsWrap, isSelected && styles.barsSelected]}
-                      >
-                        <View
-                          style={[styles.bar, styles.targetBar, { height: targetHeight }]}
-                        />
+                      <View style={[styles.barsWrap, isSelected && styles.barsSelected]}>
                         <View
                           style={[
                             styles.bar,
-                            point.actualMinutes >= point.targetMinutes
-                              ? styles.actualBar
-                              : styles.actualShortBar,
-                            { height: actualHeight },
+                            week.future ? styles.plannedBar : styles.goalBar,
+                            { height: goalHeight },
                           ]}
                         />
+                        {!week.future && (
+                          <View
+                            style={[
+                              styles.bar,
+                              styles.readBar,
+                              { height: Math.max(readHeight > 0 ? 2 : 0, readHeight) },
+                            ]}
+                          />
+                        )}
                       </View>
                     </Pressable>
                   );
                 })}
               </View>
-              <View style={styles.xAxisRow}>
-                {weeklyData.map((point, index) => {
-                  const showLabel =
-                    index % xAxisLabelStep === 0 || index === weeklyData.length - 1;
-                  return (
-                    <View key={`${point.key}-label`} style={styles.xAxisLabelSlot}>
-                      <Text style={styles.xAxisLabel}>
-                        {showLabel ? formatWeekLabel(point.weekStart) : ""}
-                      </Text>
-                    </View>
-                  );
-                })}
+              <View style={styles.axisRow}>
+                {weeks.map((week, index) => (
+                  <View key={week.key} style={styles.axisSlot}>
+                    <Text style={[styles.axisLabel, week.key === thisWeek && styles.axisNow]}>
+                      {(index - labelAnchor) % labelStep === 0
+                        ? weekLabel(week.key)
+                        : ""}
+                    </Text>
+                  </View>
+                ))}
               </View>
+
+              <View style={styles.legendRow}>
+                <Legend swatch={styles.readBar} label={t("growthJourney.chart.actual")} />
+                <Legend swatch={styles.goalBar} label={t("growthJourney.chart.target")} />
+                {showPlanned && (
+                  <Legend swatch={styles.plannedBar} label={t("growthJourney.chart.planned")} />
+                )}
+              </View>
+
+              {maxOffset > 0 && (
+                <View style={styles.navigationRow}>
+                  <Pressable
+                    onPress={() => setOffsetWeeks(olderOffset)}
+                    disabled={offset >= maxOffset}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("growthJourney.controls.prev")}
+                    hitSlop={10}
+                    style={[styles.navButton, offset >= maxOffset && styles.disabled]}
+                  >
+                    <Ionicons name="chevron-back" size={20} color={COLORS.ink.primary} />
+                  </Pressable>
+                  <View style={styles.navCenter}>
+                    {offset > 0 && (
+                      <Pressable
+                        onPress={() => setOffsetWeeks(0)}
+                        accessibilityRole="button"
+                        hitSlop={8}
+                      >
+                        <Text style={styles.link}>{t("growthJourney.controls.current")}</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                  <Pressable
+                    onPress={() => setOffsetWeeks(newerOffset)}
+                    disabled={offset === 0}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("growthJourney.controls.next")}
+                    hitSlop={10}
+                    style={[styles.navButton, offset === 0 && styles.disabled]}
+                  >
+                    <Ionicons name="chevron-forward" size={20} color={COLORS.ink.primary} />
+                  </Pressable>
+                </View>
+              )}
             </>
           )}
-
-          <View style={styles.navigationRow}>
-            <Pressable
-              onPress={() =>
-                setOffsetWeeks((prev) => Math.min(maxOffsetWeeks, prev + 1))
-              }
-              disabled={offsetWeeks >= maxOffsetWeeks}
-              accessibilityRole="button"
-              accessibilityLabel={t("growthJourney.controls.prev")}
-              hitSlop={10}
-              style={[styles.navButton, offsetWeeks >= maxOffsetWeeks && styles.disabled]}
-            >
-              <Ionicons name="chevron-back" size={20} color={COLORS.ink.primary} />
-            </Pressable>
-            <Pressable
-              onPress={() => setOffsetWeeks(0)}
-              disabled={offsetWeeks === 0}
-              accessibilityRole="button"
-              style={styles.navCenter}
-            >
-              <Text style={[styles.meta, offsetWeeks === 0 && styles.disabled]}>
-                {t("growthJourney.controls.current")}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setOffsetWeeks((prev) => Math.max(0, prev - 1))}
-              disabled={offsetWeeks === 0}
-              accessibilityRole="button"
-              accessibilityLabel={t("growthJourney.controls.next")}
-              hitSlop={10}
-              style={[styles.navButton, offsetWeeks === 0 && styles.disabled]}
-            >
-              <Ionicons name="chevron-forward" size={20} color={COLORS.ink.primary} />
-            </Pressable>
-          </View>
         </View>
 
-        {selectedWeek && (
+        {selected && (
           <View style={styles.section}>
-            <Eyebrow>
-              {t("growthJourney.summary.weekOf", {
-                date: formatWeekLabel(selectedWeek.weekStart),
-              })}
-            </Eyebrow>
+            <Eyebrow>{t("growthJourney.summary.weekOf", { date: weekLabel(selected.key) })}</Eyebrow>
             <StatRow
-              stats={[
-                {
-                  label: t("growthJourney.chart.actual"),
-                  value: formatDuration(Math.round(selectedWeek.actualMinutes)),
-                },
-                {
-                  label: t("growthJourney.chart.target"),
-                  value: formatDuration(Math.round(selectedWeek.targetMinutes)),
-                },
-              ]}
+              stats={
+                selected.future
+                  ? [
+                      {
+                        label: t("growthJourney.chart.planned"),
+                        value: formatDuration(selected.goalMinutes),
+                      },
+                    ]
+                  : [
+                      {
+                        label: t("growthJourney.chart.actual"),
+                        value: formatDuration(selected.readMinutes),
+                      },
+                      {
+                        label: t("growthJourney.chart.target"),
+                        value: formatDuration(selected.goalMinutes),
+                      },
+                    ]
+              }
             />
           </View>
         )}
 
-        <View style={styles.section}>
-          <Eyebrow>{t("growthJourney.summary.title")}</Eyebrow>
-          <StatRow
-            stats={[
-              {
-                label: t("growthJourney.summary.goalHit"),
-                value: `${goalHitWeeks}/${applicableWeeks}`,
-              },
-              {
-                label: t("growthJourney.summary.avgVariance"),
-                value: `${averageVariance >= 0 ? "+" : ""}${averageVariance}`,
-              },
-              {
-                label: t("growthJourney.summary.trend"),
-                value:
-                  trendDirection === "up"
-                    ? t("growthJourney.summary.trendUp")
-                    : trendDirection === "down"
-                      ? t("growthJourney.summary.trendDown")
-                      : t("growthJourney.summary.trendFlat"),
-              },
-            ]}
-          />
-        </View>
+        {data && (
+          <View style={styles.section}>
+            <Eyebrow>{t("growthJourney.summary.title")}</Eyebrow>
+            {summary ? (
+              <StatRow
+                stats={[
+                  {
+                    label: t("growthJourney.summary.goalHit"),
+                    value: `${summary.onGoal}/${summary.weeks}`,
+                  },
+                  {
+                    label: t("growthJourney.summary.avgVariance"),
+                    value: signedDuration(summary.averageGap),
+                  },
+                  {
+                    label: t("growthJourney.summary.trend"),
+                    value:
+                      summary.trend === "up"
+                        ? t("growthJourney.summary.trendUp")
+                        : summary.trend === "down"
+                          ? t("growthJourney.summary.trendDown")
+                          : t("growthJourney.summary.trendFlat"),
+                  },
+                ]}
+              />
+            ) : (
+              <Text style={styles.meta}>
+                {t("growthJourney.summary.notYet", { count: SUMMARY_MIN_WEEKS })}
+              </Text>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       <GoalSheet visible={editing} prefs={prefs} onClose={() => setEditing(false)} />
     </Screen>
+  );
+}
+
+function Legend({ swatch, label }: { swatch: StyleProp<ViewStyle>; label: string }) {
+  return (
+    <View style={styles.legendItem}>
+      <View style={[styles.legendSwatch, swatch]} />
+      <Text style={styles.meta}>{label}</Text>
+    </View>
   );
 }
 
@@ -526,6 +465,11 @@ const styles = StyleSheet.create({
     ...TYPE.title,
   },
   meta: TYPE.meta,
+  link: {
+    ...TYPE.meta,
+    fontFamily: FONTS.sansSemiBold,
+    color: COLORS.accent.primary,
+  },
   editButton: {
     alignSelf: "flex-start",
     marginTop: SPACING[2],
@@ -539,7 +483,9 @@ const styles = StyleSheet.create({
   },
   legendRow: {
     flexDirection: "row",
-    gap: SPACING[4],
+    flexWrap: "wrap",
+    columnGap: SPACING[4],
+    rowGap: SPACING[1],
   },
   legendItem: {
     flexDirection: "row",
@@ -577,34 +523,42 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.paper.sunken,
   },
   bar: {
-    width: 5,
+    width: "30%",
+    maxWidth: 12,
+    minWidth: 4,
     borderTopLeftRadius: 2,
     borderTopRightRadius: 2,
   },
-  targetBar: {
+  goalBar: {
     backgroundColor: COLORS.line.strong,
   },
-  actualBar: {
+  readBar: {
     backgroundColor: COLORS.accent.primary,
   },
-  actualShortBar: {
-    backgroundColor: COLORS.ink.tertiary,
+  plannedBar: {
+    borderWidth: 1,
+    borderColor: COLORS.line.strong,
+    borderStyle: "dashed",
   },
-  xAxisRow: {
+  axisRow: {
     flexDirection: "row",
     gap: 2,
   },
-  xAxisLabelSlot: {
+  axisSlot: {
     flex: 1,
     alignItems: "center",
     overflow: "visible",
   },
-  xAxisLabel: {
+  axisLabel: {
     fontFamily: FONTS.sans,
     fontSize: 10,
     color: COLORS.ink.tertiary,
-    width: 40,
+    width: 44,
     textAlign: "center",
+  },
+  axisNow: {
+    fontFamily: FONTS.sansSemiBold,
+    color: COLORS.ink.primary,
   },
   navigationRow: {
     flexDirection: "row",

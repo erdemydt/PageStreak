@@ -186,6 +186,80 @@ export default function ReminderSettings() {
     }, 600);
   };
 
+  const timeControls = (
+    <>
+      <View style={styles.timeRow}>
+        <Text style={styles.timeLabel}>
+          {t("settings.reminderTimeLabel")}
+        </Text>
+        {Platform.OS === "ios" ? (
+          <DateTimePicker
+            value={reminderTimeAsDate}
+            mode="time"
+            display="compact"
+            accentColor={COLORS.accent.primary}
+            onChange={(_, date) => date && saveReminderTime(date)}
+          />
+        ) : (
+          <Pressable
+            onPress={() => setShowTimePicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`${t("settings.reminderTimeLabel")}, ${reminderTimeLabel}`}
+            hitSlop={8}
+          >
+            <Text style={styles.timeValue}>{reminderTimeLabel}</Text>
+          </Pressable>
+        )}
+      </View>
+      {showTimePicker && (
+        <DateTimePicker
+          value={reminderTimeAsDate}
+          mode="time"
+          onChange={(event, date) => {
+            setShowTimePicker(false);
+            if (date && event.type !== "dismissed") {
+              saveReminderTime(date);
+            }
+          }}
+        />
+      )}
+      <Text style={styles.description}>
+        {t("settings.reminderAtTimeDescription", {
+          time: reminderTimeLabel,
+        })}
+      </Text>
+    </>
+  );
+
+  const hourControls = (
+    <>
+      <View style={styles.chips}>
+        {HOUR_OPTIONS.map((hours) => (
+          <Chip
+            key={hours}
+            grow
+            label={t("duration.hours", { count: hours })}
+            selected={hoursAfter === hours}
+            disabled={saving}
+            onPress={() => {
+              if (hoursAfter === hours) return;
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              updatePreferences({
+                daily_reminder_hours_after_last_open: hours,
+              });
+            }}
+            style={styles.hourChip}
+          />
+        ))}
+      </View>
+      <Text style={styles.description}>
+        {hoursAfter === 1
+          ? t("settings.reminderTimingDescriptionOne")
+          : t("settings.reminderTimingDescription", { hours: hoursAfter })}
+      </Text>
+    </>
+  );
+
   return (
     <View>
       <SettingsRow
@@ -220,101 +294,31 @@ export default function ReminderSettings() {
         </View>
       )}
 
-      {remindersOn && (
-        <View style={styles.timing}>
-          <View>
-            {(["after_close", "daily_time"] as const).map((mode) => (
-              <SettingsRow
-                key={mode}
-                label={
-                  mode === "after_close"
-                    ? t("settings.reminderModeAfterClose")
-                    : t("settings.reminderModeAtTime")
-                }
-                selected={reminderMode === mode}
-                disabled={saving}
-                onPress={() => {
-                  if (reminderMode === mode) return;
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  updatePreferences({ reminder_mode: mode });
-                }}
-              />
-            ))}
+      {remindersOn &&
+        (["after_close", "daily_time"] as const).map((mode) => (
+          <View key={mode}>
+            <SettingsRow
+              label={
+                mode === "after_close"
+                  ? t("settings.reminderModeAfterClose")
+                  : t("settings.reminderModeAtTime")
+              }
+              selected={reminderMode === mode}
+              disabled={saving}
+              onPress={() => {
+                if (reminderMode === mode) return;
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                updatePreferences({ reminder_mode: mode });
+              }}
+            />
+            {/* Each mode's controls sit under its own row, only while selected */}
+            {reminderMode === mode && (
+              <View style={styles.timing}>
+                {mode === "daily_time" ? timeControls : hourControls}
+              </View>
+            )}
           </View>
-
-          {reminderMode === "daily_time" ? (
-            <>
-              <View style={styles.timeRow}>
-                <Text style={styles.timeLabel}>
-                  {t("settings.reminderTimeLabel")}
-                </Text>
-                {Platform.OS === "ios" ? (
-                  <DateTimePicker
-                    value={reminderTimeAsDate}
-                    mode="time"
-                    display="compact"
-                    accentColor={COLORS.accent.primary}
-                    onChange={(_, date) => date && saveReminderTime(date)}
-                  />
-                ) : (
-                  <Pressable
-                    onPress={() => setShowTimePicker(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${t("settings.reminderTimeLabel")}, ${reminderTimeLabel}`}
-                    hitSlop={8}
-                  >
-                    <Text style={styles.timeValue}>{reminderTimeLabel}</Text>
-                  </Pressable>
-                )}
-              </View>
-              {showTimePicker && (
-                <DateTimePicker
-                  value={reminderTimeAsDate}
-                  mode="time"
-                  onChange={(event, date) => {
-                    setShowTimePicker(false);
-                    if (date && event.type !== "dismissed") {
-                      saveReminderTime(date);
-                    }
-                  }}
-                />
-              )}
-              <Text style={styles.description}>
-                {t("settings.reminderAtTimeDescription", {
-                  time: reminderTimeLabel,
-                })}
-              </Text>
-            </>
-          ) : (
-            <>
-              <View style={styles.chips}>
-                {HOUR_OPTIONS.map((hours) => (
-                  <Chip
-                    key={hours}
-                    grow
-                    label={t("duration.hours", { count: hours })}
-                    selected={hoursAfter === hours}
-                    disabled={saving}
-                    onPress={() => {
-                      if (hoursAfter === hours) return;
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                      updatePreferences({
-                        daily_reminder_hours_after_last_open: hours,
-                      });
-                    }}
-                    style={styles.hourChip}
-                  />
-                ))}
-              </View>
-              <Text style={styles.description}>
-                {hoursAfter === 1
-                  ? t("settings.reminderTimingDescriptionOne")
-                  : t("settings.reminderTimingDescription", { hours: hoursAfter })}
-              </Text>
-            </>
-          )}
-        </View>
-      )}
+        ))}
     </View>
   );
 }

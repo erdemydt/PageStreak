@@ -4,10 +4,6 @@ import SettingsButton from "../../../components/ui/SettingsButton";
 import { COLORS } from "../../../themes/colors";
 import { FONTS } from "../../../themes/typography";
 
-// Keep Progress underneath when a screen in this stack is opened directly
-export const unstable_settings = {
-  initialRouteName: "index",
-};
 
 export default function ProgressLayout() {
   const { t } = useTranslation();

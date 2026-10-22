@@ -46,6 +46,7 @@ import {
   formatLanguage,
   formatSessionDay,
   formatSessionDetail,
+  toAppUpperCase,
 } from "../../../utils/format";
 import {
   estimateDaysToFinish,
@@ -316,7 +317,7 @@ export default function BookDetailsScreen() {
             hitSlop={8}
             style={({ pressed }) => [styles.status, pressed && styles.pressed]}
           >
-            <Text style={styles.statusText}>{statusLine}</Text>
+            <Text style={styles.statusText}>{toAppUpperCase(statusLine)}</Text>
             <Ionicons
               name="chevron-down"
               size={14}

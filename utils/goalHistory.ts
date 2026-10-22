@@ -61,6 +61,22 @@ export async function loadGoalForDate(): Promise<GoalForDate> {
 }
 
 /**
+ * The first day the user had a goal: the earliest of the first goal and the
+ * first session (sessions can be backdated before onboarding). Days before it
+ * are not judged. null when there is neither.
+ */
+export async function getTrackingStartDate(): Promise<string | null> {
+  const row = await queryFirst<{ first_goal: string | null; first_session: string | null }>(
+    `SELECT (SELECT MIN(effective_date) FROM goal_history) AS first_goal,
+            (SELECT MIN(date) FROM reading_sessions) AS first_session`,
+  );
+  const dates = [row?.first_goal, row?.first_session].filter(
+    (date): date is string => !!date,
+  );
+  return dates.sort()[0] ?? null;
+}
+
+/**
  * For installs that predate goal_history: reconstruct the timeline from the
  * growth plan. The goal started at the initial rate and stepped up by the
  * weekly increase, the last step landing on current_reading_rate_last_updated.

@@ -3,10 +3,6 @@ import { useTranslation } from "react-i18next";
 import { COLORS } from "../../../themes/colors";
 import { FONTS } from "../../../themes/typography";
 
-// Keep the dashboard underneath when another tab navigates in (withAnchor)
-export const unstable_settings = {
-  initialRouteName: "index",
-};
 
 export default function HomeLayout() {
   const { t } = useTranslation();

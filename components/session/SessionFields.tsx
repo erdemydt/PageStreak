@@ -11,6 +11,7 @@ import {
 import { COLORS } from "../../themes/colors";
 import { RADIUS, SPACING } from "../../themes/spacing";
 import { FONTS, TYPE } from "../../themes/typography";
+import { toAppUpperCase } from "../../utils/format";
 import Chip from "../ui/Chip";
 
 /**
@@ -31,8 +32,13 @@ export function FieldGroup({
   return (
     <View style={styles.group}>
       <View style={styles.labelRow}>
-        <Text style={styles.label} accessibilityRole="header">
-          {label}
+        <Text
+          style={styles.label}
+          accessibilityRole="header"
+          // VoiceOver can spell out all-caps words; read the original text
+          accessibilityLabel={label}
+        >
+          {toAppUpperCase(label)}
         </Text>
         {optional && (
           <Text style={styles.optional}>

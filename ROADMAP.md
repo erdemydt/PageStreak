@@ -15,15 +15,16 @@ Phases 1–7 are done and committed (see CLAUDE.md "Journey log"). **Nothing has
 decides when to ship and tests on device first.
 
 **Owner to-do before the next App Store release:**
-1. `cd ios && pod install`, then commit `Podfile.lock` (packages were removed and versions bumped in Phase 4;
-   CocoaPods wasn't available to Claude).
+1. ~~`pod install`~~: done and committed 2026-10-22 ("Pods for Phase 4").
 2. Device QA: first launch of an *existing* install (runs the v4 migration), reminders in both modes, onboarding
    (including restoring a backup), export/import, the Home reading timer.
 3. Bump the version in `ios/PageStreak/Info.plist` (app.json `version` is ignored).
 4. Still open: an Android notification icon asset; choose Xcode Cloud vs EAS.
 
 **Next work, in order:**
-1. **Phase 8: Structure + Folio redesign** (below). The owner chose design direction **A · Folio** from the
+1. **Phase 9: Folio QA** (below): 9.0 done; next 9.1 quick bugs, 9.2 serif accents, 9.3 backup sheet, 9.4 polish.
+   Phase 8 history follows.
+   **Phase 8: Structure + Folio redesign** (below). The owner chose design direction **A · Folio** from the
    prototypes (https://claude.ai/artifact/23gdMca8CB6BvLTXN5yaaZ, Main + FolioBook artboards) and approved a new
    navigation structure. **8.0–8.6 are done** (code only: needs simulator/device QA of every flow, and the export/
    import modals are still in their older style).
@@ -229,3 +230,20 @@ changes**: UI and routing only. Every old route keeps a `<Redirect>` stub for 2+
   optional first book via the root Add sheet (`closeOnAdd`). `yearly_book_goal = 0`, genres `''` for new users. Intro is
   now a plain fade screen (a native modal would block the root-hosted sheets). `utils/genres.ts`, TargetGoalStep,
   introStyles and the old intro keys removed.
+
+## Phase 9: Folio QA (simulator round 1)
+From the simulator review of every flow (https://claude.ai/artifact/Xon4uLCrwSXwQ5qQG7bJgt): 1 blocker, 6 High, 9 Medium,
+21 Polish. Owner decisions (2026-10-22): status names stay context-specific (the chip labels are not used everywhere);
+backups always include everything (no per-table export switches).
+
+- [x] **9.0 Blocker + first fixes**: launch skipped boot (`unstable_settings.initialRouteName` in tab layouts); Turkish
+  uppercase (`toAppUpperCase`); week strip "before you started" days; Growth rebuilt (planned bars, paging, full-week
+  summary, axis labels); reminder options under their own mode. Time-zone checked (LA, Istanbul, Auckland, UTC), reviewed.
+- [ ] **9.1 Quick bug batch**: restore text in i18n with `formatDate`; stale search submit; blank covers
+  (`?default=false`); status toast with Undo; log/edit helper text ("Page 20 of 608"); calmer reminder copy; Progress
+  "Per day" and "Days met" counting the same days.
+- [ ] **9.2 Serif accents**: Newsreader clips Turkish capitals (İ, Ş, Ç) on iOS; bundle it with a raised ascender, then a
+  screenshot pass over every screen.
+- [ ] **9.3 Backup and restore on `Sheet`**: one "Create backup" (everything), picker first, merge/replace only when data
+  exists, toasts. Test merge/replace against real backup JSONs, including an old-format one.
+- [ ] **9.4 Polish**: header/status-bar band, chips, gear styles, sheet close buttons, copy.

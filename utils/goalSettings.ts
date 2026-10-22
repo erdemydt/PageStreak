@@ -273,3 +273,34 @@ export function planState(
   if (target <= daily) return "atTarget" as const;
   return end && end.getTime() < Date.now() ? ("ended" as const) : ("growing" as const);
 }
+
+/**
+ * The daily goal the plan will have reached on `date`, the way
+ * applyWeeklyGoalGrowth will grow it: +increase per full week since the last
+ * step, capped at the target, with no steps after the goal date.
+ */
+export function projectDailyGoal(
+  prefs: Pick<
+    UserPreferences,
+    | "current_reading_rate_minutes_per_day"
+    | "end_reading_rate_goal_minutes_per_day"
+    | "end_reading_rate_goal_date"
+    | "current_reading_rate_last_updated"
+    | "weekly_reading_rate_increase_minutes"
+  > | null,
+  date: Date,
+): number {
+  const current = prefs?.current_reading_rate_minutes_per_day || 0;
+  const target = prefs?.end_reading_rate_goal_minutes_per_day || current;
+  const increase = prefs?.weekly_reading_rate_increase_minutes ?? 0;
+  const lastUpdated = parseDbDate(prefs?.current_reading_rate_last_updated);
+  const end = parseDbDate(prefs?.end_reading_rate_goal_date);
+  if (!lastUpdated || !end || increase <= 0 || current >= target) return current;
+
+  // By the end of `date`: growth applies on the step day once the app is opened
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+  const until = Math.min(endOfDay.getTime(), end.getTime());
+  const weeks = Math.max(0, Math.floor((until - lastUpdated.getTime()) / MS_PER_WEEK));
+  return Math.min(target, Math.round(current + increase * weeks));
+}

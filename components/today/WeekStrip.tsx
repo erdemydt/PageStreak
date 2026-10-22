@@ -7,7 +7,8 @@ import { formatWeekday, WeekDay } from "../../utils/week";
 
 /**
  * Monday to Sunday between hairlines: a filled dot for each day the goal (of
- * that day) was met, a ring for today, and an outline for missed days.
+ * that day) was met, a ring for today, and an outline for missed days. Days
+ * before the user's first day look like upcoming ones (not judged).
  */
 export default function WeekStrip({
   days,
@@ -29,6 +30,8 @@ export default function WeekStrip({
         return day.metToday
           ? t("today.dayMet", { day: name })
           : t("today.dayToday", { day: name });
+      case "before":
+        return t("today.dayBeforeStart", { day: name });
       default:
         return t("today.dayUpcoming", { day: name });
     }
@@ -48,7 +51,8 @@ export default function WeekStrip({
             style={[
               styles.label,
               day.state === "today" && styles.labelToday,
-              day.state === "upcoming" && styles.labelUpcoming,
+              (day.state === "upcoming" || day.state === "before") &&
+                styles.labelUpcoming,
             ]}
           >
             {formatWeekday(day.date)}
@@ -72,6 +76,9 @@ const DOT = StyleSheet.create({
     borderColor: COLORS.accent.primary,
   },
   upcoming: {
+    borderColor: COLORS.line.hairline,
+  },
+  before: {
     borderColor: COLORS.line.hairline,
   },
 });

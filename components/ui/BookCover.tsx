@@ -4,6 +4,7 @@ import { StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { COLORS } from "../../themes/colors";
 import { RADIUS } from "../../themes/spacing";
 import { FONTS } from "../../themes/typography";
+import { toAppUpperCase } from "../../utils/format";
 
 type Props = {
   uri?: string | null;
@@ -63,7 +64,7 @@ export default function BookCover({ uri, title, author, width, style }: Props) {
               style={[styles.drawnAuthor, { fontSize: Math.max(5, width * 0.075) }]}
               numberOfLines={2}
             >
-              {author.toUpperCase()}
+              {toAppUpperCase(author)}
             </Text>
           ) : null}
         </View>

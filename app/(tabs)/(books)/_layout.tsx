@@ -3,11 +3,6 @@ import { useTranslation } from "react-i18next";
 import { COLORS } from "../../../themes/colors";
 import { FONTS } from "../../../themes/typography";
 
-// When another tab navigates into this stack (with withAnchor), keep the
-// library index underneath so Back and the tab button lead somewhere
-export const unstable_settings = {
-  initialRouteName: "index",
-};
 
 export default function BooksLayout() {
   const { t } = useTranslation();

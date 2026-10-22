@@ -5,9 +5,10 @@ import {
   parseLocalDateString,
 } from "./dateUtils";
 import { getAppLocale } from "./format";
-import { loadGoalForDate } from "./goalHistory";
+import { getTrackingStartDate, loadGoalForDate } from "./goalHistory";
 
-export type WeekDayState = "met" | "missed" | "today" | "upcoming";
+/** "before": earlier than the user's first day, so not judged */
+export type WeekDayState = "met" | "missed" | "today" | "upcoming" | "before";
 
 export type WeekDay = {
   /** YYYY-MM-DD */
@@ -45,10 +46,13 @@ export async function loadWeek(
   today: string = getTodayDateString(),
 ): Promise<WeekDay[]> {
   const dates = getWeekDates(today);
-  const [sessions, goalForDate] = await Promise.all([
+  const [sessions, goalForDate, start] = await Promise.all([
     listSessionMinutes(dates[0], dates[6]),
     loadGoalForDate(),
+    getTrackingStartDate(),
   ]);
+  // With no goal or session yet, today is the first day
+  const firstDay = start ?? today;
 
   const totals = new Map<string, number>();
   for (const session of sessions) {
@@ -60,7 +64,15 @@ export async function loadWeek(
     const goal = goalForDate(date);
     const met = minutes >= goal;
     const state: WeekDayState =
-      date > today ? "upcoming" : date === today ? "today" : met ? "met" : "missed";
+      date > today
+        ? "upcoming"
+        : date === today
+          ? "today"
+          : date < firstDay
+            ? "before"
+            : met
+              ? "met"
+              : "missed";
     return { date, minutes, goal, state, metToday: date === today && met };
   });
 }

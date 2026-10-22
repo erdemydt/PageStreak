@@ -163,13 +163,16 @@ tables there and to the backup service. Test migrations against real DB files: s
 - **i18n parity**: every key must exist in both `en` and `tr`. No hard-coded user-facing
   strings, including `Alert.alert` titles and buttons. Avoid i18next `_one`/`_other` plurals
   (Hermes `Intl.PluralRules` support is not guaranteed); use explicit keys like `bookCountOne` / `bookCountOther`.
-- Navigating into another tab's stack: pass `withAnchor` (both tab stacks set
-  `unstable_settings.initialRouteName = "index"`), or the user lands on a stack with no way back.
-  Home opens books via its own route `(home)/book/[id]` (re-exports the Books detail screen).
+- **Never export `unstable_settings.initialRouteName` from a tab stack layout.** With it, expo-router
+  matches the launch URL `/` inside the tabs instead of `app/index.tsx`, so boot (onboarding, goal growth,
+  `markBootComplete`) never runs. Don't navigate across tabs into a stack; give each tab its own route
+  instead (Home opens books via `(home)/book/[id]`, which re-exports the Books detail screen).
 - Tabs stay mounted: load screen data with `useFocusRefresh(load, topics, deps?)`, not `useEffect([])`.
   New writes belong in a repo and must `emitDataChange(...)` so visible screens refresh.
 - Feedback: success → `showToast` (optionally with Undo); `Alert.alert` only for errors and decisions.
 - Turkish copy uses the formal "siz" form consistently.
+- **Uppercase with `toAppUpperCase` (utils/format.ts)**, never `textTransform: "uppercase"` or `toUpperCase()`:
+  those turn Turkish "i" into "I" instead of "İ". `Eyebrow` already does it.
 - No SQL in `app/` or `components/` (ESLint `no-restricted-imports`); add a repo function instead.
   `utils/` and `services/` may query, but prefer repos.
 - Don't define components inside render (e.g. `const Header = () => …; <Header/>`); it remounts every render.
@@ -299,3 +302,11 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   and `/settings` are the same URL), restyled with hairline rows; About shows the native version (expo-application).
   8.6 onboarding rebuilt in Folio: name → daily goal → grow it? → reminder → optional first book; genres and the yearly
   step dropped (yearly goal starts unset). Phase 8 is complete.
+- **Phase 9.0: simulator QA round 1.** `pod install` done (iOS 26.5 simulator). Walked every flow; review at
+  https://claude.ai/artifact/Xon4uLCrwSXwQ5qQG7bJgt. Blocker: `unstable_settings.initialRouteName` in the tab layouts made
+  `/` resolve inside the tabs, so boot never ran (removed; see Gotchas). Fixed: Turkish uppercase (`toAppUpperCase`,
+  `textTransform` dropped from TYPE); the week strip marks days before tracking began (`getTrackingStartDate`, state
+  `"before"`) and Progress stats skip them; Growth rebuilt (planned dashed bars from `projectDailyGoal`, older/newer paging
+  measured from the window end, full-week-only summary, axis labels anchored on this week); reminder controls sit under
+  their own mode. Date logic checked under LA, Istanbul, Auckland and UTC; paging over 195 range/history combinations.
+  The reviewer found unreachable past weeks, a partial-week trend, projection a day late, a stranding redirect.

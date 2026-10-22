@@ -94,6 +94,8 @@ utils/
   devData.ts             Dev-only random session generator
   toast.ts               showToast({message, actionLabel?, onAction?}): non-blocking feedback (ToastHost in root layout)
 i18n/index.ts            ALL strings, `en` and `tr` in one file
+assets/brand/            App icon SVG masters (light/dark/tinted). Never edit icon PNGs by hand: change the geometry in
+                         scripts/brand/build-icons.py and rerun it (writes the SVGs and every iOS/Android/in-app icon and splash PNG)
 themes/                  COLORS / SPACING / TYPE / FONTS tokens (use them; no raw hex in screens). Folio design
                          language: role tokens COLORS.paper/ink/line/accent/streak; legacy keys map onto them
 ```
@@ -341,3 +343,10 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   backups are written to the cache (they used to pile up in Documents).
 - **2026-10-22: Xcode Cloud CI.** Made `ios/ci_scripts/ci_post_clone.sh` use `npm ci` only when
   `package-lock.json` is present, with an `npm install` fallback for checkouts missing the lockfile.
+- **2026-10-23: New app icon.** Three rounds on a design canvas (https://claude.ai/artifact/TCuNB4bxW75iMwsLS1vPEM), with
+  brand, icon-craft and wildcard critic subagents. The owner picked the shelf: six paper books on forest, the seventh (today,
+  marigold) leaning on them. A week of reading with today keeping the streak; the lean is what stops it reading as a bar chart.
+  `scripts/brand/build-icons.py` (Pillow) writes the SVG masters and every PNG: iOS light + dark + tinted appearances
+  (AppIcon Contents.json), `icon.png` (app.json icon), `Logo.png` (rounded, in-app and splash), favicon, Android adaptive
+  foreground/legacy/round mipmaps and splash logos. Splash backgrounds are paper #F5F1E8 (app.json, colorset, storyboard,
+  colors.xml); Android icon background forest. Unused Expo template images removed. Needs an on-device look (icons cache: reinstall).

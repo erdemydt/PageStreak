@@ -1,7 +1,7 @@
 # PageStreak - Enhanced Book Library 📚
 
 PageStreak is a React Native app built with Expo that helps you track your reading journey with advanced book discovery and management features. Download: https://apps.apple.com/tr/app/pagestreak/id6752559360
-w
+
 ## New Features Added ✨
 
 ### 🔍 Comprehensive Book Search

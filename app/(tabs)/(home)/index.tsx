@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TimerClock from "../../../components/TimerClock";
+import SessionRow from "../../../components/session/SessionRow";
 import WeekStrip from "../../../components/today/WeekStrip";
 import BookCover from "../../../components/ui/BookCover";
 import Button from "../../../components/ui/Button";
@@ -35,7 +36,11 @@ import {
   getTodayDateString,
   parseDbDate,
 } from "../../../utils/dateUtils";
-import { formatDate, formatDuration } from "../../../utils/format";
+import {
+  formatDate,
+  formatDuration,
+  formatSessionDetail,
+} from "../../../utils/format";
 import {
   computeBookProgress,
   getReadingStreak,
@@ -404,26 +409,11 @@ export default function TodayScreen() {
             {todaySessions.map((session, index) => (
               <View key={session.id}>
                 {index > 0 && <Hairline />}
-                <Pressable
+                <SessionRow
+                  label={session.book_name}
+                  detail={formatSessionDetail(session)}
                   onPress={() => editSession(session)}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.sessionRow,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={styles.sessionBook} numberOfLines={1}>
-                    {session.book_name}
-                  </Text>
-                  <Text style={styles.sessionMeta}>
-                    {session.pages_read
-                      ? t("today.sessionPages", {
-                          time: formatDuration(session.minutes_read),
-                          pages: session.pages_read,
-                        })
-                      : formatDuration(session.minutes_read)}
-                  </Text>
-                </Pressable>
+                />
               </View>
             ))}
           </View>
@@ -665,21 +655,6 @@ const styles = StyleSheet.create({
   emptyText: {
     ...TYPE.byline,
     fontSize: 19,
-  },
-  sessionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: SPACING[3],
-    minHeight: 48,
-  },
-  sessionBook: {
-    ...TYPE.bodyStrong,
-    flex: 1,
-  },
-  sessionMeta: {
-    ...TYPE.meta,
-    fontVariant: ["tabular-nums"],
   },
   yearly: {
     gap: SPACING[3],

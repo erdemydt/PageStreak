@@ -1,5 +1,9 @@
 import i18n from "../i18n";
-import { parseDbDate } from "./dateUtils";
+import {
+  addDaysToDateString,
+  getTodayDateString,
+  parseDbDate,
+} from "./dateUtils";
 
 /**
  * Shared, app-language-aware formatters. Use these instead of per-screen
@@ -66,9 +70,42 @@ export function formatDate(
   return date.toLocaleDateString(getAppLocale(), options);
 }
 
+/** "3 Mar", with the year only when it isn't this year */
+export function formatShortDate(value?: string | Date | null): string {
+  if (!value) return "";
+  const date = value instanceof Date ? value : parseDbDate(value);
+  if (!date) return typeof value === "string" ? value : "";
+  return date.toLocaleDateString(getAppLocale(), {
+    day: "numeric",
+    month: "short",
+    ...(date.getFullYear() !== new Date().getFullYear() && { year: "numeric" }),
+  });
+}
+
 /** Open Library language code ("eng") to a localized name, else the raw code */
 export function formatLanguage(code?: string | null): string {
   if (!code) return "";
   const key = `languages.${code.toLowerCase()}`;
   return i18n.exists(key) ? i18n.t(key) : code.toUpperCase();
+}
+
+/** "Today", "Yesterday", else "Tue, Oct 20" (a session's day, in the app language) */
+export function formatSessionDay(date: string): string {
+  const today = getTodayDateString();
+  if (date === today) return i18n.t("components.sessionDate.today");
+  if (date === addDaysToDateString(today, -1)) {
+    return i18n.t("components.sessionDate.yesterday");
+  }
+  return formatDate(date, { weekday: "short", day: "numeric", month: "short" });
+}
+
+/** "25 min · 12 pages", or just "25 min" when no pages were logged */
+export function formatSessionDetail(session: {
+  minutes_read: number;
+  pages_read?: number | null;
+}): string {
+  const time = formatDuration(session.minutes_read);
+  return session.pages_read
+    ? i18n.t("duration.withPages", { time, pages: session.pages_read })
+    : time;
 }

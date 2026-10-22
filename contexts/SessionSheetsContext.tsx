@@ -1,8 +1,18 @@
-import { createContext, ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import * as Haptics from "expo-haptics";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Alert } from "react-native";
+import FinishSheet from "../components/book/FinishSheet";
 import EditSessionModal from "../components/EditSessionModal";
 import ReadingTimeLogger from "../components/ReadingTimeLogger";
+import { SHEET_HANDOFF_MS } from "../components/ui/Sheet";
 import {
   deleteSession,
   restoreSession,
@@ -27,14 +37,16 @@ export type LoggerOptions = {
 type SessionSheets = {
   openLogger: (options?: LoggerOptions) => void;
   editSession: (session: SessionWithBook) => void;
+  /** After a book is marked read: its place in the year and what to read next */
+  celebrateFinish: (bookId: number) => void;
 };
 
 const SessionSheetsContext = createContext<SessionSheets | null>(null);
 
 /**
- * Hosts the two session sheets once, at the root, so any screen can log a
- * session (Today, a book's page, History) or edit one without mounting its
- * own copy of the form.
+ * Hosts the session sheets once, at the root, so any screen can log a session
+ * (Today, a book's page, History), edit one, or celebrate a finished book
+ * without mounting its own copy.
  */
 export function SessionSheetsProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -42,6 +54,8 @@ export function SessionSheetsProvider({ children }: { children: ReactNode }) {
   const [loggerVisible, setLoggerVisible] = useState(false);
   const [editing, setEditing] = useState<SessionWithBook | null>(null);
   const [editVisible, setEditVisible] = useState(false);
+  const [finishedBookId, setFinishedBookId] = useState<number | null>(null);
+  const [finishVisible, setFinishVisible] = useState(false);
 
   const openLogger = useCallback((options: LoggerOptions = {}) => {
     setLoggerOptions(options);
@@ -52,6 +66,19 @@ export function SessionSheetsProvider({ children }: { children: ReactNode }) {
     setEditing(session);
     setEditVisible(true);
   }, []);
+
+  const celebrateFinish = useCallback((bookId: number) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => {},
+    );
+    setFinishedBookId(bookId);
+    setFinishVisible(true);
+  }, []);
+
+  // Finished from the log sheet: celebrate once that sheet has slid away
+  const handleFinishedFromLogger = (bookId: number) => {
+    setTimeout(() => celebrateFinish(bookId), SHEET_HANDOFF_MS);
+  };
 
   const closeLogger = () => {
     setLoggerVisible(false);
@@ -94,8 +121,8 @@ export function SessionSheetsProvider({ children }: { children: ReactNode }) {
   };
 
   const value = useMemo(
-    () => ({ openLogger, editSession }),
-    [openLogger, editSession],
+    () => ({ openLogger, editSession, celebrateFinish }),
+    [openLogger, editSession, celebrateFinish],
   );
 
   return (
@@ -105,6 +132,7 @@ export function SessionSheetsProvider({ children }: { children: ReactNode }) {
         visible={loggerVisible}
         onClose={closeLogger}
         onSuccess={loggerOptions.onSuccess}
+        onFinishedBook={handleFinishedFromLogger}
         initialBookId={loggerOptions.bookId}
         initialDate={loggerOptions.date}
         initialMinutes={loggerOptions.minutes}
@@ -115,6 +143,11 @@ export function SessionSheetsProvider({ children }: { children: ReactNode }) {
         onClose={() => setEditVisible(false)}
         onSave={handleUpdate}
         onDelete={handleDelete}
+      />
+      <FinishSheet
+        bookId={finishedBookId}
+        visible={finishVisible}
+        onClose={() => setFinishVisible(false)}
       />
     </SessionSheetsContext.Provider>
   );

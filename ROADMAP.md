@@ -64,6 +64,9 @@ Kept for the owner's release notes; clear it when a release ships.
 - New Today screen: today's minutes and streak at a glance, this week's days, the book you read last (switch between
   books in progress), and today's sessions (tap to fix one). Tapping a reminder opens Today.
 - Logging and editing a session use a new bottom sheet; the logger preselects the book you read last.
+- Book page: log reading for that book, see and fix its sessions, change status from one control, edit the page
+  count or delete the book from the "…" menu. Finishing a book shows where it lands in your yearly goal and offers
+  the next book on your list.
 
 ---
 
@@ -193,8 +196,9 @@ changes**: UI and routing only. Every old route keeps a `<Redirect>` stub for 2+
   `components/ui/` primitives (Screen, Eyebrow, Hairline, Button, Sheet, BookCover, ProgressRule, StatRow); Folio tab bar; haptics.
 - [x] **8.1 Logging + Today**: LogSessionProvider, logger as a Folio sheet, Today rebuilt, most-recent-book query,
   notification response listener (after DB init).
-- [ ] **8.2 Book detail**: shared route group `(home,books,progress)/book/[id]` (fallback: root-stack route), drop the
-  `withAnchor` jumps, per-book sessions, one status control, "…" menu with delete, finish sheet.
+- [x] **8.2 Book detail**: per-book sessions, one status control, "…" menu (page count, delete), finish sheet; the
+  Logs/Library `withAnchor` jumps are gone. Kept per-stack re-export routes instead of a shared route group (the
+  group can't be verified without a device); 8.4 adds `(progress)/book/[id]`.
 - [ ] **8.3 Library merge**: one library screen, Add book sheet (search + manual), long-press menu, redirects.
 - [ ] **8.4 Progress tab**: `(progress)` stack with index / growth / history, trimmed weekly stats, yearly-goal sheet,
   Profile tab → redirect, name → Settings.

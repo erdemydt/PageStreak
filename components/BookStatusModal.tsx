@@ -1,15 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Animated,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { COLORS } from "../themes/colors";
-import { getStatusColor } from "../utils/bookStatus";
+import { SPACING } from "../themes/spacing";
+import { FONTS, TYPE } from "../themes/typography";
+import Sheet from "./ui/Sheet";
 
 export type BookStatus = "want_to_read" | "currently_reading" | "read";
 
@@ -21,6 +17,9 @@ interface BookStatusModalProps {
   onClose: () => void;
 }
 
+const STATUS_ORDER: BookStatus[] = ["want_to_read", "currently_reading", "read"];
+
+/** Pick a reading status (a sheet; parents only toggle `visible`) */
 export default function BookStatusModal({
   visible,
   bookTitle,
@@ -30,281 +29,90 @@ export default function BookStatusModal({
 }: BookStatusModalProps) {
   const { t } = useTranslation();
 
-  // The modal owns its fade/scale animation: parents only toggle `visible`.
-  // It stays rendered until the close animation finishes, showing the last
-  // book it was opened for (the parent may clear its selection meanwhile).
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const [rendered, setRendered] = useState(visible);
+  // Keep showing the book it was opened for while it animates closed (the
+  // parent may clear its selection meanwhile)
   const shown = useRef({ bookTitle, currentStatus });
   if (visible) {
     shown.current = { bookTitle, currentStatus };
   }
 
-  useEffect(() => {
-    if (visible) {
-      setRendered(true);
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.8,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
-        if (finished) setRendered(false);
-      });
-    }
-  }, [visible, fadeAnim, scaleAnim]);
-
-  const statusOptions: {
-    value: BookStatus;
-    label: string;
-    description: string;
-    emoji: string;
-    color: string;
-  }[] = [
-    {
-      value: "want_to_read",
+  const options: Record<BookStatus, { label: string; description: string }> = {
+    want_to_read: {
       label: t("bookStatus.options.wantToRead.label"),
       description: t("bookStatus.options.wantToRead.description"),
-      emoji: "📚",
-      color: getStatusColor("want_to_read"),
     },
-    {
-      value: "currently_reading",
+    currently_reading: {
       label: t("bookStatus.options.currentlyReading.label"),
       description: t("bookStatus.options.currentlyReading.description"),
-      emoji: "📖",
-      color: getStatusColor("currently_reading"),
     },
-    {
-      value: "read",
+    read: {
       label: t("bookStatus.options.read.label"),
       description: t("bookStatus.options.read.description"),
-      emoji: "✅",
-      color: getStatusColor("read"),
     },
-  ];
+  };
 
-  const handleStatusSelect = (status: BookStatus) => {
+  const select = (status: BookStatus) => {
     onStatusChange(status);
     onClose();
   };
 
   return (
-    <Modal
-      transparent
-      visible={rendered}
-      animationType="none"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t("bookStatus.title")}</Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel={t("a11y.close")}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={styles.closeButtonText}>
-                {t("bookStatus.close")}
+    <Sheet visible={visible} onClose={onClose} title={t("bookStatus.title")}>
+      <Text style={styles.bookTitle} numberOfLines={2}>
+        {shown.current.bookTitle}
+      </Text>
+      {STATUS_ORDER.map((status) => {
+        const selected = shown.current.currentStatus === status;
+        return (
+          <Pressable
+            key={status}
+            onPress={() => select(status)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selected }}
+            style={({ pressed }) => [styles.option, pressed && styles.pressed]}
+          >
+            <View style={styles.optionText}>
+              <Text style={styles.optionLabel}>{options[status].label}</Text>
+              <Text style={styles.optionDescription}>
+                {options[status].description}
               </Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.bookTitle} numberOfLines={2}>
-            {shown.current.bookTitle}
-          </Text>
-
-          <View style={styles.statusOptions}>
-            {statusOptions.map((option) => (
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityState={{
-                  selected: shown.current.currentStatus === option.value,
-                }}
-                key={option.value}
-                style={[
-                  styles.statusOption,
-                  shown.current.currentStatus === option.value &&
-                    styles.statusOptionActive,
-                  { borderColor: option.color },
-                ]}
-                onPress={() => handleStatusSelect(option.value)}
-              >
-                <View style={styles.statusOptionLeft}>
-                  <View
-                    style={[
-                      styles.statusEmoji,
-                      { backgroundColor: option.color + "20" },
-                    ]}
-                  >
-                    <Text style={styles.statusEmojiText}>{option.emoji}</Text>
-                  </View>
-                  <View style={styles.statusTextContainer}>
-                    <Text style={styles.statusLabel}>{option.label}</Text>
-                    <Text style={styles.statusDescription}>
-                      {option.description}
-                    </Text>
-                  </View>
-                </View>
-                {shown.current.currentStatus === option.value && (
-                  <View
-                    style={[
-                      styles.selectedIndicator,
-                      { backgroundColor: option.color },
-                    ]}
-                  >
-                    <Text style={styles.selectedIndicatorText}>✓</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Animated.View>
-      </View>
-    </Modal>
+            </View>
+            <Ionicons
+              name={selected ? "checkmark-circle" : "ellipse-outline"}
+              size={24}
+              color={selected ? COLORS.accent.primary : COLORS.line.strong}
+            />
+          </Pressable>
+        );
+      })}
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: COLORS.overlay,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  modalContainer: {
-    backgroundColor: COLORS.white,
-    width: "100%",
-    maxWidth: 400,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.neutral[800],
-    flex: 1,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.neutral[100],
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeButtonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: COLORS.neutral[500],
-  },
   bookTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.neutral[500],
-    marginBottom: 20,
-    textAlign: "center",
-    lineHeight: 22,
+    ...TYPE.byline,
+    paddingBottom: SPACING[3],
   },
-  statusOptions: {
-    gap: 12,
-  },
-  statusOption: {
+  option: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    backgroundColor: COLORS.white,
+    gap: SPACING[3],
+    minHeight: 64,
+    borderTopWidth: StyleSheet.hairlineWidth * 2,
+    borderTopColor: COLORS.line.hairline,
   },
-  statusOptionActive: {
-    backgroundColor: COLORS.neutral[50],
-    borderWidth: 2,
+  pressed: {
+    opacity: 0.6,
   },
-  statusOptionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+  optionText: {
     flex: 1,
+    gap: 2,
   },
-  statusEmoji: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
+  optionLabel: {
+    fontFamily: FONTS.serif,
+    fontSize: 19,
+    color: COLORS.ink.primary,
   },
-  statusEmojiText: {
-    fontSize: 18,
-  },
-  statusTextContainer: {
-    flex: 1,
-  },
-  statusLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.neutral[800],
-    marginBottom: 2,
-  },
-  statusDescription: {
-    fontSize: 13,
-    color: COLORS.neutral[500],
-  },
-  selectedIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  selectedIndicatorText: {
-    fontSize: 12,
-    color: COLORS.white,
-    fontWeight: "bold",
-  },
+  optionDescription: TYPE.meta,
 });

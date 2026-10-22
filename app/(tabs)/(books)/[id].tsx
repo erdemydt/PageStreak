@@ -1,106 +1,125 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Fragment, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { Image } from "expo-image";
+import BookMenuSheet from "../../../components/book/BookMenuSheet";
 import BookStatusModal, {
   BookStatus,
 } from "../../../components/BookStatusModal";
+import SessionRow from "../../../components/session/SessionRow";
+import BookCover from "../../../components/ui/BookCover";
+import Button from "../../../components/ui/Button";
+import Hairline from "../../../components/ui/Hairline";
+import { SHEET_HANDOFF_MS } from "../../../components/ui/Sheet";
+import ProgressRule from "../../../components/ui/ProgressRule";
+import StatRow, { Stat } from "../../../components/ui/StatRow";
+import { useSessionSheets } from "../../../contexts/SessionSheetsContext";
 import { EnhancedBook } from "../../../db/db";
-import {
-  getBook,
-  setPageCount,
-  updateBookStatus,
-} from "../../../db/repos/books";
-import { COLORS } from "../../../themes/colors";
-import { SPACING } from "../../../themes/spacing";
-import { TYPE } from "../../../themes/typography";
-import { getStatusColor, getStatusText } from "../../../utils/bookStatus";
-import {
-  getBookReadingTime,
-  estimateDaysToFinish,
-  getEnhancedBookProgress,
-} from "../../../utils/readingProgress";
-import {
-  formatDate,
-  formatDuration,
-  formatLanguage,
-} from "../../../utils/format";
-import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
-import { showToast } from "../../../utils/toast";
+import { getBook, updateBookStatus } from "../../../db/repos/books";
 import { getDailyGoal } from "../../../db/repos/preferences";
 import {
   getAverageMinutesPerDay,
   getPagesPerMinute,
+  listSessionsForBook,
+  SessionWithBook,
 } from "../../../db/repos/sessions";
+import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
+import { COLORS } from "../../../themes/colors";
+import { SPACING } from "../../../themes/spacing";
+import { FONTS, TYPE } from "../../../themes/typography";
+import { getStatusText } from "../../../utils/bookStatus";
 import {
   addDaysToDateString,
   getTodayDateString,
 } from "../../../utils/dateUtils";
+import {
+  formatDate,
+  formatShortDate,
+  formatDuration,
+  formatLanguage,
+  formatSessionDay,
+  formatSessionDetail,
+} from "../../../utils/format";
+import {
+  estimateDaysToFinish,
+  getEnhancedBookProgress,
+} from "../../../utils/readingProgress";
+import { showToast } from "../../../utils/toast";
 
+const SESSIONS_PREVIEW = 5;
+
+type FinishEstimate = { date: string; basedOnGoal: boolean };
+
+/**
+ * A book's home: its status, progress, sessions and details. Opened from the
+ * Library and (via a re-export) from Today, inside the tab it was opened from.
+ */
 export default function BookDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
+  const { openLogger, editSession, celebrateFinish } = useSessionSheets();
 
   const [book, setBook] = useState<EnhancedBook | null>(null);
-  const [readingTimeMinutes, setReadingTimeMinutes] = useState(0);
+  const [sessions, setSessions] = useState<SessionWithBook[]>([]);
+  const [pagesRead, setPagesRead] = useState(0);
+  const [finishEstimate, setFinishEstimate] = useState<FinishEstimate | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [isEditingPages, setIsEditingPages] = useState(false);
-  const [pagesInput, setPagesInput] = useState("");
-  const [finishEstimate, setFinishEstimate] = useState<{
-    days: number;
-    basedOnGoal: boolean;
-  } | null>(null);
-  const [progressData, setProgressData] = useState<{
-    pagesRead: number;
-    percentage: number;
-    isComplete: boolean;
-    source: "sessions" | "current_page" | "none";
-  }>({ pagesRead: 0, percentage: 0, isComplete: false, source: "none" });
+  const [showStatus, setShowStatus] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [menuMode, setMenuMode] = useState<"menu" | "pages">("menu");
+  const [showAllSessions, setShowAllSessions] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  // Set before a delete starts: its change event must not reload a book
+  // that's gone (that would flash "not found" before going back)
+  const deleting = useRef(false);
 
   const loadData = useCallback(async () => {
-    if (!id) return;
-
-    setLoading(true);
+    if (!id || deleting.current) return;
     setError(null);
 
     try {
       const numericId = Number(id);
       const foundBook = await getBook(numericId);
-
       if (!foundBook) {
         setError(t("components.bookDetailModal.bookNotFound"));
         setBook(null);
         return;
       }
 
-      const [readingTime, progress] = await Promise.all([
-        getBookReadingTime(numericId),
+      const [bookSessions, progress] = await Promise.all([
+        listSessionsForBook(numericId),
         getEnhancedBookProgress(
           foundBook.id,
           foundBook.page,
           foundBook.current_page || 0,
         ),
       ]);
-
       setBook(foundBook);
-      setReadingTimeMinutes(readingTime);
-      setProgressData(progress);
+      setSessions(bookSessions);
+      // Finished books are pinned to their length; session sums can overshoot
+      setPagesRead(
+        foundBook.page <= 0
+          ? progress.pagesRead
+          : foundBook.reading_status === "read"
+            ? foundBook.page
+            : Math.min(progress.pagesRead, foundBook.page),
+      );
 
-      // "Finish by" estimate: pace (pages/min) x minutes per day, using this
-      // book's recent reading, else all recent reading, else the daily goal
+      // "Finish by": pace (pages/min) x minutes per day, using this book's
+      // recent reading, else all recent reading, else the daily goal
       if (
         foundBook.reading_status === "currently_reading" &&
         foundBook.page > 0
@@ -118,7 +137,12 @@ export default function BookDetailsScreen() {
             recentMinutes > 0 ? recentMinutes : await getDailyGoal(),
         });
         setFinishEstimate(
-          days === null ? null : { days, basedOnGoal: recentMinutes <= 0 },
+          days === null
+            ? null
+            : {
+                date: addDaysToDateString(getTodayDateString(), days),
+                basedOnGoal: recentMinutes <= 0,
+              },
         );
       } else {
         setFinishEstimate(null);
@@ -133,59 +157,84 @@ export default function BookDetailsScreen() {
 
   useFocusRefresh(loadData, ["books", "sessions"], [loadData]);
 
-  const openStatusModal = () => {
-    setShowStatusModal(true);
+  // fromSheet: the status sheet is still sliding away, and iOS can't present
+  // the finish sheet until it's gone
+  const changeStatus = (status: BookStatus, fromSheet = false) => {
+    if (!book || status === book.reading_status) return;
+    if (book.reading_status === "read") {
+      // Leaving "read" clears the finish date (the book drops out of the
+      // year's count), so ask first
+      const ask = () =>
+        Alert.alert(t("bookPage.unfinishTitle"), t("bookPage.unfinishMessage"), [
+          { text: t("booksPage.alert.cancel"), style: "cancel" },
+          { text: t("bookPage.unfinishConfirm"), onPress: () => applyStatus(status) },
+        ]);
+      if (fromSheet) setTimeout(ask, SHEET_HANDOFF_MS);
+      else ask();
+      return;
+    }
+    applyStatus(status, fromSheet);
   };
 
-  const closeStatusModal = () => {
-    setShowStatusModal(false);
-  };
-
-  const handleStatusChange = async (status: BookStatus) => {
+  const applyStatus = async (status: BookStatus, fromSheet = false) => {
     if (!book) return;
-
     try {
       await updateBookStatus(book.id, status);
-      closeStatusModal();
-
-      showToast({
-        message: t("booksPage.alert.bookStatusUpdated", {
-          statusText: getStatusText(t, status),
-        }),
-      });
+      if (status === "read") {
+        const bookId = book.id;
+        if (fromSheet) {
+          setTimeout(() => celebrateFinish(bookId), SHEET_HANDOFF_MS);
+        } else {
+          celebrateFinish(bookId);
+        }
+      } else {
+        showToast({
+          message: t("booksPage.alert.bookStatusUpdated", {
+            statusText: getStatusText(t, status),
+          }),
+        });
+      }
     } catch (e) {
       console.error("Failed to update status:", e);
       Alert.alert(t("error"), t("booksPage.alert.failedUpdate"));
     }
   };
 
-  const startEditingPages = () => {
-    setPagesInput(book && book.page > 0 ? String(book.page) : "");
-    setIsEditingPages(true);
+  const openMenu = (mode: "menu" | "pages") => {
+    setMenuMode(mode);
+    setShowMenu(true);
   };
 
-  const savePageCount = async () => {
-    if (!book) return;
-
-    const newPageCount = Number(pagesInput);
-    if (!Number.isInteger(newPageCount) || newPageCount <= 0) {
-      Alert.alert(t("error"), t("components.bookDetailModal.invalidPageCount"));
-      return;
-    }
-
-    try {
-      await setPageCount(book.id, newPageCount);
-      setIsEditingPages(false);
-    } catch (e) {
-      console.error("Failed to update page count:", e);
-      Alert.alert(t("error"), t("booksPage.failedToSave"));
-    }
-  };
+  const header = (
+    <Stack.Screen
+      options={{
+        title: "",
+        headerRight: book
+          ? () => (
+              <Pressable
+                onPress={() => openMenu("menu")}
+                accessibilityRole="button"
+                accessibilityLabel={t("bookPage.more")}
+                hitSlop={10}
+                style={styles.headerButton}
+              >
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={22}
+                  color={COLORS.ink.primary}
+                />
+              </Pressable>
+            )
+          : undefined,
+      }}
+    />
+  );
 
   if (loading) {
     return (
       <View style={styles.centerState}>
-        <ActivityIndicator size="large" color={COLORS.accent.primary} />
+        {header}
+        <ActivityIndicator color={COLORS.accent.primary} />
       </View>
     );
   }
@@ -193,559 +242,424 @@ export default function BookDetailsScreen() {
   if (!book) {
     return (
       <View style={styles.centerState}>
-        <Text style={styles.centerStateText}>
+        {header}
+        <Text style={styles.centerText}>
           {error || t("components.bookDetailModal.bookNotFound")}
         </Text>
       </View>
     );
   }
 
-  const progress =
-    book.reading_status === "currently_reading" ? progressData.percentage : 0;
+  const status = book.reading_status as BookStatus;
+  const percent =
+    book.page > 0 ? Math.min(100, Math.round((pagesRead / book.page) * 100)) : 0;
+
+  const statusLine =
+    status === "currently_reading"
+      ? book.date_started
+        ? t("bookPage.statusReadingSince", {
+            date: formatShortDate(book.date_started),
+          })
+        : t("bookPage.statusReading")
+      : status === "read"
+        ? book.date_finished
+          ? t("bookPage.statusFinishedOn", {
+              date: formatShortDate(book.date_finished),
+            })
+          : t("bookPage.statusFinished")
+        : t("bookPage.statusWantToRead");
+
+  const totalMinutes = sessions.reduce((sum, s) => sum + s.minutes_read, 0);
+  const lastStat: Stat =
+    status === "currently_reading" && finishEstimate
+      ? {
+          label: t("bookPage.finishBy"),
+          value: formatShortDate(finishEstimate.date),
+          emphasis: true,
+        }
+      : status === "read" && book.date_finished
+        ? {
+            label: t("bookPage.finished"),
+            value: formatShortDate(book.date_finished),
+          }
+        : {
+            label: t("bookPage.added"),
+            value: formatShortDate(book.date_added) || "—",
+          };
+  const stats: Stat[] = [
+    {
+      label: t("bookPage.pages"),
+      value:
+        book.page > 0 ? (
+          status === "want_to_read" ? (
+            String(book.page)
+          ) : (
+            <>
+              {pagesRead}
+              <Text style={styles.statSmall}>/{book.page}</Text>
+            </>
+          )
+        ) : (
+          "—"
+        ),
+    },
+    { label: t("bookPage.timeRead"), value: formatDuration(totalMinutes) },
+    lastStat,
+  ];
+
+  const visibleSessions = showAllSessions
+    ? sessions
+    : sessions.slice(0, SESSIONS_PREVIEW);
+
+  const aboutRows: { label: string; value: string }[] = [
+    {
+      label: t("components.bookDetailModal.publishedDate"),
+      value: book.first_publish_year ? String(book.first_publish_year) : "",
+    },
+    { label: t("components.bookDetailModal.publisher"), value: book.publisher || "" },
+    {
+      label: t("components.bookDetailModal.language"),
+      value: formatLanguage(book.language),
+    },
+    { label: "ISBN", value: book.isbn || "" },
+    {
+      label: t("components.bookDetailModal.addedToLibrary"),
+      value: formatDate(book.date_added),
+    },
+    {
+      label: t("components.bookDetailModal.dateStarted"),
+      value: formatDate(book.date_started),
+    },
+    {
+      label: t("components.bookDetailModal.dateFinished"),
+      value: formatDate(book.date_finished),
+    },
+  ].filter((row) => row.value);
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.bookHeader}>
-          <View style={styles.coverContainer}>
-            {book.cover_url ? (
-              <Image
-                source={{ uri: book.cover_url }}
-                style={styles.cover}
-                placeholder={require("../../../assets/images/icon.png")}
-                cachePolicy="memory-disk"
-                transition={150}
+    <View style={styles.screen}>
+      {header}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.hero}>
+          <BookCover
+            uri={book.cover_url}
+            title={book.name}
+            author={book.author}
+            width={112}
+          />
+          <Pressable
+            onPress={() => setShowStatus(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`${statusLine}. ${t("bookPage.changeStatus")}`}
+            hitSlop={8}
+            style={({ pressed }) => [styles.status, pressed && styles.pressed]}
+          >
+            <Text style={styles.statusText}>{statusLine}</Text>
+            <Ionicons
+              name="chevron-down"
+              size={14}
+              color={COLORS.accent.primary}
+            />
+          </Pressable>
+          <Text style={styles.title} accessibilityRole="header">
+            {book.name}
+          </Text>
+          <Text style={styles.author}>{book.author}</Text>
+        </View>
+
+        <StatRow stats={stats} style={styles.stats} />
+
+        {book.page <= 0 && status !== "want_to_read" && (
+          <Pressable
+            onPress={() => openMenu("pages")}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={({ pressed }) => [styles.progress, pressed && styles.pressed]}
+          >
+            <Text style={styles.setPages}>{t("bookPage.setPageCount")}</Text>
+          </Pressable>
+        )}
+
+        {status === "currently_reading" && book.page > 0 && (
+          <View style={styles.progress}>
+            <ProgressRule
+              progress={percent / 100}
+              color={COLORS.ink.primary}
+              thickness={2}
+            />
+            {finishEstimate && (
+              <Text style={styles.meta}>
+                {finishEstimate.basedOnGoal
+                  ? t("bookPage.paceGoal")
+                  : t("bookPage.paceRecent")}
+              </Text>
+            )}
+          </View>
+        )}
+
+        <View style={styles.actions}>
+          {status === "currently_reading" && (
+            <>
+              <Button
+                title={t("bookPage.logReading")}
+                onPress={() => openLogger({ bookId: book.id })}
+                grow
               />
-            ) : (
-              <View style={styles.coverPlaceholder}>
-                <Text style={styles.coverPlaceholderText}>📖</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.bookMeta}>
-            <Text style={styles.title}>{book.name}</Text>
-            <Text style={styles.author}>
-              {t("components.bookCard.by")} {book.author}
-            </Text>
-
-            {book.reading_status && (
-              <TouchableOpacity
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: getStatusColor(book.reading_status) },
-                ]}
-                onPress={openStatusModal}
-              >
-                <Text style={styles.statusText}>
-                  {getStatusText(t, book.reading_status)}
-                </Text>
-                <Text style={styles.statusEdit}>
-                  {t("components.bookDetailModal.edit")}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.quickActionsRow}>
-          <TouchableOpacity
-            style={[styles.quickActionButton, styles.quickActionPrimary]}
-            onPress={openStatusModal}
-          >
-            <Text style={styles.quickActionPrimaryText}>
-              {t("components.bookDetailModal.changeStatus")}
-            </Text>
-          </TouchableOpacity>
-
-          {book.reading_status !== "read" && (
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => handleStatusChange("read")}
-            >
-              <Text style={styles.quickActionText}>
-                {t("components.bookCard.read")}
-              </Text>
-            </TouchableOpacity>
+              <Button
+                title={t("bookPage.markFinished")}
+                variant="secondary"
+                onPress={() => changeStatus("read")}
+              />
+            </>
           )}
-
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() =>
-              router.push("/(tabs)/(home)/readinglogs", { withAnchor: true })
-            }
-          >
-            <Text style={styles.quickActionText}>
-              {t("components.bookDetailModal.logs")}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() =>
-              router.push("/(tabs)/(books)/my-books", { withAnchor: true })
-            }
-          >
-            <Text style={styles.quickActionText}>
-              {t("components.bookDetailModal.library")}
-            </Text>
-          </TouchableOpacity>
+          {status === "want_to_read" && (
+            <Button
+              title={t("bookPage.startReading")}
+              onPress={() => changeStatus("currently_reading")}
+              grow
+            />
+          )}
+          {status === "read" && (
+            <Button
+              title={t("bookPage.readAgain")}
+              variant="secondary"
+              onPress={() => changeStatus("currently_reading")}
+              grow
+            />
+          )}
         </View>
 
-        {book.reading_status === "currently_reading" && progress > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {t("components.bookDetailModal.readingProgress")}
-            </Text>
-            <View style={styles.progressCard}>
-              <View style={styles.progressTopRow}>
-                <Text style={styles.progressValue}>{progress}%</Text>
-                <Text style={styles.progressSummary}>
-                  {t("components.bookDetailModal.pagesOf", {
-                    pagesRead: progressData.pagesRead,
-                    totalPages: book.page,
-                  })}
-                </Text>
-              </View>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[styles.progressFill, { width: `${progress}%` }]}
-                />
-              </View>
-              {finishEstimate && (
-                <Text style={styles.finishEstimate}>
-                  {t(
-                    `components.bookDetailModal.${
-                      finishEstimate.basedOnGoal
-                        ? "finishEstimateGoal"
-                        : "finishEstimate"
-                    }${finishEstimate.days === 1 ? "One" : ""}`,
-                    {
-                      days: finishEstimate.days,
-                      date: formatDate(
-                        addDaysToDateString(
-                          getTodayDateString(),
-                          finishEstimate.days,
-                        ),
-                        { month: "short", day: "numeric" },
-                      ),
-                    },
-                  )}
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
-
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {t("components.bookDetailModal.statistics")}
-          </Text>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              {isEditingPages ? (
-                <>
-                  <TextInput
-                    style={styles.pagesInput}
-                    value={pagesInput}
-                    onChangeText={setPagesInput}
-                    keyboardType="number-pad"
-                    placeholder={t(
-                      "components.bookDetailModal.pageCountPlaceholder",
-                    )}
-                    placeholderTextColor={COLORS.neutral[400]}
-                    autoFocus
-                    onSubmitEditing={savePageCount}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {t("bookPage.sessions")}
+            </Text>
+            {sessions.length > 0 && (
+              <Text style={styles.meta}>
+                {t("bookPage.sessionCount", { count: sessions.length })}
+              </Text>
+            )}
+          </View>
+          {sessions.length === 0 ? (
+            <Text style={styles.empty}>{t("bookPage.noSessions")}</Text>
+          ) : (
+            <View style={styles.sessionList}>
+              {visibleSessions.map((session) => (
+                <Fragment key={session.id}>
+                  <SessionRow
+                    label={formatSessionDay(session.date)}
+                    detail={formatSessionDetail(session)}
+                    onPress={() => editSession(session)}
                   />
-                  <View style={styles.pagesEditActions}>
-                    <TouchableOpacity onPress={() => setIsEditingPages(false)}>
-                      <Text style={styles.pagesEditCancel}>
-                        {t("components.bookDetailModal.cancel")}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={savePageCount}>
-                      <Text style={styles.pagesEditLink}>
-                        {t("components.bookDetailModal.save")}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={styles.pagesValueRow}>
-                    <Text style={styles.statValue}>{book.page}</Text>
-                    <TouchableOpacity onPress={startEditingPages}>
-                      <Text style={styles.pagesEditLink}>
-                        {t("components.bookDetailModal.editPageCount")}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.statLabel}>
-                    {book.page > 0
-                      ? t("components.bookDetailModal.totalPages")
-                      : t("components.bookDetailModal.pageCountUnknown")}
-                  </Text>
-                </>
+                  <Hairline />
+                </Fragment>
+              ))}
+              {sessions.length > SESSIONS_PREVIEW && (
+                <Button
+                  title={
+                    showAllSessions
+                      ? t("bookPage.showFewer")
+                      : t("bookPage.showAll", { count: sessions.length })
+                  }
+                  variant="ghost"
+                  compact
+                  onPress={() => setShowAllSessions((shown) => !shown)}
+                  style={styles.showAll}
+                />
               )}
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                {formatDuration(readingTimeMinutes)}
-              </Text>
-              <Text style={styles.statLabel}>
-                {t("components.bookDetailModal.totalReadingTime")}
-              </Text>
-            </View>
-          </View>
+          )}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {t("components.bookDetailModal.bookInformation")}
-          </Text>
-          <View style={styles.infoCard}>
-            {book.first_publish_year && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>
-                  {t("components.bookDetailModal.publishedDate")}
-                </Text>
-                <Text style={styles.infoValue}>{book.first_publish_year}</Text>
-              </View>
-            )}
-            {book.publisher && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>
-                  {t("components.bookDetailModal.publisher")}
-                </Text>
-                <Text style={styles.infoValue}>{book.publisher}</Text>
-              </View>
-            )}
-            {book.language && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>
-                  {t("components.bookDetailModal.language")}
-                </Text>
-                <Text style={styles.infoValue}>
-                  {formatLanguage(book.language)}
-                </Text>
-              </View>
-            )}
-            {book.isbn && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>ISBN</Text>
-                <Text style={styles.infoValue}>{book.isbn}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {t("components.bookDetailModal.timeline")}
-          </Text>
-          <View style={styles.infoCard}>
-            {book.date_added && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>
-                  {t("components.bookDetailModal.addedToLibrary")}
-                </Text>
-                <Text style={styles.infoValue}>
-                  {formatDate(book.date_added)}
-                </Text>
-              </View>
-            )}
-            {book.date_started && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>
-                  {t("components.bookDetailModal.dateStarted")}
-                </Text>
-                <Text style={styles.infoValue}>
-                  {formatDate(book.date_started)}
-                </Text>
-              </View>
-            )}
-            {book.date_finished && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>
-                  {t("components.bookDetailModal.dateFinished")}
-                </Text>
-                <Text style={styles.infoValue}>
-                  {formatDate(book.date_finished)}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {book.description && (
+        {(aboutRows.length > 0 || book.description || book.notes) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {t("components.bookDetailModal.description")}
-            </Text>
-            <Text style={styles.paragraph}>{book.description}</Text>
-          </View>
-        )}
-
-        {book.notes && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {t("components.bookDetailModal.notes")}
-            </Text>
-            <Text style={styles.paragraph}>{book.notes}</Text>
+            <Pressable
+              onPress={() => setAboutOpen((open) => !open)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: aboutOpen }}
+              style={({ pressed }) => [
+                styles.sectionHeader,
+                styles.aboutHeader,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.sectionTitle}>{t("bookPage.about")}</Text>
+              <Ionicons
+                name={aboutOpen ? "chevron-up" : "chevron-down"}
+                size={18}
+                color={COLORS.ink.secondary}
+              />
+            </Pressable>
+            {aboutOpen && (
+              <View style={styles.about}>
+                {aboutRows.map((row) => (
+                  <View key={row.label} style={styles.aboutRow}>
+                    <Text style={styles.aboutLabel}>{row.label}</Text>
+                    <Text style={styles.aboutValue}>{row.value}</Text>
+                  </View>
+                ))}
+                {book.description ? (
+                  <Text style={styles.paragraph}>{book.description}</Text>
+                ) : null}
+                {book.notes ? (
+                  <View style={styles.notes}>
+                    <Text style={styles.aboutLabel}>{t("bookPage.notes")}</Text>
+                    <Text style={styles.paragraph}>{book.notes}</Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
 
       <BookStatusModal
-        visible={showStatusModal}
+        visible={showStatus}
         bookTitle={book.name}
-        currentStatus={(book.reading_status as BookStatus) || "want_to_read"}
-        onStatusChange={handleStatusChange}
-        onClose={closeStatusModal}
+        currentStatus={status || "want_to_read"}
+        onStatusChange={(next) => changeStatus(next, true)}
+        onClose={() => setShowStatus(false)}
+      />
+      <BookMenuSheet
+        book={book}
+        visible={showMenu}
+        initialMode={menuMode}
+        onClose={() => setShowMenu(false)}
+        onDeleting={(active) => {
+          deleting.current = active;
+        }}
+        onDeleted={() => router.back()}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: COLORS.surface.page,
+    backgroundColor: COLORS.paper.base,
   },
   content: {
-    paddingHorizontal: SPACING[4],
-    paddingVertical: SPACING[4],
-    paddingBottom: SPACING[6],
+    paddingHorizontal: SPACING[5],
+    paddingTop: SPACING[2],
+    paddingBottom: SPACING[8],
   },
   centerState: {
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.surface.page,
-  },
-  centerStateText: {
-    ...TYPE.body,
-    color: COLORS.text.secondary,
-  },
-  bookHeader: {
-    flexDirection: "row",
-    marginBottom: SPACING[4],
-  },
-  coverContainer: {
-    marginRight: SPACING[3],
-  },
-  cover: {
-    width: 88,
-    height: 132,
-    borderRadius: 10,
-  },
-  coverPlaceholder: {
-    width: 88,
-    height: 132,
-    borderRadius: 10,
-    backgroundColor: COLORS.neutral[100],
     justifyContent: "center",
+    padding: SPACING[5],
+    backgroundColor: COLORS.paper.base,
+  },
+  centerText: TYPE.byline,
+  headerButton: {
+    width: 36,
+    height: 36,
     alignItems: "center",
-  },
-  coverPlaceholderText: {
-    fontSize: 30,
-  },
-  bookMeta: {
-    flex: 1,
     justifyContent: "center",
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: COLORS.text.primary,
-    marginBottom: 6,
+  pressed: {
+    opacity: 0.6,
   },
-  author: {
-    ...TYPE.body,
-    marginBottom: SPACING[2],
+  hero: {
+    alignItems: "center",
+    gap: SPACING[2],
   },
-  statusBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
+  status: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 4,
+    marginTop: SPACING[4],
+    minHeight: 32,
   },
   statusText: {
-    color: COLORS.text.inverse,
-    fontSize: 12,
-    fontWeight: "600",
+    ...TYPE.eyebrow,
+    color: COLORS.accent.primary,
   },
-  statusEdit: {
-    color: COLORS.text.inverse,
-    fontSize: 11,
-    opacity: 0.85,
+  title: {
+    fontFamily: FONTS.serif,
+    fontSize: 32,
+    lineHeight: 38,
+    textAlign: "center",
+    color: COLORS.ink.primary,
+  },
+  author: {
+    ...TYPE.byline,
+    fontSize: 18,
+    textAlign: "center",
+  },
+  stats: {
+    marginTop: SPACING[5],
+  },
+  statSmall: {
+    fontSize: 15,
+    color: COLORS.ink.secondary,
+  },
+  progress: {
+    marginTop: SPACING[4],
+    gap: SPACING[2],
+  },
+  meta: TYPE.meta,
+  setPages: {
+    ...TYPE.meta,
+    color: COLORS.accent.primary,
+    textDecorationLine: "underline",
+  },
+  actions: {
+    flexDirection: "row",
+    gap: SPACING[3],
+    marginTop: SPACING[5],
   },
   section: {
-    marginBottom: SPACING[4],
-  },
-  quickActionsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING[2],
-    marginBottom: SPACING[4],
-  },
-  quickActionButton: {
-    backgroundColor: COLORS.surface.raised,
-    borderColor: COLORS.neutral[200],
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  quickActionPrimary: {
-    backgroundColor: COLORS.accent.soft,
-    borderColor: COLORS.accent.primary,
-  },
-  quickActionText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.text.secondary,
-  },
-  quickActionPrimaryText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.accent.strong,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.text.secondary,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    marginBottom: SPACING[2],
-  },
-  progressCard: {
-    backgroundColor: COLORS.surface.raised,
-    borderRadius: 12,
-    padding: SPACING[3],
-    borderWidth: 1,
-    borderColor: COLORS.neutral[100],
-  },
-  progressTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SPACING[2],
-  },
-  progressValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.accent.strong,
-  },
-  finishEstimate: {
-    ...TYPE.meta,
-    color: COLORS.text.secondary,
-    marginTop: SPACING[2],
-  },
-  progressSummary: {
-    ...TYPE.meta,
-    color: COLORS.text.secondary,
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: COLORS.neutral[200],
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: COLORS.accent.primary,
-  },
-  statsRow: {
-    flexDirection: "row",
+    marginTop: SPACING[6],
     gap: SPACING[2],
   },
-  statItem: {
-    flex: 1,
-    backgroundColor: COLORS.surface.raised,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.neutral[100],
-    padding: SPACING[3],
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.text.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    ...TYPE.meta,
-    color: COLORS.text.secondary,
-  },
-  pagesValueRow: {
+  sectionHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "baseline",
+    justifyContent: "space-between",
   },
-  pagesInput: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.text.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.neutral[200],
-    paddingVertical: 2,
-    marginBottom: 6,
+  sectionTitle: TYPE.headline,
+  empty: {
+    ...TYPE.body,
+    paddingVertical: SPACING[2],
   },
-  pagesEditActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+  sessionList: {
+    borderTopWidth: StyleSheet.hairlineWidth * 2,
+    borderTopColor: COLORS.line.hairline,
+  },
+  showAll: {
+    alignSelf: "flex-start",
+    marginTop: SPACING[2],
+    paddingHorizontal: 0,
+  },
+  aboutHeader: {
+    alignItems: "center",
+    minHeight: 44,
+  },
+  about: {
     gap: SPACING[3],
   },
-  pagesEditLink: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.accent.strong,
-  },
-  pagesEditCancel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.text.secondary,
-  },
-  infoCard: {
-    backgroundColor: COLORS.surface.raised,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.neutral[100],
-    paddingHorizontal: SPACING[3],
-  },
-  infoRow: {
+  aboutRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: SPACING[3],
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.neutral[100],
+    gap: SPACING[4],
   },
-  infoLabel: {
-    ...TYPE.meta,
-    color: COLORS.text.secondary,
-    flex: 1,
-  },
-  infoValue: {
-    fontSize: 13,
-    color: COLORS.text.primary,
-    fontWeight: "500",
-    flex: 1,
+  aboutLabel: TYPE.meta,
+  aboutValue: {
+    ...TYPE.body,
+    color: COLORS.ink.primary,
+    flexShrink: 1,
     textAlign: "right",
   },
   paragraph: {
-    backgroundColor: COLORS.surface.raised,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.neutral[100],
-    padding: SPACING[3],
-    fontSize: 14,
-    lineHeight: 20,
-    color: COLORS.text.secondary,
+    ...TYPE.body,
+    lineHeight: 23,
+  },
+  notes: {
+    gap: SPACING[1],
   },
 });

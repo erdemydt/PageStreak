@@ -140,6 +140,20 @@ export async function listSessionsWithBooks(
   );
 }
 
+/** All sessions of one book, newest first, with the book's name and author */
+export async function listSessionsForBook(
+  bookId: number,
+): Promise<SessionWithBook[]> {
+  return queryAll<SessionWithBook>(
+    `SELECT rs.*, eb.name as book_name, eb.author as book_author
+     FROM reading_sessions rs
+     JOIN enhanced_books eb ON rs.book_id = eb.id
+     WHERE rs.book_id = ?
+     ORDER BY rs.date DESC, datetime(rs.created_at) DESC, rs.id DESC`,
+    [bookId],
+  );
+}
+
 /** Minutes per session in [startDate, endDate], without book info */
 export async function listSessionMinutes(
   startDate: string,

@@ -36,6 +36,8 @@ interface ReadingTimeLoggerProps {
   onClose: () => void;
   /** Optional: listeners via useFocusRefresh already reload on save */
   onSuccess?: () => void;
+  /** The session also marked its book as read */
+  onFinishedBook?: (bookId: number) => void;
   /** Pre-fill from the reading timer */
   initialMinutes?: number;
   initialBookId?: number;
@@ -47,6 +49,7 @@ export default function ReadingTimeLogger({
   visible,
   onClose,
   onSuccess,
+  onFinishedBook,
   initialMinutes,
   initialBookId,
   initialDate,
@@ -216,6 +219,7 @@ export default function ReadingTimeLogger({
 
       onSuccess?.();
       onClose();
+      if (finishBook) onFinishedBook?.(selectedBook.id);
 
       const successMessage = finishBook
         ? t("components.readingTimeLogger.finishedBook", {
@@ -232,7 +236,8 @@ export default function ReadingTimeLogger({
               bookName: selectedBook.name,
             });
 
-      showToast({ message: successMessage });
+      // A finished book gets the finish sheet instead of a toast
+      if (!finishBook) showToast({ message: successMessage });
     } catch (error) {
       console.error("Error logging reading time:", error);
       Alert.alert(

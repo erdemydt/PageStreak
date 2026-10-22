@@ -43,18 +43,19 @@ app/
     (books)/index.tsx    Library preview (10 books, status filter), manual add form
     (books)/my-books.tsx Full library: search/sort/filter
     (books)/search.tsx   Open Library search → add book with status
-    (books)/[id].tsx     Book detail: status, progress, page-count edit
+    (books)/[id].tsx     Book page: status line, stats, actions, its sessions, About; "…" menu (re-exported in (home)/book)
     profile.tsx          Edit name / yearly goal / daily + target goal / genres
     reading-growth.tsx   Growth Journey chart (hidden tab, opened from profile)
     settings.tsx         Language, notifications, backup/restore, logout (wipes all data)
 components/              Screens' building blocks (intro/ and profile/ hold those screens' parts + styles)
   today/                 Today's parts (WeekStrip)
-  session/               SessionFields: minutes/pages/notes fields shared by the log and edit sheets
+  session/               SessionFields (log/edit sheet fields), SessionRow (one session in a list)
+  book/                  BookMenuSheet (page count, delete), FinishSheet (the finish moment)
   ui/                    Folio primitives: Button, Sheet (the one bottom sheet), BookCover, Eyebrow, Hairline,
                          ProgressRule, StatRow, Screen. Build new UI from these
 contexts/
-  SessionSheetsContext.tsx  Hosts the log sheet (ReadingTimeLogger) and edit sheet once at the root:
-                         useSessionSheets().openLogger({bookId?, date?, minutes?, onSuccess?}) / editSession(session)
+  SessionSheetsContext.tsx  Hosts the log, edit and finish sheets once at the root: useSessionSheets()
+                         .openLogger({bookId?, date?, minutes?, onSuccess?}) / editSession(s) / celebrateFinish(bookId)
 db/db.tsx                SQLite handle, queryAll/queryFirst/execute, schema init
 db/repos/                Data layer. Screens/components use ONLY these (lint-enforced):
   books.ts               addBook, listBooksWithStats, getBook, setPageCount, updateBookStatus, ...
@@ -133,6 +134,8 @@ tables there and to the backup service. Test migrations against real DB files: s
 - **Yearly goal** counts books with status `read` whose `date_finished` is in the current year.
 - **Session sheets**: never mount ReadingTimeLogger / EditSessionModal in a screen; call `useSessionSheets()`.
   The logger preselects `bookId` only if that book is currently being read, else the most recently read book.
+  Marking a book read anywhere calls `celebrateFinish(bookId)`; when another sheet is closing, delay it ~450 ms
+  (iOS can't present a modal while one is dismissing).
 - **Reminder taps** land on Today (`NotificationService.onReminderTapped` in the root layout, `router.dismissTo` so Today
   isn't pushed twice), only for onboarded users and only after boot (`utils/boot.ts`; a launching tap is left to app/index.tsx).
 - **Notifications**: a single reminder with the fixed identifier `daily-reminder`, scheduled only on
@@ -273,3 +276,8 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   discarded, stops over 4h ask first, and sessions are dated to the timer's start day. The finish estimate uses
   per-book recent minutes, averaged over the days actually read. Profile asks before discarding edits.
   Next: dark mode as its own phase (owner's call), then tests (separate track).
+- **Phase 8 (structure + Folio redesign), in progress.** 8.0 fonts, tokens, `components/ui/` primitives; 8.1 Today screen and
+  root-hosted session sheets, reminder taps open Today; 8.2 the book page as the book's home (log for this book, its
+  sessions, one status control, "…" menu for page count and delete, finish sheet). Review fixes in 8.2: leaving "read"
+  asks first (it clears the finish date), finished books show full pages, no "not found" flash on delete, a
+  failed finish-sheet load can't block later ones, dates outside this year show the year.

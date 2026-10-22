@@ -37,6 +37,12 @@ const SCREEN_HEIGHT = Dimensions.get("window").height;
 const DRAG_CLOSE_DISTANCE = 120;
 
 /**
+ * How long to wait after closing a sheet before presenting another modal
+ * (iOS can't present one while another is still dismissing)
+ */
+export const SHEET_HANDOFF_MS = 450;
+
+/**
  * The one bottom sheet. It owns its slide/fade animation; parents only toggle
  * `visible`. It stays mounted until the close animation finishes. Drag the
  * handle down, tap the backdrop or use the back button to close.

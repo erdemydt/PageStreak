@@ -10,7 +10,22 @@ export VOLTA_HOME="$HOME/.volta"
 export PATH="$VOLTA_HOME/bin:$PATH"
 
 curl https://get.volta.sh | bash -s -- --skip-setup
-"$VOLTA_HOME/bin/volta" install node@20 yarn@1 pnpm@9
+
+# Xcode Cloud can occasionally return a truncated Node archive from the
+# Volta download endpoint. Retry after clearing only Volta's temp files.
+for attempt in 1 2 3; do
+  if "$VOLTA_HOME/bin/volta" install node@20 yarn@1 pnpm@9; then
+    break
+  fi
+
+  if [ "$attempt" -eq 3 ]; then
+    echo "Volta toolchain installation failed after 3 attempts" >&2
+    exit 1
+  fi
+
+  rm -rf "$VOLTA_HOME/tmp"
+  echo "Volta toolchain installation failed; retrying (attempt $((attempt + 1))/3)" >&2
+done
 
 # Show versions (debugging)
 node -v

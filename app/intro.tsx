@@ -15,7 +15,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import DataImportModal from "../components/DataImportModal";
+import RestoreSheet, { chooseBackup } from "../components/settings/RestoreSheet";
 import {
   DailyGoalStep,
   FirstBookStep,
@@ -34,6 +34,7 @@ import {
   saveOnboardingPreferences,
 } from "../db/repos/preferences";
 import { useFocusRefresh } from "../hooks/useFocusRefresh";
+import type { BackupPreview } from "../services/dataBackupService";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
 import { SPACING } from "../themes/spacing";
@@ -86,7 +87,7 @@ export default function IntroScreen() {
   const [wantsReminders, setWantsReminders] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showImport, setShowImport] = useState(false);
+  const [backup, setBackup] = useState<BackupPreview | null>(null);
   const [books, setBooks] = useState<BookWithStats[]>([]);
   const [keyboardShown, setKeyboardShown] = useState(false);
   const fade = useRef(new Animated.Value(1)).current;
@@ -274,8 +275,13 @@ export default function IntroScreen() {
     }
   };
 
+  const restoreBackup = async () => {
+    const chosen = await chooseBackup(t);
+    if (chosen) setBackup(chosen);
+  };
+
   const handleRestoreSuccess = async () => {
-    setShowImport(false);
+    setBackup(null);
     try {
       // The restored plan may be weeks old: catch up its goal before Today loads
       await applyWeeklyGoalGrowth();
@@ -351,7 +357,7 @@ export default function IntroScreen() {
                   if (error && value.trim().length >= 2) setError(null);
                 }}
                 onSubmit={handleNext}
-                onRestore={() => setShowImport(true)}
+                onRestore={restoreBackup}
                 disabled={saving}
               />
             )}
@@ -463,10 +469,10 @@ export default function IntroScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      <DataImportModal
-        visible={showImport}
-        onClose={() => setShowImport(false)}
-        onSuccess={handleRestoreSuccess}
+      <RestoreSheet
+        backup={backup}
+        onClose={() => setBackup(null)}
+        onRestored={handleRestoreSuccess}
       />
     </Screen>
   );

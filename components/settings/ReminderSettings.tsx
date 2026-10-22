@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { NotificationPreferences } from "../../db/db";
+import { useFocusRefresh } from "../../hooks/useFocusRefresh";
 import NotificationService from "../../services/notificationService";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
@@ -81,8 +82,10 @@ export default function ReminderSettings() {
     }
   }, []);
 
+  // Also after a restore, and when the other tab's Settings changed them
+  useFocusRefresh(loadPreferences, ["preferences"]);
+
   useEffect(() => {
-    loadPreferences();
     checkSystemPermissions();
 
     const subscription = AppState.addEventListener("change", (state) => {

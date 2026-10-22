@@ -370,7 +370,7 @@ const resources = {
         language: "Language",
         reminders: "Reminder",
         dailyReminder: "Daily reminder",
-        exportBackup: "Export a backup",
+        exportBackup: "Create a backup",
         restoreBackup: "Restore from a backup",
         bookData: "Book data",
         about: "About",
@@ -380,7 +380,7 @@ const resources = {
         logoutConfirmMessage:
           "This permanently deletes all your books, reading sessions and settings. Export a backup first if you might want them back.",
         logoutFailed: "Failed to erase data. Please try again.",
-        exportFirst: "Export first",
+        exportFirst: "Back up first",
         reminderModeAfterClose: "After I leave the app",
         reminderModeAtTime: "At a set time",
         reminderTimeLabel: "Reminder time",
@@ -420,141 +420,40 @@ const resources = {
 
       dataBackup: {
         export: {
-          title: "Export Data",
-          subtitle: "Choose which data you want to include in your backup file",
-          buttonSubtitle: "Download your books and reading progress",
-          whatToExport: "What to Export",
-          exportInformation: "Export Information",
-          exportingData: "Exporting Data...",
-          exportAndSave: "Export & Save",
-          estimatedSize: "Estimated Size:",
-          format: "Format:",
-          compatibility: "Compatibility:",
-          options: {
-            includeBooks: "Books",
-            includeBooksDescription: "Your book collection and metadata",
-            includeReadingSessions: "Reading Sessions",
-            includeReadingSessionsDescription: "Your reading logs and progress",
-            includeUserPreferences: "User Preferences",
-            includeUserPreferencesDescription: "Your profile and reading goals",
-            includeWeeklyProgress: "Weekly Progress",
-            includeWeeklyProgressDescription:
-              "Your weekly reading achievements",
-            includeNotificationPreferences: "Notification Settings",
-            includeNotificationPreferencesDescription:
-              "Your notification preferences",
-            includeAppUsage: "App Usage Data",
-            includeAppUsageDescription: "Your app usage statistics (optional)",
-          },
-          size: {
-            small: "Small (< 1MB)",
-            medium: "Medium (100KB-1MB)",
-            large: "Large (1-5MB)",
-          },
-          buttons: {
-            cancel: "Cancel",
-          },
-          messages: {
-            preparing: "Preparing export...",
-            success: "Export Successful",
-            successMessage:
-              "Your backup has been saved to your chosen location successfully!",
-            backupCreated: "Backup Created",
-            backupCreatedMessage:
-              "Your backup file has been created. You can find it in the app's documents folder.",
-            exportFailed: "Export Failed",
-            warning:
-              "Keep your backup file safe! It contains your personal reading data. You'll be able to choose where to save the backup file on your device.",
-            unknownError: "An unknown error occurred",
-          },
+          buttonSubtitle: "Save all your books, sessions and settings to a file",
+          shareTitle: "Save PageStreak backup",
+          failed: "The backup couldn't be created. Please try again.",
         },
         import: {
-          title: "Import Data",
           buttonSubtitle: "Bring back books, sessions and goals from a file",
-          steps: {
-            select: {
-              title: "Select Backup File",
-              subtitle:
-                "Choose a PageStreak backup file (.json) to restore your data",
-              instructions: {
-                title: "Supported Files",
-                fileType: "PageStreak backup files (.json)",
-                source: "Files created with Export Data feature",
-                version: "Files from PageStreak v1.0 and later",
-              },
-              buttons: {
-                selectFile: "Select File",
-              },
-            },
-            validate: {
-              validating: "Validating backup file...",
-              validTitle: "Backup ready",
-              valid: "Your backup file is valid and ready to import",
-              invalid: "Invalid Backup File",
-              warnings: "Backup Warnings",
-              warningsMessage:
-                "The backup file has some warnings:\n\n{{warnings}}\n\nDo you want to continue?",
-              backupInfo: {
-                title: "Backup Information",
-                created: "Created:",
-                books: "Books:",
-                sessions: "Reading Sessions:",
-                fileSize: "File Size:",
-                userPreferences: "User Preferences:",
-                included: "Included",
-                notIncluded: "Not included",
-              },
-            },
-            configure: {
-              title: "Configure Import",
-              subtitle: "Choose how you want to import your data",
-              importMode: "Import Mode",
-              options: {
-                merge: "Merge Data",
-                recommended: "(Recommended)",
-                replace: "Replace Data",
-                mergeDescription:
-                  "Add the backup to your existing data. Nothing already here is overwritten; duplicate sessions are skipped.",
-                replaceDescription:
-                  "Delete all current data and replace with backup. This cannot be undone.",
-              },
-              warningText:
-                "Warning: This will permanently delete all your current books, reading sessions, and progress. Make sure to export your current data first if you want to keep it.",
-              buttons: {
-                back: "Back",
-                chooseDifferentFile: "Choose Different File",
-              },
-            },
-            import: {
-              importing: "Importing data...",
-              importingTitle: "Importing Data",
-              importingDescription:
-                "Please wait while we import your backup data",
-              importWarning:
-                "Please don't close the app or navigate away during the import process.",
-              completeTitle: "Import Complete!",
-              completeDescription: "Your data has been successfully imported",
-              importSummary: "Import Summary",
-              booksImported: "{{count}} books imported",
-              sessionsImported: "{{count}} reading sessions imported",
-            },
+          title: "Restore backup",
+          createdOn: "Created {{date}}",
+          books: "Books",
+          sessions: "Sessions",
+          includesProfile: "Includes your name, goals and reminder settings.",
+          mergeExplained:
+            "Merge adds the backup's books and sessions to yours. Your name, goals and settings stay as they are.",
+          merge: "Merge",
+          replace: "Replace",
+          restore: "Restore",
+          replaceTitle: "Replace everything?",
+          replaceMessage:
+            "Your books, sessions, goals and settings will be deleted and replaced with the backup. This can't be undone.",
+          failed: "The backup couldn't be restored. Nothing was changed.",
+          problemTitle: "Can't restore this file",
+          problem: {
+            notBackup: "This file isn't a PageStreak backup.",
+            newerVersion: "This backup was made by a newer version of PageStreak. Update the app, then try again.",
+            damaged: "This backup is damaged or incomplete.",
           },
-          buttons: {
-            import: "Import Data",
-            replace: "Replace Data",
-            cancel: "Cancel",
-            continue: "Continue",
-            finish: "Finish",
-            ok: "OK",
-          },
-          messages: {
-            error: "Error",
-            failedToSelect: "Failed to select file",
-            replaceConfirmTitle: "Replace All Data?",
-            replaceConfirmMessage:
-              "This will DELETE all your current data and replace it with the backup. This action cannot be undone. Are you sure?",
-            unknownError: "An unknown error occurred",
-          },
+          restored: "Backup restored",
+          merged: "Added {{books}} and {{sessions}}",
+          mergedOnly: "Added {{items}}",
+          mergedNothing: "Nothing new: everything in this backup is already here",
+          bookCountOne: "{{count}} book",
+          bookCountOther: "{{count}} books",
+          sessionCountOne: "{{count}} session",
+          sessionCountOther: "{{count}} sessions",
         },
       },
 
@@ -586,30 +485,6 @@ const resources = {
         dut: "Dutch",
       },
 
-      backupProgress: {
-        startingBackup: "Starting backup...",
-        exportingBooks: "Exporting books...",
-        exportingSessions: "Exporting reading sessions...",
-        exportingPreferences: "Exporting user preferences...",
-        exportingWeeklyProgress: "Exporting weekly progress...",
-        exportingNotifications: "Exporting notification settings...",
-        exportingAppUsage: "Exporting app usage data...",
-        creatingFile: "Creating backup file...",
-        backupComplete: "Backup complete!",
-        preparingSave: "Preparing file for save...",
-        fileSaved: "File saved successfully!",
-        savedLocally: "Backup created locally",
-        readingFile: "Reading backup file...",
-        startingImport: "Starting import...",
-        clearingData: "Clearing existing data...",
-        importingPreferences: "Importing user preferences...",
-        importingBooks: "Importing books...",
-        importingSessions: "Importing reading sessions...",
-        importingWeeklyProgress: "Importing weekly progress...",
-        importingNotifications: "Importing notification preferences...",
-        importingAppUsage: "Importing app usage data...",
-        importComplete: "Import completed successfully!",
-      },
 
       intro: {
         step: "Step {{step}} of {{total}}",
@@ -1166,142 +1041,40 @@ const resources = {
 
       dataBackup: {
         export: {
-          title: "Veri Dışa Aktar",
-          subtitle:
-            "Yedek dosyanıza hangi verileri dahil etmek istediğinizi seçin",
-          buttonSubtitle: "Kitaplarınızı ve okuma ilerlemenizi indirin",
-          whatToExport: "Neyi Dışa Aktaracaksınız",
-          exportInformation: "Dışa Aktarma Bilgileri",
-          exportingData: "Veriler dışa aktarılıyor...",
-          exportAndSave: "Kaydet",
-          estimatedSize: "Tahmini Boyut:",
-          format: "Format:",
-          compatibility: "Uyumluluk:",
-          options: {
-            includeBooks: "Kitaplar",
-            includeBooksDescription: "Kitap koleksiyonunuz ve meta veriler",
-            includeReadingSessions: "Okuma Seansları",
-            includeReadingSessionsDescription:
-              "Okuma kayıtlarınız ve ilerlemeniz",
-            includeUserPreferences: "Kullanıcı Tercihleri",
-            includeUserPreferencesDescription:
-              "Profiliniz ve okuma hedefleriniz",
-            includeWeeklyProgress: "Haftalık İlerleme",
-            includeWeeklyProgressDescription: "Haftalık okuma başarılarınız",
-            includeNotificationPreferences: "Bildirim Ayarları",
-            includeNotificationPreferencesDescription: "Bildirim tercihleriniz",
-            includeAppUsage: "Uygulama Kullanım Verileri",
-            includeAppUsageDescription:
-              "Uygulama kullanım istatistikleriniz (isteğe bağlı)",
-          },
-          size: {
-            small: "Küçük (< 1MB)",
-            medium: "Orta (100KB-1MB)",
-            large: "Büyük (1-5MB)",
-          },
-          buttons: {
-            cancel: "İptal",
-          },
-          messages: {
-            preparing: "Dışa aktarma hazırlanıyor...",
-            success: "Dışa Aktarma Başarılı",
-            successMessage: "Yedeğiniz seçtiğiniz konuma başarıyla kaydedildi!",
-            backupCreated: "Yedek Oluşturuldu",
-            backupCreatedMessage:
-              "Yedek dosyanız oluşturuldu. Uygulamanın belgeler klasöründe bulabilirsiniz.",
-            exportFailed: "Dışa Aktarma Başarısız",
-            warning:
-              "Yedek dosyanızı güvende tutun! Kişisel okuma verilerinizi içerir. Dosyayı cihazınızda nereye kaydedeceğinizi seçebilirsiniz.",
-            unknownError: "Bilinmeyen bir hata oluştu",
-          },
+          buttonSubtitle: "Tüm kitaplarınızı, seanslarınızı ve ayarlarınızı bir dosyaya kaydedin",
+          shareTitle: "PageStreak yedeğini kaydedin",
+          failed: "Yedek oluşturulamadı. Lütfen tekrar deneyin.",
         },
         import: {
-          title: "Veri İçe Aktar",
           buttonSubtitle: "Kitapları, seansları ve hedefleri bir dosyadan geri getirin",
-          steps: {
-            select: {
-              title: "Yedek Dosya Seç",
-              subtitle:
-                "Verilerinizi geri yüklemek için bir PageStreak yedek dosyası (.json) seçin",
-              instructions: {
-                title: "Desteklenen Dosyalar",
-                fileType: "PageStreak yedek dosyaları (.json)",
-                source: "Veri Dışa Aktar özelliği ile oluşturulan dosyalar",
-                version: "PageStreak v1.0 ve sonraki sürümlerden dosyalar",
-              },
-              buttons: {
-                selectFile: "Dosya Seç",
-              },
-            },
-            validate: {
-              validating: "Yedek dosya doğrulanıyor...",
-              validTitle: "Yedek hazır",
-              valid: "Yedek dosyanız geçerli ve içe aktarılmaya hazır",
-              invalid: "Geçersiz Yedek Dosyası",
-              warnings: "Yedek Uyarıları",
-              warningsMessage:
-                "Yedek dosyada bazı uyarılar var:\n\n{{warnings}}\n\nDevam etmek istiyor musunuz?",
-              backupInfo: {
-                title: "Yedek Bilgileri",
-                created: "Oluşturulma:",
-                books: "Kitaplar:",
-                sessions: "Okuma Seansları:",
-                fileSize: "Dosya Boyutu:",
-                userPreferences: "Kullanıcı Tercihleri:",
-                included: "Dahil",
-                notIncluded: "Dahil değil",
-              },
-            },
-            configure: {
-              title: "İçe Aktarmayı Yapılandır",
-              subtitle: "Verilerinizi nasıl içe aktarmak istediğinizi seçin",
-              importMode: "İçe Aktarma Modu",
-              options: {
-                merge: "Veri Birleştir",
-                recommended: "(Önerilen)",
-                replace: "Veri Değiştir",
-                mergeDescription:
-                  "Yedeği mevcut verilerinize ekler. Var olan hiçbir şeyin üzerine yazılmaz; tekrarlanan seanslar atlanır.",
-                replaceDescription:
-                  "Tüm mevcut verileri silin ve yedekle değiştirin. Bu geri alınamaz.",
-              },
-              warningText:
-                "Uyarı: Bu, tüm mevcut kitaplarınızı, okuma seanslarınızı ve ilerlemenizi kalıcı olarak silecektir. Saklamak istiyorsanız mevcut verilerinizi önce dışa aktardığınızdan emin olun.",
-              buttons: {
-                back: "Geri",
-                chooseDifferentFile: "Farklı Dosya Seç",
-              },
-            },
-            import: {
-              importing: "Veriler içe aktarılıyor...",
-              importingTitle: "Veriler İçe Aktarılıyor",
-              importingDescription:
-                "Yedek verilerinizi içe aktarırken lütfen bekleyin",
-              importWarning:
-                "İçe aktarma işlemi sırasında lütfen uygulamayı kapatmayın veya başka bir sayfaya geçmeyin.",
-              completeTitle: "İçe Aktarma Tamamlandı!",
-              completeDescription: "Verileriniz başarıyla içe aktarıldı",
-              importSummary: "İçe Aktarma Özeti",
-              booksImported: "{{count}} kitap içe aktarıldı",
-              sessionsImported: "{{count}} okuma seansı içe aktarıldı",
-            },
+          title: "Yedeği geri yükleyin",
+          createdOn: "Oluşturulma: {{date}}",
+          books: "Kitap",
+          sessions: "Seans",
+          includesProfile: "Adınızı, hedeflerinizi ve hatırlatıcı ayarlarınızı içerir.",
+          mergeExplained:
+            "Birleştirme, yedekteki kitapları ve seansları sizinkilere ekler. Adınız, hedefleriniz ve ayarlarınız olduğu gibi kalır.",
+          merge: "Birleştir",
+          replace: "Değiştir",
+          restore: "Geri yükle",
+          replaceTitle: "Her şey değiştirilsin mi?",
+          replaceMessage:
+            "Kitaplarınız, seanslarınız, hedefleriniz ve ayarlarınız silinip yedektekilerle değiştirilecek. Bu geri alınamaz.",
+          failed: "Yedek geri yüklenemedi. Hiçbir şey değişmedi.",
+          problemTitle: "Bu dosya geri yüklenemiyor",
+          problem: {
+            notBackup: "Bu dosya bir PageStreak yedeği değil.",
+            newerVersion: "Bu yedek PageStreak'in daha yeni bir sürümüyle oluşturulmuş. Uygulamayı güncelleyip tekrar deneyin.",
+            damaged: "Bu yedek hasarlı ya da eksik.",
           },
-          buttons: {
-            import: "Veri İçe Aktar",
-            replace: "Veri Değiştir",
-            cancel: "İptal",
-            continue: "Devam Et",
-            finish: "Bitir",
-            ok: "Tamam",
-          },
-          messages: {
-            error: "Hata",
-            failedToSelect: "Dosya seçilemedi",
-            replaceConfirmTitle: "Tüm Veriyi Değiştir?",
-            replaceConfirmMessage:
-              "Bu, TÜM mevcut verilerinizi SİLECEK ve yedeği ile değiştirecek. Bu işlem geri alınamaz. Emin misiniz?",
-            unknownError: "Bilinmeyen bir hata oluştu",
-          },
+          restored: "Yedek geri yüklendi",
+          merged: "{{books}} ve {{sessions}} eklendi",
+          mergedOnly: "{{items}} eklendi",
+          mergedNothing: "Yeni bir şey yok: bu yedekteki her şey zaten burada",
+          bookCountOne: "{{count}} kitap",
+          bookCountOther: "{{count}} kitap",
+          sessionCountOne: "{{count}} seans",
+          sessionCountOther: "{{count}} seans",
         },
       },
 
@@ -1333,30 +1106,6 @@ const resources = {
         dut: "Felemenkçe",
       },
 
-      backupProgress: {
-        startingBackup: "Yedekleme başlıyor...",
-        exportingBooks: "Kitaplar dışa aktarılıyor...",
-        exportingSessions: "Okuma seansları dışa aktarılıyor...",
-        exportingPreferences: "Kullanıcı tercihleri dışa aktarılıyor...",
-        exportingWeeklyProgress: "Haftalık ilerleme dışa aktarılıyor...",
-        exportingNotifications: "Bildirim ayarları dışa aktarılıyor...",
-        exportingAppUsage: "Uygulama kullanım verileri dışa aktarılıyor...",
-        creatingFile: "Yedek dosyası oluşturuluyor...",
-        backupComplete: "Yedekleme tamamlandı!",
-        preparingSave: "Dosya kaydetmeye hazırlanıyor...",
-        fileSaved: "Dosya başarıyla kaydedildi!",
-        savedLocally: "Yedek cihazda oluşturuldu",
-        readingFile: "Yedek dosyası okunuyor...",
-        startingImport: "İçe aktarma başlıyor...",
-        clearingData: "Mevcut veriler temizleniyor...",
-        importingPreferences: "Kullanıcı tercihleri içe aktarılıyor...",
-        importingBooks: "Kitaplar içe aktarılıyor...",
-        importingSessions: "Okuma seansları içe aktarılıyor...",
-        importingWeeklyProgress: "Haftalık ilerleme içe aktarılıyor...",
-        importingNotifications: "Bildirim tercihleri içe aktarılıyor...",
-        importingAppUsage: "Uygulama kullanım verileri içe aktarılıyor...",
-        importComplete: "İçe aktarma başarıyla tamamlandı!",
-      },
 
       intro: {
         step: "Adım {{step}} / {{total}}",

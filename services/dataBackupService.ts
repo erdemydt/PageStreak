@@ -1,6 +1,8 @@
+import * as Application from 'expo-application';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 import type { AppUsageTracking, EnhancedBook, NotificationPreferences, ReadingSession } from '../db/db';
 import type { SQLiteBindValue, SQLiteDatabase } from 'expo-sqlite';
 import db, { initializeDatabase, queryAll } from '../db/db';
@@ -43,23 +45,28 @@ export type WeeklyProgress = {
   date_created?: string;
 };
 
-export type BackupOptions = {
-  includeBooks: boolean;
-  includeReadingSessions: boolean;
-  includeUserPreferences: boolean;
-  includeWeeklyProgress: boolean;
-  includeNotificationPreferences: boolean;
-  includeAppUsage: boolean;
-  compressed?: boolean; // For future use with .json.gz
+export type ImportMode = 'replace' | 'merge';
+
+/** What a backup file holds, for the restore sheet */
+export type BackupPreview = {
+  fileUri: string;
+  createdAt: string;
+  books: number;
+  sessions: number;
+  /** Name, goals and reminder settings */
+  hasProfile: boolean;
 };
 
-export type ImportOptions = {
-  mode: 'replace' | 'merge';
-  validateIntegrity: boolean;
-};
+/**
+ * Why a file can't be restored, for a localized message:
+ * not JSON or not ours, made by a newer app version, or ours but damaged
+ */
+export type BackupProblem = 'notBackup' | 'newerVersion' | 'damaged';
 
 export type BackupValidationResult = {
   isValid: boolean;
+  problem?: BackupProblem;
+  /** Developer detail for logs; not shown to users */
   errors: string[];
   warnings: string[];
   stats: {
@@ -72,187 +79,96 @@ export type BackupValidationResult = {
 };
 
 /**
- * Export and save backup file with user-selected location
+ * Write a backup of everything (books, sessions, profile and goals, reminder
+ * settings, app usage) and open the share sheet so the user can save it.
+ * There is deliberately no way to leave tables out: a partial backup (e.g.
+ * sessions without their books) can't be restored.
  */
-export async function exportAndSaveBackup(
-  options: BackupOptions,
-  onProgress?: (progress: number, message: string) => void
-): Promise<{ success: boolean; filePath?: string; error?: string; userSaved?: boolean }> {
+export async function exportAndSaveBackup(): Promise<{ success: boolean; error?: string }> {
   try {
-    // First create the backup data
-    const exportResult = await exportDataToBackup(options, (progress, message) => {
-      // Scale progress to 0-80% for the export phase
-      onProgress?.(Math.floor(progress * 0.8), message);
-    });
-
-    if (!exportResult.success || !exportResult.filePath) {
-      return exportResult;
-    }
-
-    onProgress?.(80, i18n.t('backupProgress.preparingSave'));
-
-    // Now let user save it to their preferred location
-    const saved = await shareBackupFile(exportResult.filePath);
-    
-    onProgress?.(100, i18n.t(saved ? 'backupProgress.fileSaved' : 'backupProgress.savedLocally'));
-
-    return {
-      ...exportResult,
-      userSaved: saved
-    };
-
-  } catch (error) {
-    console.error('Export and save failed:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error occurred' 
-    };
-  }
-}
-
-/**
- * Export user data to a JSON backup file
- */
-export async function exportDataToBackup(
-  options: BackupOptions,
-  onProgress?: (progress: number, message: string) => void
-): Promise<{ success: boolean; filePath?: string; error?: string }> {
-  try {
-    onProgress?.(0, i18n.t('backupProgress.startingBackup'));
-
     const backupData: BackupData = {
       app: APP_IDENTIFIER,
       schemaVersion: BACKUP_SCHEMA_VERSION,
       createdAt: new Date().toISOString(),
       deviceInfo: {
-        platform: 'mobile', // Could be enhanced with actual platform detection
-        version: '1.0.0', // Could be read from package.json
+        platform: Platform.OS,
+        version: Application.nativeApplicationVersion ?? 'unknown',
       },
-      tables: {},
+      tables: {
+        enhanced_books: await queryAll<EnhancedBook>('SELECT * FROM enhanced_books ORDER BY id'),
+        reading_sessions: await queryAll<ReadingSession>('SELECT * FROM reading_sessions ORDER BY created_at'),
+        user_preferences: await queryAll<UserPreferences>('SELECT * FROM user_preferences'),
+        goal_history: await queryAll<{ effective_date: string; minutes: number }>(
+          'SELECT effective_date, minutes FROM goal_history ORDER BY effective_date'
+        ),
+        // Vestigial, kept so older app versions can still read the file
+        weekly_progress: await queryAll<WeeklyProgress>('SELECT * FROM weekly_progress ORDER BY id'),
+        notification_preferences: await queryAll<NotificationPreferences>('SELECT * FROM notification_preferences'),
+        app_usage_tracking: await queryAll<AppUsageTracking>('SELECT * FROM app_usage_tracking ORDER BY date DESC'),
+      },
     };
 
-    let progress = 10;
-
-    // Export enhanced_books
-    if (options.includeBooks) {
-      onProgress?.(progress, i18n.t('backupProgress.exportingBooks'));
-      const books = await queryAll<EnhancedBook>('SELECT * FROM enhanced_books ORDER BY id');
-      backupData.tables.enhanced_books = books;
-      progress += 15;
-    }
-
-    // Export reading_sessions
-    if (options.includeReadingSessions) {
-      onProgress?.(progress, i18n.t('backupProgress.exportingSessions'));
-      const sessions = await queryAll<ReadingSession>('SELECT * FROM reading_sessions ORDER BY created_at');
-      backupData.tables.reading_sessions = sessions;
-      progress += 15;
-    }
-
-    // Export user_preferences
-    if (options.includeUserPreferences) {
-      onProgress?.(progress, i18n.t('backupProgress.exportingPreferences'));
-      const preferences = await queryAll<UserPreferences>('SELECT * FROM user_preferences');
-      backupData.tables.user_preferences = preferences;
-      backupData.tables.goal_history = await queryAll<{ effective_date: string; minutes: number }>(
-        'SELECT effective_date, minutes FROM goal_history ORDER BY effective_date'
-      );
-      progress += 10;
-    }
-
-    // Export weekly_progress
-    if (options.includeWeeklyProgress) {
-      onProgress?.(progress, i18n.t('backupProgress.exportingWeeklyProgress'));
-      const weeklyProgress = await queryAll<WeeklyProgress>('SELECT * FROM weekly_progress ORDER BY id');
-      backupData.tables.weekly_progress = weeklyProgress;
-      progress += 10;
-    }
-
-    // Export notification_preferences
-    if (options.includeNotificationPreferences) {
-      onProgress?.(progress, i18n.t('backupProgress.exportingNotifications'));
-      const notificationPrefs = await queryAll<NotificationPreferences>('SELECT * FROM notification_preferences');
-      backupData.tables.notification_preferences = notificationPrefs;
-      progress += 10;
-    }
-
-    // Export app_usage_tracking (optional, might be large)
-    if (options.includeAppUsage) {
-      onProgress?.(progress, i18n.t('backupProgress.exportingAppUsage'));
-      const appUsage = await queryAll<AppUsageTracking>('SELECT * FROM app_usage_tracking ORDER BY date DESC');
-      backupData.tables.app_usage_tracking = appUsage;
-      progress += 10;
-    }
-
-    onProgress?.(80, i18n.t('backupProgress.creatingFile'));
-
-    // Create filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    const filename = `pagestreak-backup-${timestamp}.json`;
-    
-    // Always use default document directory for initial creation
-    const filePath = FileSystem.documentDirectory + filename;
+    // The cache: the share sheet copies it wherever the user saves it, so nothing piles up here
+    const filePath = `${FileSystem.cacheDirectory}pagestreak-backup-${timestamp}.json`;
+    await FileSystem.writeAsStringAsync(filePath, JSON.stringify(backupData, null, 2));
 
-    // Write JSON data to file
-    const jsonContent = JSON.stringify(backupData, null, 2);
-    await FileSystem.writeAsStringAsync(filePath, jsonContent);
-
-    onProgress?.(100, i18n.t('backupProgress.backupComplete'));
-
-    return { success: true, filePath };
-  } catch (error) {
-    console.error('Export failed:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error occurred' 
-    };
-  }
-}
-
-/**
- * Share the backup file using the system share dialog
- */
-export async function shareBackupFile(filePath: string): Promise<boolean> {
-  try {
-    const isAvailable = await Sharing.isAvailableAsync();
-    if (!isAvailable) {
+    if (!(await Sharing.isAvailableAsync())) {
       throw new Error('Sharing is not available on this device');
     }
-
+    // Resolves when the share sheet closes, saved or not (iOS doesn't say)
     await Sharing.shareAsync(filePath, {
-      dialogTitle: 'Save PageStreak Backup',
+      dialogTitle: i18n.t('dataBackup.export.shareTitle'),
       mimeType: 'application/json',
+      UTI: 'public.json',
     });
-
-    return true;
+    return { success: true };
   } catch (error) {
-    console.error('Share failed:', error);
-    return false;
+    console.error('Export failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
   }
 }
 
-/**
- * Pick a backup file for import
- */
-export async function pickBackupFile(): Promise<{ success: boolean; fileUri?: string; error?: string }> {
-  try {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: 'application/json',
-      copyToCacheDirectory: true,
-    });
+/** Let the user pick a backup file; null if they cancel */
+export async function pickBackupFile(): Promise<string | null> {
+  const result = await DocumentPicker.getDocumentAsync({
+    type: 'application/json',
+    copyToCacheDirectory: true,
+  });
+  return result.canceled ? null : result.assets[0].uri;
+}
 
-    if (result.canceled) {
-      return { success: false, error: 'User cancelled file selection' };
-    }
-
-    return { success: true, fileUri: result.assets[0].uri };
-  } catch (error) {
-    console.error('File picker failed:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to pick file' 
-    };
+/** Read and check a picked file: what it holds, or why it can't be restored */
+export async function previewBackup(
+  fileUri: string
+): Promise<{ preview: BackupPreview } | { problem: BackupProblem }> {
+  const validation = await validateBackupFile(fileUri);
+  if (!validation.isValid) {
+    console.warn('Backup rejected:', validation.errors.join('; '));
+    return { problem: validation.problem ?? 'damaged' };
   }
+  return {
+    preview: {
+      fileUri,
+      createdAt: validation.stats.createdAt,
+      books: validation.stats.totalBooks,
+      sessions: validation.stats.totalSessions,
+      hasProfile: validation.stats.hasUserPreferences,
+    },
+  };
+}
+
+/** Whether this device has anything a restore could merge with or overwrite */
+export async function hasLocalData(): Promise<boolean> {
+  const row = await queryAll<{ n: number }>(
+    `SELECT (SELECT COUNT(*) FROM enhanced_books)
+          + (SELECT COUNT(*) FROM reading_sessions)
+          + (SELECT COUNT(*) FROM user_preferences) AS n`
+  );
+  return (row[0]?.n ?? 0) > 0;
 }
 
 /**
@@ -271,6 +187,10 @@ export async function validateBackupFile(fileUri: string): Promise<BackupValidat
       createdAt: '',
     },
   };
+  const fail = (problem: BackupProblem, detail: string) => {
+    result.problem ??= problem;
+    result.errors.push(detail);
+  };
 
   try {
     // Read and parse JSON
@@ -278,31 +198,29 @@ export async function validateBackupFile(fileUri: string): Promise<BackupValidat
     const backupData: BackupData = JSON.parse(fileContent);
 
     // Validate basic structure
-    if (!backupData.app) {
-      result.errors.push('Missing app identifier');
+    if (!backupData || typeof backupData !== 'object' || !backupData.app) {
+      fail('notBackup', 'Missing app identifier');
     } else if (backupData.app !== APP_IDENTIFIER) {
-      result.errors.push(`Invalid app identifier: expected "${APP_IDENTIFIER}", got "${backupData.app}"`);
+      fail('notBackup', `Invalid app identifier: expected "${APP_IDENTIFIER}", got "${backupData.app}"`);
     }
 
-    if (!backupData.schemaVersion) {
-      result.errors.push('Missing schema version');
+    if (!backupData?.schemaVersion) {
+      fail('notBackup', 'Missing schema version');
     } else {
       result.stats.schemaVersion = backupData.schemaVersion;
       if (backupData.schemaVersion > BACKUP_SCHEMA_VERSION) {
-        result.errors.push(`Backup schema version ${backupData.schemaVersion} is newer than supported version ${BACKUP_SCHEMA_VERSION}`);
-      } else if (backupData.schemaVersion < BACKUP_SCHEMA_VERSION) {
-        result.warnings.push(`Backup schema version ${backupData.schemaVersion} is older than current version ${BACKUP_SCHEMA_VERSION}. Data will be migrated.`);
+        fail('newerVersion', `Backup schema version ${backupData.schemaVersion} is newer than supported version ${BACKUP_SCHEMA_VERSION}`);
       }
     }
 
-    if (!backupData.createdAt) {
-      result.errors.push('Missing creation timestamp');
+    if (!backupData?.createdAt) {
+      fail('damaged', 'Missing creation timestamp');
     } else {
       result.stats.createdAt = backupData.createdAt;
     }
 
-    if (!backupData.tables) {
-      result.errors.push('Missing tables data');
+    if (!backupData?.tables) {
+      fail('damaged', 'Missing tables data');
     } else {
       // Validate table data
       const { tables } = backupData;
@@ -314,32 +232,30 @@ export async function validateBackupFile(fileUri: string): Promise<BackupValidat
 
       // Validate book data integrity
       if (tables.enhanced_books?.length) {
-        const invalidBooks = tables.enhanced_books.filter(book => 
+        const invalidBooks = tables.enhanced_books.filter(book =>
           !book.name || !book.author || typeof book.page !== 'number'
         );
         if (invalidBooks.length > 0) {
-          result.errors.push(`${invalidBooks.length} books have invalid data`);
+          fail('damaged', `${invalidBooks.length} books have invalid data`);
         }
       }
 
       // Validate reading sessions integrity
       if (tables.reading_sessions?.length) {
-        const invalidSessions = tables.reading_sessions.filter(session => 
+        const invalidSessions = tables.reading_sessions.filter(session =>
           !session.book_id || !session.minutes_read || !session.date
         );
         if (invalidSessions.length > 0) {
-          result.errors.push(`${invalidSessions.length} reading sessions have invalid data`);
+          fail('damaged', `${invalidSessions.length} reading sessions have invalid data`);
         }
 
         // Check for orphaned sessions (sessions without corresponding books)
-        if (tables.enhanced_books?.length) {
-          const bookIds = new Set(tables.enhanced_books.map(book => book.id));
-          const orphanedSessions = tables.reading_sessions.filter(session => 
-            !bookIds.has(session.book_id)
-          );
-          if (orphanedSessions.length > 0) {
-            result.warnings.push(`${orphanedSessions.length} reading sessions reference books that don't exist in the backup`);
-          }
+        const bookIds = new Set((tables.enhanced_books ?? []).map(book => book.id));
+        const orphanedSessions = tables.reading_sessions.filter(session =>
+          !bookIds.has(session.book_id)
+        );
+        if (orphanedSessions.length > 0) {
+          result.warnings.push(`${orphanedSessions.length} reading sessions reference books that don't exist in the backup`);
         }
       }
     }
@@ -347,7 +263,7 @@ export async function validateBackupFile(fileUri: string): Promise<BackupValidat
     result.isValid = result.errors.length === 0;
 
   } catch (error) {
-    result.errors.push(error instanceof Error ? error.message : 'Failed to parse backup file');
+    fail('notBackup', error instanceof Error ? error.message : 'Failed to parse backup file');
   }
 
   return result;
@@ -383,12 +299,16 @@ async function findMatchingBook(
 }
 
 /**
- * Import data from a validated backup file
+ * Restore a backup file.
+ * - replace: everything here is deleted and the backup takes its place.
+ * - merge: the backup's books and sessions are added (matching books and duplicate
+ *   sessions are skipped). The profile, goals, goal history and reminder settings
+ *   come from the backup only when this device has no profile yet; otherwise
+ *   nothing already here is overwritten.
  */
 export async function importDataFromBackup(
   fileUri: string,
-  options: ImportOptions,
-  onProgress?: (progress: number, message: string) => void
+  mode: ImportMode
 ): Promise<{ success: boolean; error?: string; imported: { books: number; sessions: number; } }> {
   const importResult = {
     success: false,
@@ -396,8 +316,6 @@ export async function importDataFromBackup(
   };
 
   try {
-    onProgress?.(0, i18n.t('backupProgress.readingFile'));
-
     // Read and validate backup
     const validationResult = await validateBackupFile(fileUri);
     if (!validationResult.isValid) {
@@ -406,8 +324,6 @@ export async function importDataFromBackup(
 
     const fileContent = await FileSystem.readAsStringAsync(fileUri);
     const backupData: BackupData = JSON.parse(fileContent);
-
-    onProgress?.(10, i18n.t('backupProgress.startingImport'));
 
     // Ensure database is properly initialized with latest schema
     await initializeDatabase();
@@ -418,21 +334,26 @@ export async function importDataFromBackup(
     let importedBooks = 0;
     let importedSessions = 0;
     // Replace mode clears preferences whenever the backup has the key (even
-    // empty), so the goal timeline must be reset in exactly those cases too
-    const importsPreferences =
-      options.mode === 'replace'
-        ? backupData.tables.user_preferences !== undefined
-        : !!backupData.tables.user_preferences?.length;
+    // empty), so the goal timeline must be reset in exactly those cases too.
+    // Merge decides inside the transaction (only onto a device without a profile).
+    let importsPreferences =
+      mode === 'replace' && !!backupData.tables.user_preferences;
 
     // One exclusive transaction on its own connection: other writes (e.g. app
     // usage tracking on app-state changes) can't slip into it, and any error
     // rolls the whole import back. Every statement must go through `txn`.
     await db.withExclusiveTransactionAsync(async (txn) => {
-      let progress = 20;
+      // Merge never overwrites settings: the profile, goals and reminder settings
+      // come from the backup only when this device has no profile of its own
+      const takeSettings =
+        mode === 'replace' ||
+        !(await txn.getFirstAsync('SELECT id FROM user_preferences LIMIT 1'));
+      if (mode === 'merge') {
+        importsPreferences = takeSettings && !!backupData.tables.user_preferences?.length;
+      }
 
       // Import based on mode
-      if (options.mode === 'replace') {
-        onProgress?.(progress, i18n.t('backupProgress.clearingData'));
+      if (mode === 'replace') {
         
         // Clear existing data in reverse dependency order
         if (backupData.tables.reading_sessions) {
@@ -453,59 +374,35 @@ export async function importDataFromBackup(
         if (backupData.tables.app_usage_tracking) {
           await runIn(txn, 'DELETE FROM app_usage_tracking');
         }
-        
-        progress += 10;
       }
 
       // Import user preferences first
-      if (backupData.tables.user_preferences?.length) {
-        onProgress?.(progress, i18n.t('backupProgress.importingPreferences'));
+      if (takeSettings && backupData.tables.user_preferences?.length) {
         for (const pref of backupData.tables.user_preferences) {
-          if (options.mode === 'replace') {
-            await runIn(txn, `
-              INSERT INTO user_preferences (
-                id, username, yearly_book_goal, preferred_genres, created_at, updated_at,
-                weekly_reading_goal, initial_reading_rate_minutes_per_day,
-                end_reading_rate_goal_minutes_per_day, end_reading_rate_goal_date,
-                current_reading_rate_minutes_per_day, current_reading_rate_last_updated,
-                weekly_reading_rate_increase_minutes, weekly_reading_rate_increase_minutes_percentage
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-              pref.id, pref.username, pref.yearly_book_goal, pref.preferred_genres,
-              pref.created_at, pref.updated_at, pref.weekly_reading_goal,
-              pref.initial_reading_rate_minutes_per_day, pref.end_reading_rate_goal_minutes_per_day,
-              pref.end_reading_rate_goal_date, pref.current_reading_rate_minutes_per_day,
-              pref.current_reading_rate_last_updated, pref.weekly_reading_rate_increase_minutes,
-              pref.weekly_reading_rate_increase_minutes_percentage
-            ]);
-          } else {
-            // Merge mode - use INSERT OR REPLACE
-            await runIn(txn, `
-              INSERT OR REPLACE INTO user_preferences (
-                id, username, yearly_book_goal, preferred_genres, created_at, updated_at,
-                weekly_reading_goal, initial_reading_rate_minutes_per_day,
-                end_reading_rate_goal_minutes_per_day, end_reading_rate_goal_date,
-                current_reading_rate_minutes_per_day, current_reading_rate_last_updated,
-                weekly_reading_rate_increase_minutes, weekly_reading_rate_increase_minutes_percentage
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-              pref.id, pref.username, pref.yearly_book_goal, pref.preferred_genres,
-              pref.created_at, pref.updated_at, pref.weekly_reading_goal,
-              pref.initial_reading_rate_minutes_per_day, pref.end_reading_rate_goal_minutes_per_day,
-              pref.end_reading_rate_goal_date, pref.current_reading_rate_minutes_per_day,
-              pref.current_reading_rate_last_updated, pref.weekly_reading_rate_increase_minutes,
-              pref.weekly_reading_rate_increase_minutes_percentage
-            ]);
-          }
+          // Replace cleared the table; merge only gets here with no local profile
+          await runIn(txn, `
+            INSERT OR REPLACE INTO user_preferences (
+              id, username, yearly_book_goal, preferred_genres, created_at, updated_at,
+              weekly_reading_goal, initial_reading_rate_minutes_per_day,
+              end_reading_rate_goal_minutes_per_day, end_reading_rate_goal_date,
+              current_reading_rate_minutes_per_day, current_reading_rate_last_updated,
+              weekly_reading_rate_increase_minutes, weekly_reading_rate_increase_minutes_percentage
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            pref.id, pref.username, pref.yearly_book_goal, pref.preferred_genres,
+            pref.created_at, pref.updated_at, pref.weekly_reading_goal,
+            pref.initial_reading_rate_minutes_per_day, pref.end_reading_rate_goal_minutes_per_day,
+            pref.end_reading_rate_goal_date, pref.current_reading_rate_minutes_per_day,
+            pref.current_reading_rate_last_updated, pref.weekly_reading_rate_increase_minutes,
+            pref.weekly_reading_rate_increase_minutes_percentage
+          ]);
         }
-        progress += 10;
       }
 
       // Import books
       if (backupData.tables.enhanced_books?.length) {
-        onProgress?.(progress, i18n.t('backupProgress.importingBooks'));
         for (const book of backupData.tables.enhanced_books) {
-          if (options.mode === 'replace') {
+          if (mode === 'replace') {
             await runIn(txn, `
               INSERT INTO enhanced_books (
                 id, name, author, page, isbn, cover_id, cover_url, first_publish_year,
@@ -547,15 +444,13 @@ export async function importDataFromBackup(
           }
         }
         importResult.imported.books =
-          options.mode === 'replace' ? backupData.tables.enhanced_books.length : importedBooks;
-        progress += 20;
+          mode === 'replace' ? backupData.tables.enhanced_books.length : importedBooks;
       }
 
       // Import reading sessions
       if (backupData.tables.reading_sessions?.length) {
-        onProgress?.(progress, i18n.t('backupProgress.importingSessions'));
         for (const session of backupData.tables.reading_sessions) {
-          if (options.mode === 'replace') {
+          if (mode === 'replace') {
             await runIn(txn, `
               INSERT INTO reading_sessions (id, book_id, minutes_read, pages_read, date, created_at, notes)
               VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -592,17 +487,15 @@ export async function importDataFromBackup(
           }
         }
         importResult.imported.sessions =
-          options.mode === 'replace' ? backupData.tables.reading_sessions.length : importedSessions;
-        progress += 20;
+          mode === 'replace' ? backupData.tables.reading_sessions.length : importedSessions;
       }
 
       // weekly_progress and app_usage_tracking are device-local bookkeeping keyed
       // by id; merging them by id would overwrite unrelated local rows, so they
       // are only restored in replace mode.
-      if (options.mode === 'replace' && backupData.tables.weekly_progress?.length) {
-        onProgress?.(progress, i18n.t('backupProgress.importingWeeklyProgress'));
+      if (mode === 'replace' && backupData.tables.weekly_progress?.length) {
         for (const weeklyProg of backupData.tables.weekly_progress) {
-          const insertQuery = options.mode === 'replace' 
+          const insertQuery = mode === 'replace' 
             ? 'INSERT INTO weekly_progress'
             : 'INSERT OR REPLACE INTO weekly_progress';
           
@@ -614,13 +507,11 @@ export async function importDataFromBackup(
             weeklyProg.achived_reading_minutes, weeklyProg.date_created
           ]);
         }
-        progress += 10;
       }
 
-      if (backupData.tables.notification_preferences?.length) {
-        onProgress?.(progress, i18n.t('backupProgress.importingNotifications'));
+      if (takeSettings && backupData.tables.notification_preferences?.length) {
         for (const notifPref of backupData.tables.notification_preferences) {
-          const insertQuery = options.mode === 'replace' 
+          const insertQuery = mode === 'replace' 
             ? 'INSERT INTO notification_preferences'
             : 'INSERT OR REPLACE INTO notification_preferences';
           
@@ -638,13 +529,11 @@ export async function importDataFromBackup(
             notifPref.reminder_mode ?? 'after_close', notifPref.reminder_time ?? '20:00'
           ]);
         }
-        progress += 5;
       }
 
-      if (options.mode === 'replace' && backupData.tables.app_usage_tracking?.length) {
-        onProgress?.(progress, i18n.t('backupProgress.importingAppUsage'));
+      if (mode === 'replace' && backupData.tables.app_usage_tracking?.length) {
         for (const usage of backupData.tables.app_usage_tracking) {
-          const insertQuery = options.mode === 'replace' 
+          const insertQuery = mode === 'replace' 
             ? 'INSERT INTO app_usage_tracking'
             : 'INSERT OR REPLACE INTO app_usage_tracking';
           
@@ -670,22 +559,25 @@ export async function importDataFromBackup(
       }
     });
 
-    // Keep merged books' current_page consistent with their combined sessions
-    for (const bookId of touchedBookIds) {
-      await syncBookCurrentPageFromSessions(bookId);
-    }
-    // Older backups carry no goal history: rebuild it from the imported plan
-    if (importsPreferences) {
-      await backfillGoalHistoryIfEmpty();
-    }
-
-    // Replace mode swaps all books; a running timer could point at an unrelated one
-    if (options.mode === 'replace') {
-      await clearReadingTimer().catch(() => {});
+    // Committed from here on: a failed follow-up step must not report the import as failed
+    importResult.success = true;
+    try {
+      // Keep merged books' current_page consistent with their combined sessions
+      for (const bookId of touchedBookIds) {
+        await syncBookCurrentPageFromSessions(bookId);
+      }
+      // Older backups carry no goal history: rebuild it from the imported plan
+      if (importsPreferences) {
+        await backfillGoalHistoryIfEmpty();
+      }
+      // Replace mode swaps all books; a running timer could point at an unrelated one
+      if (mode === 'replace') {
+        await clearReadingTimer();
+      }
+    } catch (error) {
+      console.error('Post-import cleanup failed:', error);
     }
     emitDataChange('books', 'sessions', 'preferences');
-    onProgress?.(100, i18n.t('backupProgress.importComplete'));
-    importResult.success = true;
 
   } catch (error) {
     console.error('Import failed:', error);
@@ -696,52 +588,4 @@ export async function importDataFromBackup(
   }
 
   return importResult;
-}
-
-/**
- * Get backup file information without importing
- */
-export async function getBackupInfo(fileUri: string): Promise<{
-  success: boolean;
-  info?: {
-    appName: string;
-    schemaVersion: number;
-    createdAt: string;
-    totalBooks: number;
-    totalSessions: number;
-    hasUserPreferences: boolean;
-    fileSize: string;
-  };
-  error?: string;
-}> {
-  try {
-    const fileInfo = await FileSystem.getInfoAsync(fileUri);
-    const validation = await validateBackupFile(fileUri);
-    
-    if (!validation.isValid) {
-      return { success: false, error: validation.errors.join(', ') };
-    }
-
-    const fileSize = fileInfo.exists && fileInfo.size 
-      ? (fileInfo.size / 1024).toFixed(1) + ' KB'
-      : 'Unknown';
-
-    return {
-      success: true,
-      info: {
-        appName: 'PageStreak',
-        schemaVersion: validation.stats.schemaVersion,
-        createdAt: validation.stats.createdAt,
-        totalBooks: validation.stats.totalBooks,
-        totalSessions: validation.stats.totalSessions,
-        hasUserPreferences: validation.stats.hasUserPreferences,
-        fileSize,
-      }
-    };
-  } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to read backup info' 
-    };
-  }
 }

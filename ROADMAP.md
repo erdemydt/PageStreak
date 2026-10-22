@@ -22,7 +22,7 @@ decides when to ship and tests on device first.
 4. Still open: an Android notification icon asset; choose Xcode Cloud vs EAS.
 
 **Next work, in order:**
-1. **Phase 9: Folio QA** (below): 9.0–9.2 done; next 9.3 backup sheet, 9.4 polish.
+1. **Phase 9: Folio QA** (below): 9.0–9.3 done; next 9.4 polish.
    Phase 8 history follows.
    **Phase 8: Structure + Folio redesign** (below). The owner chose design direction **A · Folio** from the
    prototypes (https://claude.ai/artifact/23gdMca8CB6BvLTXN5yaaZ, Main + FolioBook artboards) and approved a new
@@ -85,6 +85,8 @@ Kept for the owner's release notes; clear it when a release ships.
   that load slowly show the drawn cover instead of a blank tile. Logging pages shows "Page 20 of 608" as you type.
   Reminders read as one calm sentence. The week's "per day" average counts the same days as "days met".
 - Turkish capitals in serif headings keep their accents (İlerleme, not Ilerleme).
+- Backups: one tap creates a complete backup; restoring shows what's in the file first and only asks "merge or
+  replace" when there's something to merge with. Merging no longer changes your name, goals or reminder settings.
 - Settings opens inside the current tab (the tab bar stays visible). Fixes the app ignoring taps after leaving Settings
   and quickly switching tabs.
 
@@ -255,6 +257,7 @@ backups always include everything (no per-table export switches).
   serif text moved ~3 px, layout otherwise unchanged; checked Today, Progress, Growth, Library, book page, sheets, Settings.
 - [x] **9.2b Settings in the tab stacks**: as a root screen over the tabs, a tab tap during its pop transition left every
   tab ignoring touches until restart. Now `(progress)/settings` + `(home)/settings` re-export; the gear pushes in its tab.
-- [ ] **9.3 Backup and restore on `Sheet`**: one "Create backup" (everything), picker first, merge/replace only when data
-  exists, toasts. Test merge/replace against real backup JSONs, including an old-format one.
+- [x] **9.3 Backup and restore on `Sheet`**: one "Create a backup" (everything), picker first, `RestoreSheet` (counts;
+  merge/replace only when data exists), localized problems, toasts. Merge keeps the device's profile, goals and reminder
+  settings. `scripts/backup-check/run.sh` covers both real backups (old partial, full) across 8 scenarios.
 - [ ] **9.4 Polish**: header/status-bar band, chips, gear styles, sheet close buttons, copy.

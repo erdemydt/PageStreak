@@ -21,7 +21,8 @@ npx tsc --noEmit     # typecheck (strict). Keep it clean
 ```
 
 There is **no test framework**. Verify with `tsc` + `lint`, and after any change to `db/db.tsx` run
-`scripts/db-migration-check/run.sh` (real SQLite files, the original app's schema, and the boot race). For pure logic (dates, streaks,
+`scripts/db-migration-check/run.sh` (real SQLite files, the original app's schema, and the boot race). After any
+change to the backup service run `scripts/backup-check/run.sh` (export, merge, replace, round trip, bad files). For pure logic (dates, streaks,
 goal math), transpile the module with `typescript.transpileModule`, stub `db/db`, and run it
 under several `TZ=` values (at least America/Los_Angeles, Europe/Istanbul, Pacific/Auckland).
 Adding Jest for `utils/` is on the roadmap.
@@ -56,7 +57,8 @@ components/              Screens' building blocks (intro/ holds the onboarding s
   session/               SessionFields (log/edit sheet fields), SessionRow (one session in a list)
   book/                  AddBookSheet (Open Library + manual), LibraryRow, BookMenuSheet (page count, delete), FinishSheet
   progress/              GoalSheet (daily goal, target, target date)
-  settings/              SettingsRow (hairline row), ReminderSettings (switch, mode, hours/time)
+  settings/              SettingsRow (hairline row), ReminderSettings (switch, mode, hours/time), RestoreSheet
+                         (chooseBackup → preview → merge/replace; used by Settings and onboarding)
   ui/                    Folio primitives: Button, Sheet (the one bottom sheet), OptionSheet, FieldSheet, Chip, BookCover, Eyebrow, Hairline,
                          ProgressRule, StatRow, Screen, SettingsButton (the gear). Build new UI from these
 contexts/
@@ -76,7 +78,7 @@ services/
   notificationService.ts Reminder entry point (facade): permissions, prefs, app-state lifecycle
   reminderScheduler.ts   Stateless scheduling (quiet hours, after-last-open, daily-time x7 days, message text)
   notificationDevTools.ts Dev-only test notifications/status
-  dataBackupService.ts   JSON export/import (replace or merge)
+  dataBackupService.ts   JSON backup: export always has every table; import replace or merge (see Gotchas)
   openLibrary.ts         Search API
 utils/
   dateUtils.ts           Local-date helpers + parseDbDate (use these, see Gotchas)
@@ -178,7 +180,9 @@ tables there and to the backup service. Test migrations against real DB files: s
 - No SQL in `app/` or `components/` (ESLint `no-restricted-imports`); add a repo function instead.
   `utils/` and `services/` may query, but prefer repos.
 - Don't define components inside render (e.g. `const Header = () => …; <Header/>`); it remounts every render.
-- Backup **merge** never writes by primary key; it remaps book ids and dedupes sessions.
+- Backup **merge** never writes by primary key; it remaps book ids and dedupes sessions. It only adds books and
+  sessions: the profile, goal history and reminder settings come from the backup only when the device has no profile.
+  After changing the backup service, run `scripts/backup-check/run.sh` (real SQLite, the owner's real backups).
 - `utils/devMode.ts#ENABLE_DEV_FEATURES` gates dev tools (NotificationTester, random data). Keep it `false` in commits.
 - Logging: use `log`/`warn` from `utils/logger.ts` (dev-only); `console.error` for real errors.
 - **Transactions:** always `runInTransaction(task)` from `db/db.tsx`; never `db.withTransactionAsync`
@@ -224,10 +228,11 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
 3. **Screens are huge** (700–1300 lines), with copy-pasted modal/animation code and inline queries.
    Extract a data layer (repositories/hooks) and shared modal primitives.
 4. Remaining hard-coded English: dev-only `NotificationTester`, readinglogs random-data alerts,
-   `DataImportModal` validation details, Open Library error messages, home "Reading" label fallback.
+   Open Library error messages, home "Reading" label fallback.
    Dates use `toLocaleDateString()` (device locale), not the app language.
 5. Notification permission is requested on first launch before onboarding (`app/index.tsx`), not at a contextual moment.
-6. Merge-import skips sessions whose book isn't in the backup file (e.g. a sessions-only export).
+6. Merge-import skips sessions whose book isn't in the backup file. Exports are always complete since 9.3, so only
+   hand-edited or very old partial files can hit this.
 7. (Fixed in 8.4: goal-form errors each have their own message, a past target date is rejected, and the form no
    longer shifts the target date a day west of UTC.)
 
@@ -324,3 +329,13 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   a tab while it was still sliding away (Back, then a tab) left all tab content ignoring touches until a restart (the
   tab bar still worked). Settings now lives in `(progress)/settings` and `(home)/settings` (a re-export); the same quick
   tab switch keeps working. The tab bar now shows on Settings.
+- **Phase 9.3: backup and restore.** One "Create a backup" (every table, straight to the share sheet); restore opens
+  the picker at once, then `RestoreSheet` shows the date and counts and asks merge or replace only when the device has
+  data (onboarding just restores). Problems get one localized message (not ours / newer version / damaged). Merge no
+  longer overwrites the name, goals, goal history or reminder settings (it did, despite "Merge"). `DataExportModal`
+  and `DataImportModal` (~1600 lines, per-table switches) are gone. `scripts/backup-check/` runs the real service on
+  node:sqlite with both real backups: old partial and full onto a fresh install, merge onto a used device (twice:
+  idempotent), merge without a profile, replace, export→restore round trip, bad files, a failed replace rolling back.
+  Review fixes: the reminder section reloads after a restore; a failure after the commit no longer says "nothing was
+  changed"; Replace from Settings catches up the daily goal; a double tap on Restore no longer shows "not a backup";
+  backups are written to the cache (they used to pile up in Documents).

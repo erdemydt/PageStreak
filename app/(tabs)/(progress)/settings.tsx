@@ -3,10 +3,12 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
-import DataExportModal from "../../../components/DataExportModal";
-import DataImportModal from "../../../components/DataImportModal";
 import NotificationTester from "../../../components/NotificationTester";
 import ReminderSettings from "../../../components/settings/ReminderSettings";
+import RestoreSheet, {
+  chooseBackup,
+  RestoreResult,
+} from "../../../components/settings/RestoreSheet";
 import SettingsRow from "../../../components/settings/SettingsRow";
 import Eyebrow from "../../../components/ui/Eyebrow";
 import FieldSheet from "../../../components/ui/FieldSheet";
@@ -14,12 +16,18 @@ import OptionSheet from "../../../components/ui/OptionSheet";
 import Screen from "../../../components/ui/Screen";
 import { useLanguage } from "../../../contexts/LanguageContext";
 import { getUserPreferences, updateUsername } from "../../../db/repos/preferences";
+import {
+  BackupPreview,
+  exportAndSaveBackup,
+} from "../../../services/dataBackupService";
 import { useFocusRefresh } from "../../../hooks/useFocusRefresh";
 import { SPACING } from "../../../themes/spacing";
 import { FONTS, TYPE } from "../../../themes/typography";
 import type { UserPreferences } from "../../../types/models";
 import { isDevModeEnabled } from "../../../utils/devMode";
+import { applyWeeklyGoalGrowth } from "../../../utils/goalSettings";
 import { logoutUser } from "../../../utils/migration";
+import { showToast } from "../../../utils/toast";
 
 // Language names are shown in their own language
 const LANGUAGES = [
@@ -47,8 +55,8 @@ export default function SettingsScreen() {
   const [erasing, setErasing] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [pickingLanguage, setPickingLanguage] = useState(false);
-  const [showExport, setShowExport] = useState(false);
-  const [showImport, setShowImport] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [backup, setBackup] = useState<BackupPreview | null>(null);
 
   const load = async () => {
     try {
@@ -66,13 +74,56 @@ export default function SettingsScreen() {
     await updateUsername(name);
   };
 
+  const createBackup = async () => {
+    setExporting(true);
+    const result = await exportAndSaveBackup();
+    setExporting(false);
+    if (!result.success) {
+      Alert.alert(t("settings.error"), t("dataBackup.export.failed"));
+    }
+  };
+
+  const restoreBackup = async () => {
+    const chosen = await chooseBackup(t);
+    if (chosen) setBackup(chosen);
+  };
+
+  const restored = ({ mode, books, sessions }: RestoreResult) => {
+    setBackup(null);
+    // A restored growth plan may be weeks behind; onboarding does the same
+    if (mode === "replace") {
+      applyWeeklyGoalGrowth().catch((error) =>
+        console.error("Goal catch-up after restore failed:", error),
+      );
+    }
+    const count = (key: string, n: number) =>
+      t(`dataBackup.import.${key}${n === 1 ? "One" : "Other"}`, { count: n });
+    showToast({
+      message:
+        mode === "replace"
+          ? t("dataBackup.import.restored")
+          : books + sessions === 0
+            ? t("dataBackup.import.mergedNothing")
+            : books === 0 || sessions === 0
+              ? t("dataBackup.import.mergedOnly", {
+                  items: books
+                    ? count("bookCount", books)
+                    : count("sessionCount", sessions),
+                })
+              : t("dataBackup.import.merged", {
+                  books: count("bookCount", books),
+                  sessions: count("sessionCount", sessions),
+                }),
+    });
+  };
+
   const confirmErase = () => {
     Alert.alert(t("settings.logout"), t("settings.logoutConfirmMessage"), [
       { text: t("settings.cancel"), style: "cancel" },
       {
         // Erasing can't be undone; offer a backup right from the warning
         text: t("settings.exportFirst"),
-        onPress: () => setShowExport(true),
+        onPress: createBackup,
       },
       {
         text: t("settings.logout"),
@@ -136,12 +187,13 @@ export default function SettingsScreen() {
             first
             label={t("settings.exportBackup")}
             hint={t("dataBackup.export.buttonSubtitle")}
-            onPress={() => setShowExport(true)}
+            onPress={createBackup}
+            disabled={exporting}
           />
           <SettingsRow
             label={t("settings.restoreBackup")}
             hint={t("dataBackup.import.buttonSubtitle")}
-            onPress={() => setShowImport(true)}
+            onPress={restoreBackup}
           />
         </View>
 
@@ -193,8 +245,11 @@ export default function SettingsScreen() {
         }}
         onClose={() => setPickingLanguage(false)}
       />
-      <DataExportModal visible={showExport} onClose={() => setShowExport(false)} />
-      <DataImportModal visible={showImport} onClose={() => setShowImport(false)} />
+      <RestoreSheet
+        backup={backup}
+        onClose={() => setBackup(null)}
+        onRestored={restored}
+      />
     </Screen>
   );
 }

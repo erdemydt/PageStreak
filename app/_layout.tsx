@@ -99,9 +99,11 @@ export default function RootLayout() {
           <Stack.Screen
             name="intro"
             options={{
-              presentation: "modal",
+              // A plain screen, not a native modal: the root-hosted sheets (Add
+              // book) must be able to present over it
               headerShown: false,
-              animation: "slide_from_bottom",
+              animation: "fade",
+              gestureEnabled: false,
             }}
           />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

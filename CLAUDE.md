@@ -35,7 +35,9 @@ routes), expo-sqlite 16, i18next, Hermes.
 app/
   _layout.tsx            Root stack + LanguageProvider; forwards AppState to NotificationService
   index.tsx              Boot: init DB → notification prefs → grow daily goal → route to intro/home
-  intro.tsx              5-step onboarding; writes user_preferences row id=1
+  intro.tsx              Onboarding: name (+ restore) → daily goal (presets) → grow it? (target, date, preview) →
+                         reminder opt-in → saves user_preferences id=1 → optional first book (Add sheet). A plain
+                         fade-in screen, not a native modal, so root-hosted sheets can present over it
   settings.tsx           Root screen pushed from the gear (Today, Progress): name, language, reminder, backup, About, erase
   (tabs)/
     (home)/index.tsx     Today (Folio): minutes vs goal + streak, week strip (→ readinglogs), the book read most
@@ -48,7 +50,7 @@ app/
     (progress)/growth.tsx   Growth Journey chart; GoalSheet is the only editor of daily/target goal and date
     (progress)/history.tsx  Sessions a week at a time; tap to edit, "+" logs on that day
     profile.tsx, reading-growth.tsx  Redirect stubs (hidden tabs; Phase 8.4; remove after 2+ releases)
-components/              Screens' building blocks (intro/ and profile/ hold those screens' parts + styles)
+components/              Screens' building blocks (intro/ holds the onboarding steps)
   today/                 Today's parts (WeekStrip)
   session/               SessionFields (log/edit sheet fields), SessionRow (one session in a list)
   book/                  AddBookSheet (Open Library + manual), LibraryRow, BookMenuSheet (page count, delete), FinishSheet
@@ -88,7 +90,6 @@ utils/
   dataEvents.ts          Change bus: repo writes emit books/sessions/preferences
   devData.ts             Dev-only random session generator
   toast.ts               showToast({message, actionLabel?, onAction?}): non-blocking feedback (ToastHost in root layout)
-  genres.ts              Genre keys; stored as keys, legacy labels normalized on read
 i18n/index.ts            ALL strings, `en` and `tr` in one file
 themes/                  COLORS / SPACING / TYPE / FONTS tokens (use them; no raw hex in screens). Folio design
                          language: role tokens COLORS.paper/ink/line/accent/streak; legacy keys map onto them
@@ -135,9 +136,10 @@ tables there and to the backup service. Test migrations against real DB files: s
   Lists come from `listBooksWithStats` (one JOIN carrying `reading_time` and `pages_from_sessions`);
   `BookCard` derives progress from those props via `computeBookProgress`.
 - **Goals** (daily/target minutes, target date) are edited only in Growth Journey (GoalSheet); the yearly goal on Progress;
-  the name in Settings. Genres are still stored and backed up but have no UI.
+  the name in Settings. Genres are still stored and backed up but have no UI
+  (onboarding no longer asks; new rows store '').
 - **Yearly goal** counts books with status `read` whose `date_finished` is in the current year. `yearly_book_goal = 0`
-  means no goal: Today hides the yearly line and Progress offers "Set a goal".
+  means no goal (new users start there): Today hides the yearly line and Progress offers "Set a goal".
 - **Session sheets**: never mount ReadingTimeLogger / EditSessionModal in a screen; call `useSessionSheets()`.
   The logger preselects `bookId` only if that book is currently being read, else the most recently read book.
   Status changes from UI go through `useBookStatusChange()`; marking a book read calls `celebrateFinish(bookId)`; when another sheet is closing, delay it ~450 ms
@@ -295,3 +297,5 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   grouped by title; "days met" counted today before it was met; the name rule now matches onboarding (2–50).
   8.5 three tabs; Settings is a root screen behind a gear on Today and Progress (no redirect stub: `(tabs)/settings`
   and `/settings` are the same URL), restyled with hairline rows; About shows the native version (expo-application).
+  8.6 onboarding rebuilt in Folio: name → daily goal → grow it? → reminder → optional first book; genres and the yearly
+  step dropped (yearly goal starts unset). Phase 8 is complete.

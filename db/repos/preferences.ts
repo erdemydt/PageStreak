@@ -25,7 +25,6 @@ export async function getDailyGoal(): Promise<number> {
 export type OnboardingInput = {
   username: string;
   yearlyBookGoal: number;
-  preferredGenres: string[];
   initialRate: number;
   targetRate: number;
   targetDate: string;
@@ -50,7 +49,7 @@ export async function saveOnboardingPreferences(
       [
         input.username,
         input.yearlyBookGoal,
-        input.preferredGenres.join(","),
+        "", // genres are no longer asked; older rows keep theirs
         input.initialRate * 7,
         input.initialRate,
         input.targetRate,

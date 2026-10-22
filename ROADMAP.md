@@ -25,7 +25,8 @@ decides when to ship and tests on device first.
 **Next work, in order:**
 1. **Phase 8: Structure + Folio redesign** (below). The owner chose design direction **A · Folio** from the
    prototypes (https://claude.ai/artifact/23gdMca8CB6BvLTXN5yaaZ, Main + FolioBook artboards) and approved a new
-   navigation structure. Work through 8.0 → 8.6 in order; each sub-phase is shippable and committed.
+   navigation structure. **8.0–8.6 are done** (code only: needs simulator/device QA of every flow, and the export/
+   import modals are still in their older style).
 2. **Dark mode** (its own phase, after Phase 8). 8.0 names tokens by role, so dark mode becomes a second palette:
    propose it for owner approval, then un-force light mode (app.json, Info.plist, Android `styles.xml`).
 3. **Tests** (separate track, when the owner says): Jest for `utils/` (dates, streaks, goal math), the repos,
@@ -76,6 +77,9 @@ Kept for the owner's release notes; clear it when a release ships.
   genres are gone. With nothing in progress, Today lets you pick the next book from your list.
 - Three tabs: Today, Library, Progress. Settings opens from the gear on Today and Progress, with a calmer layout; the
   reminder options sit right under its switch, and About shows the real app version.
+- New onboarding: your name, how long you read today (quick presets), whether to grow that goal toward a target (with
+  a live preview of the weekly step), a reminder, and optionally the book you're reading now. No genre or yearly-goal
+  questions; set a yearly goal any time in Progress.
 
 ---
 
@@ -220,4 +224,8 @@ changes**: UI and routing only. Every old route keeps a `<Redirect>` stub for 2+
   LanguageSelector → an OptionSheet; About = real version (expo-application, from Info.plist; it was already linked via
   expo-notifications, now a direct dependency) + Open Library credit. Erase now dismisses the whole stack before onboarding.
   Left as they were: the export/import modals (page sheets, legacy styling mapped onto Folio tokens).
-- [ ] **8.6 Onboarding**: new step order, `yearly_book_goal = 0` for new users, first-book step reuses the Add-sheet search.
+- [x] **8.6 Onboarding**: name (+ restore) → daily goal (presets, default 20) → grow it? (suggested target, date 3 months
+  out, min 1 week / max 5 years, live "+N min a week" preview; "keep" = no growth) → reminder opt-in → profile saved →
+  optional first book via the root Add sheet (`closeOnAdd`). `yearly_book_goal = 0`, genres `''` for new users. Intro is
+  now a plain fade screen (a native modal would block the root-hosted sheets). `utils/genres.ts`, TargetGoalStep,
+  introStyles and the old intro keys removed.

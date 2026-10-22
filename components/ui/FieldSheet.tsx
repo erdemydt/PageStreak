@@ -72,6 +72,7 @@ export default function FieldSheet({
       visible={visible}
       onClose={onClose}
       dismissible={!saving}
+      closeButton={false}
       title={title}
       footer={
         <>

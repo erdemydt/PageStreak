@@ -14,6 +14,7 @@ import { deleteBookWithSessions, setPageCount } from "../../db/repos/books";
 import { COLORS } from "../../themes/colors";
 import { RADIUS, SPACING } from "../../themes/spacing";
 import { FONTS, TYPE } from "../../themes/typography";
+import { formatDeleteBookMessage } from "../../utils/format";
 import { showToast } from "../../utils/toast";
 import Button from "../ui/Button";
 import Sheet from "../ui/Sheet";
@@ -28,8 +29,13 @@ export default function BookMenuSheet({
   onClose,
   onDeleting,
   onDeleted,
+  sessionCount,
+  minutesRead,
 }: {
   book: EnhancedBook;
+  /** The book's sessions, so the delete warning can say what goes with it */
+  sessionCount: number;
+  minutesRead: number;
   visible: boolean;
   /** "pages" opens straight on the page-count form */
   initialMode?: Mode;
@@ -79,7 +85,7 @@ export default function BookMenuSheet({
   const confirmDelete = () => {
     Alert.alert(
       t("booksPage.alert.deleteTitle"),
-      t("booksPage.alert.deleteWithSessionsMessage", { title: book.name }),
+      formatDeleteBookMessage(book.name, sessionCount, minutesRead),
       [
         { text: t("booksPage.alert.cancel"), style: "cancel" },
         {
@@ -113,12 +119,19 @@ export default function BookMenuSheet({
       visible={visible}
       onClose={onClose}
       dismissible={!busy}
-      title={mode === "pages" ? t("bookPage.pageCount") : undefined}
+      // Opened on the form alone, its Cancel closes; from the menu, Back returns there
+      closeButton={!(mode === "pages" && initialMode === "pages")}
+      title={mode === "pages" ? t("bookPage.pageCount") : book.name}
       footer={
         mode === "pages" ? (
           <>
             <Button
-              title={t("components.bookDetailModal.cancel")}
+              // From the menu this returns to it; opened on its own, it closes
+              title={
+                initialMode === "pages"
+                  ? t("components.bookDetailModal.cancel")
+                  : t("addBook.back")
+              }
               variant="secondary"
               onPress={() =>
                 initialMode === "pages" ? onClose() : setMode("menu")

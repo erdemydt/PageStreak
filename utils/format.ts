@@ -80,14 +80,20 @@ export function formatDate(
   return date.toLocaleDateString(getAppLocale(), options);
 }
 
-/** "3 Mar", with the year only when it isn't this year */
-export function formatShortDate(value?: string | Date | null): string {
+/**
+ * "3 Mar", with the year only when it isn't this year. Pass month "long" where
+ * the text is uppercased: "22 EKİM" reads better than the clipped "22 EKİ".
+ */
+export function formatShortDate(
+  value?: string | Date | null,
+  month: "short" | "long" = "short",
+): string {
   if (!value) return "";
   const date = value instanceof Date ? value : parseDbDate(value);
   if (!date) return typeof value === "string" ? value : "";
   return date.toLocaleDateString(getAppLocale(), {
     day: "numeric",
-    month: "short",
+    month,
     ...(date.getFullYear() !== new Date().getFullYear() && { year: "numeric" }),
   });
 }
@@ -118,4 +124,25 @@ export function formatSessionDetail(session: {
   return session.pages_read
     ? i18n.t("duration.withPages", { time, pages: session.pages_read })
     : time;
+}
+
+/** The delete confirmation: says how much reading goes with the book */
+export function formatDeleteBookMessage(
+  title: string,
+  sessionCount: number,
+  minutes: number,
+): string {
+  if (sessionCount === 0) {
+    return i18n.t("booksPage.alert.deleteMessage", { title });
+  }
+  return i18n.t("booksPage.alert.deleteWithSessionsMessage", {
+    title,
+    sessions: i18n.t(
+      sessionCount === 1
+        ? "booksPage.alert.sessionCountOne"
+        : "booksPage.alert.sessionCountOther",
+      { count: sessionCount },
+    ),
+    time: formatDuration(minutes),
+  });
 }

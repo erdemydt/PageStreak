@@ -304,3 +304,45 @@ export function projectDailyGoal(
   const weeks = Math.max(0, Math.floor((until - lastUpdated.getTime()) / MS_PER_WEEK));
   return Math.min(target, Math.round(current + increase * weeks));
 }
+
+/**
+ * The day a plan reaches its target: one step a week from `from`, so a weekly
+ * step rounded up gets there before the goal date. Never after `end`.
+ */
+export function reachTargetDate(
+  from: Date,
+  current: number,
+  target: number,
+  weeklyIncrease: number,
+  end?: Date | null,
+): Date {
+  const steps = Math.ceil((target - current) / weeklyIncrease);
+  const reach = new Date(from);
+  reach.setDate(reach.getDate() + steps * 7);
+  return end && end.getTime() < reach.getTime() ? end : reach;
+}
+
+/** When the saved plan reaches its target, or null if it isn't growing */
+export function projectTargetDate(
+  prefs: Pick<
+    UserPreferences,
+    | "current_reading_rate_minutes_per_day"
+    | "end_reading_rate_goal_minutes_per_day"
+    | "end_reading_rate_goal_date"
+    | "current_reading_rate_last_updated"
+    | "weekly_reading_rate_increase_minutes"
+  > | null,
+): Date | null {
+  const current = prefs?.current_reading_rate_minutes_per_day || 0;
+  const target = prefs?.end_reading_rate_goal_minutes_per_day || current;
+  const increase = prefs?.weekly_reading_rate_increase_minutes ?? 0;
+  const lastUpdated = parseDbDate(prefs?.current_reading_rate_last_updated);
+  if (!lastUpdated || increase <= 0 || current >= target) return null;
+  return reachTargetDate(
+    lastUpdated,
+    current,
+    target,
+    increase,
+    parseDbDate(prefs?.end_reading_rate_goal_date),
+  );
+}

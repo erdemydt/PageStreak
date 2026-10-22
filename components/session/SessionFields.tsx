@@ -233,7 +233,8 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.serif,
     fontSize: 52,
     lineHeight: 60,
-    minWidth: 70,
+    // About one digit: the field grows with the number, so "1" sits next to its unit
+    minWidth: 32,
     color: COLORS.ink.primary,
     paddingVertical: 0,
     fontVariant: ["tabular-nums"],

@@ -26,6 +26,7 @@ export default function BookCover({ uri, title, author, width, style }: Props) {
   const [failed, setFailed] = useState(false);
   const height = Math.round(width * 1.5);
   const size = { width, height };
+  const authorSize = author ? authorFontSize(author, width) : 0;
 
   return (
     <View
@@ -51,15 +52,15 @@ export default function BookCover({ uri, title, author, width, style }: Props) {
         >
           {title}
         </Text>
-        {author ? (
+        {authorSize ? (
           <Text
             style={[
               styles.drawnAuthor,
-              { fontSize: Math.max(5, width * 0.075) },
+              { fontSize: authorSize, letterSpacing: authorSize * AUTHOR_TRACKING },
             ]}
             numberOfLines={2}
           >
-            {toAppUpperCase(author)}
+            {toAppUpperCase(author ?? "")}
           </Text>
         ) : null}
       </View>
@@ -76,6 +77,21 @@ export default function BookCover({ uri, title, author, width, style }: Props) {
       <View style={styles.spineHighlight} pointerEvents="none" />
     </View>
   );
+}
+
+const AUTHOR_TRACKING = 0.16;
+
+/**
+ * The author line's size: small enough that its longest word fits on one line
+ * (iOS would otherwise break "SABAHATTİN" mid-word), or 0 to leave it out when
+ * that would be too small to read.
+ */
+function authorFontSize(author: string, width: number): number {
+  const longest = Math.max(...author.split(/\s+/).map((word) => word.length));
+  // Inter Medium capitals run about 0.75 em wide, plus the tracking
+  const fits = (width * 0.82) / (longest * (0.75 + AUTHOR_TRACKING));
+  const size = Math.min(Math.max(5, width * 0.075), fits);
+  return size >= 5 ? size : 0;
 }
 
 function spineColor(title: string): string {
@@ -123,7 +139,6 @@ const styles = StyleSheet.create({
   },
   drawnAuthor: {
     fontFamily: FONTS.sansMedium,
-    letterSpacing: 1.2,
     color: COLORS.cover.ink,
     textAlign: "center",
   },

@@ -37,7 +37,11 @@ import {
   GoalForDate,
   loadGoalForDate,
 } from "../../../utils/goalHistory";
-import { planState, projectDailyGoal } from "../../../utils/goalSettings";
+import {
+  planState,
+  projectDailyGoal,
+  projectTargetDate,
+} from "../../../utils/goalSettings";
 import { getWeekDates } from "../../../utils/week";
 
 type WeekPoint = {
@@ -233,7 +237,7 @@ export default function GrowthScreen() {
                   ? t("growthJourney.planGrowing", {
                       increase: weeklyIncrease,
                       target: targetGoal,
-                      date: formatDate(goalDate, LONG_DATE),
+                      date: formatDate(projectTargetDate(prefs) ?? goalDate, LONG_DATE),
                     })
                   : t("progress.growingToNoDate", { target: targetGoal })
                 : t("progress.atTarget")}

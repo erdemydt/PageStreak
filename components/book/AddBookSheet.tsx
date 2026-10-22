@@ -64,6 +64,7 @@ export default function AddBookSheet({
   // Ignore responses to searches that were superseded
   const searchId = useRef(0);
   const pickId = useRef(0);
+  const searchRef = useRef<TextInput>(null);
   const authorRef = useRef<TextInput>(null);
   const pagesRef = useRef<TextInput>(null);
 
@@ -81,6 +82,10 @@ export default function AddBookSheet({
     setSearched(false);
     setSearchError(false);
     setStatus(initialStatus);
+    // Focus once the sheet has slid in: autoFocus during the slide could lay
+    // the placeholder out below the field, clipped
+    const focus = setTimeout(() => searchRef.current?.focus(), 350);
+    return () => clearTimeout(focus);
     // Reset only when it opens
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -199,7 +204,6 @@ export default function AddBookSheet({
             selected={status === s}
             onPress={() => setStatus(s)}
             disabled={saving}
-            grow
           />
         ))}
       </View>
@@ -238,6 +242,7 @@ export default function AddBookSheet({
           <View style={styles.searchRow}>
             <Ionicons name="search" size={18} color={COLORS.ink.secondary} />
             <TextInput
+              ref={searchRef}
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
@@ -246,7 +251,6 @@ export default function AddBookSheet({
               placeholderTextColor={COLORS.ink.disabled}
               returnKeyType="search"
               autoCorrect={false}
-              autoFocus
               accessibilityLabel={t("addBook.searchPlaceholder")}
             />
             {searching && <ActivityIndicator color={COLORS.ink.secondary} />}
@@ -498,6 +502,7 @@ const styles = StyleSheet.create({
   },
   chips: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: SPACING[2],
   },
   form: {

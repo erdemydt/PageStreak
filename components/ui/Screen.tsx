@@ -21,7 +21,24 @@ export default function Screen({
   );
 }
 
+/**
+ * A paper band behind the status bar, for scrolling screens without a
+ * navigation header: content scrolls under it instead of under the clock.
+ * Render it after the ScrollView.
+ */
+export function StatusBarBand() {
+  const insets = useSafeAreaInsets();
+  return <View pointerEvents="none" style={[styles.band, { height: insets.top }]} />;
+}
+
 const styles = StyleSheet.create({
+  band: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.paper.base,
+  },
   screen: {
     flex: 1,
     backgroundColor: COLORS.paper.base,

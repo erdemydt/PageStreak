@@ -200,6 +200,7 @@ export default function ReminderSettings() {
             value={reminderTimeAsDate}
             mode="time"
             display="compact"
+            locale={getAppLocale()}
             accentColor={COLORS.accent.primary}
             onChange={(_, date) => date && saveReminderTime(date)}
           />

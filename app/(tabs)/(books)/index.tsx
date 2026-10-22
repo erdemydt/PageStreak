@@ -35,6 +35,7 @@ import { COLORS } from "../../../themes/colors";
 import { RADIUS, SPACING } from "../../../themes/spacing";
 import { FONTS, TYPE } from "../../../themes/typography";
 import { parseDbDate } from "../../../utils/dateUtils";
+import { formatDeleteBookMessage } from "../../../utils/format";
 import { computeBookProgress } from "../../../utils/readingProgress";
 import { showToast } from "../../../utils/toast";
 
@@ -155,7 +156,7 @@ export default function LibraryScreen() {
   const confirmDelete = (book: BookWithStats) => {
     Alert.alert(
       t("booksPage.alert.deleteTitle"),
-      t("booksPage.alert.deleteWithSessionsMessage", { title: book.name }),
+      formatDeleteBookMessage(book.name, book.session_count, book.reading_time),
       [
         { text: t("booksPage.alert.cancel"), style: "cancel" },
         {
@@ -242,9 +243,14 @@ export default function LibraryScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
+              // Bleed to the screen edges so a cut-off chip shows there is more
+              style={styles.filterScroll}
               contentContainerStyle={styles.filters}
             >
-              {FILTERS.map((f) => (
+              {/* An empty status can only show nothing; keep it while selected */}
+              {FILTERS.filter(
+                (f) => f === "all" || counts[f] > 0 || filter === f,
+              ).map((f) => (
                 <Chip
                   key={f}
                   label={`${filterLabels[f]} ${counts[f]}`}
@@ -254,13 +260,16 @@ export default function LibraryScreen() {
               ))}
             </ScrollView>
             <View style={styles.summaryRow}>
+              {/* The chips and sections already count; this counts search results */}
               <Text style={styles.summary}>
-                {t(
-                  resultCount === 1
-                    ? "booksPage.empty.bookCountOne"
-                    : "booksPage.empty.bookCountOther",
-                  { count: resultCount },
-                )}
+                {query.trim()
+                  ? t(
+                      resultCount === 1
+                        ? "booksPage.empty.bookCountOne"
+                        : "booksPage.empty.bookCountOther",
+                      { count: resultCount },
+                    )
+                  : ""}
               </Text>
               <Pressable
                 onPress={() => setSortOpen(true)}
@@ -360,10 +369,15 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sans,
     fontSize: 16,
     color: COLORS.ink.primary,
-    paddingVertical: SPACING[2],
+    height: 44,
+    paddingVertical: 0,
+  },
+  filterScroll: {
+    marginHorizontal: -SPACING[5],
   },
   filters: {
     gap: SPACING[2],
+    paddingHorizontal: SPACING[5],
   },
   summaryRow: {
     flexDirection: "row",

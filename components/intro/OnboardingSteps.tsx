@@ -14,7 +14,8 @@ import type { BookWithStats } from "../../db/repos/books";
 import { COLORS } from "../../themes/colors";
 import { SPACING } from "../../themes/spacing";
 import { FONTS, TYPE } from "../../themes/typography";
-import { formatDate, LONG_DATE } from "../../utils/format";
+import { formatDate, getAppLocale, LONG_DATE } from "../../utils/format";
+import { reachTargetDate } from "../../utils/goalSettings";
 import BookCover from "../ui/BookCover";
 import Chip from "../ui/Chip";
 import Hairline from "../ui/Hairline";
@@ -239,6 +240,7 @@ export function GrowStep({
                 value={goalDate}
                 mode="date"
                 display="compact"
+                locale={getAppLocale()}
                 minimumDate={minimumDate}
                 maximumDate={maximumDate}
                 accentColor={COLORS.accent.primary}
@@ -282,7 +284,11 @@ export function GrowStep({
                 {t("intro.grow.plan", {
                   from: daily,
                   to: targetNumber,
-                  date: formatDate(goalDate, LONG_DATE),
+                  // Steps are rounded up, so the target can come before the chosen date
+                  date: formatDate(
+                    reachTargetDate(new Date(), daily, targetNumber, weeklyIncrease, goalDate),
+                    LONG_DATE,
+                  ),
                 })}
               </Text>
               <Text style={styles.previewLine}>{pace}</Text>
@@ -334,7 +340,11 @@ export function FirstBookStep({ books }: { books: BookWithStats[] }) {
     <>
       <StepHeading
         title={t("intro.firstBook.title")}
-        subtitle={t("intro.firstBook.subtitle")}
+        subtitle={
+          books.length
+            ? t("intro.firstBook.subtitleAdded")
+            : t("intro.firstBook.subtitle")
+        }
       />
       {books.map((book, index) => (
         <View key={book.id}>

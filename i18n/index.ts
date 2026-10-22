@@ -14,6 +14,7 @@ const resources = {
           discardMessage: "The timed minutes won't be logged.",
           runningA11y: "Reading timer running, {{minutes}} minutes",
           review: "Review",
+          tooShort: "Under 30 seconds, so nothing was logged",
           longTitle: "Long timer",
           longMessage:
             "The timer ran for over {{hours}} hours. Did you forget to stop it? Review the minutes before logging.",
@@ -220,12 +221,12 @@ const resources = {
           enterValidPages: "Please enter a valid number of pages",
           tooManyPages: "Too Many Pages",
           tooManyPagesMessage:
-            'You entered {{pages}} pages, but only {{remaining}} pages remain in "{{bookName}}"',
+            'You entered {{pages}} pages, but only {{remaining}} pages remain in “{{bookName}}”',
           // Finish book translations
           finishBook: "Finished it?",
           finishBookDescription:
             "Mark this book as completed when logging this session",
-          markAsFinished: 'Mark "{{bookName}}" as finished',
+          markAsFinished: 'Mark “{{bookName}}” as finished',
           finishBookSubtext: 'This will move the book to your "Read" list',
           // Existing translations
           notesOptional: "Notes",
@@ -236,10 +237,10 @@ const resources = {
           selectBook: "Select a Book",
           pleaseSelectBook: "Please select which book you were reading",
           loggedMinutes:
-            'Logged {{minutes}} minutes of reading for "{{bookName}}"',
+            'Logged {{minutes}} minutes of reading for “{{bookName}}”',
           loggedMinutesAndPages:
-            'Logged {{minutes}} minutes and {{pages}} pages for "{{bookName}}"',
-          finishedBook: 'Finished "{{bookName}}"! 🎉',
+            'Logged {{minutes}} minutes and {{pages}} pages for “{{bookName}}”',
+          finishedBook: 'Finished “{{bookName}}”! 🎉',
           error: "Error",
           failedToLog: "Failed to log reading time. Please try again.",
         },
@@ -332,14 +333,17 @@ const resources = {
             "Failed to add book to your library. Please try again.",
         },
         alert: {
-          deleteTitle: "Delete Book",
+          deleteTitle: "Delete this book?",
           cancel: "Cancel",
           delete: "Delete",
           movedToWantToRead: "Moved to your reading list",
           movedToReading: "Marked as reading",
           failedUpdate: "Failed to update book status. Please try again.",
+          deleteMessage: "“{{title}}” will be removed from your library.",
           deleteWithSessionsMessage:
-            'Are you sure you want to delete "{{title}}"? This will also remove all reading session data for this book.',
+            "“{{title}}” and its {{sessions}} ({{time}}) will be deleted. This can't be undone.",
+          sessionCountOne: "{{count}} session",
+          sessionCountOther: "{{count}} sessions",
           failedDelete: "Failed to delete book",
         },
       },
@@ -459,7 +463,7 @@ const resources = {
 
       navigation: {
         progress: "Progress",
-        home: "Home",
+        home: "Today",
         books: "Library",
         settings: "Settings",
         bookDetails: "Book Details",
@@ -519,11 +523,12 @@ const resources = {
           title: "Want a gentle nudge?",
           switchLabel: "Remind me to read",
           subtitle:
-            "One gentle reminder a day if you haven't reached your goal. You can choose when in Settings.",
+            "One reminder a day if you haven't reached your goal. You can choose when in Settings.",
         },
         firstBook: {
           title: "What are you reading right now?",
           subtitle: "Add it and it'll be waiting for you when you open the app. You can skip this.",
+          subtitleAdded: "It'll be waiting for you when you open the app.",
           find: "Find my book",
           addAnother: "Add another book",
           skip: "Skip for now",
@@ -633,6 +638,7 @@ const resources = {
           discardMessage: "Ölçülen dakikalar kaydedilmeyecek.",
           runningA11y: "Okuma zamanlayıcısı çalışıyor, {{minutes}} dakika",
           review: "Gözden geçir",
+          tooShort: "30 saniyeden kısa sürdüğü için kaydedilmedi",
           longTitle: "Uzun süre",
           longMessage:
             "Zamanlayıcı {{hours}} saatten uzun çalıştı. Durdurmayı unuttunuz mu? Kaydetmeden önce dakikaları kontrol edin.",
@@ -741,7 +747,7 @@ const resources = {
         streakOther: "gün üst üste",
         longest: "en uzun {{count}}",
         thisWeek: "Bu hafta",
-        daysMet: "Hedefe ulaşılan gün",
+        daysMet: "Başarılı gün",
         perDay: "Günlük",
         mostRead: "Bu hafta en çok okunan: {{title}} ({{time}})",
         dailyGoal: "Günlük hedef",
@@ -839,12 +845,12 @@ const resources = {
           enterValidPages: "Lütfen geçerli bir sayfa sayısı girin",
           tooManyPages: "Çok Fazla Sayfa",
           tooManyPagesMessage:
-            '{{pages}} sayfa girdiniz, ancak "{{bookName}}" kitabında sadece {{remaining}} sayfa kaldı',
+            '{{pages}} sayfa girdiniz, ancak “{{bookName}}” kitabında sadece {{remaining}} sayfa kaldı',
           // Finish book translations
           finishBook: "Bitirdiniz mi?",
           finishBookDescription:
             "Bu seansı kaydederken kitabı tamamlanmış olarak işaretleyin",
-          markAsFinished: '"{{bookName}}" kitabını bitmiş olarak işaretle',
+          markAsFinished: '“{{bookName}}” kitabını bitmiş olarak işaretleyin',
           finishBookSubtext: 'Bu kitabı "Okunan" listenize taşıyacak',
           // Existing translations
           notesOptional: "Notlar",
@@ -855,10 +861,10 @@ const resources = {
           selectBook: "Kitap Seçin",
           pleaseSelectBook: "Lütfen hangi kitabı okuduğunuzu seçin",
           loggedMinutes:
-            '"{{bookName}}" için {{minutes}} dakika okuma süresi kaydedildi',
+            '“{{bookName}}” için {{minutes}} dakika okuma süresi kaydedildi',
           loggedMinutesAndPages:
-            '"{{bookName}}" için {{minutes}} dakika ve {{pages}} sayfa kaydedildi',
-          finishedBook: '"{{bookName}}" bitirildi! 🎉',
+            '“{{bookName}}” için {{minutes}} dakika ve {{pages}} sayfa kaydedildi',
+          finishedBook: '“{{bookName}}” bitirildi! 🎉',
           error: "Hata",
           failedToLog: "Okuma süresi kaydedilemedi. Lütfen tekrar deneyin.",
         },
@@ -954,14 +960,17 @@ const resources = {
         },
 
         alert: {
-          deleteTitle: "Kitabı Sil",
+          deleteTitle: "Bu kitap silinsin mi?",
           cancel: "İptal",
           delete: "Sil",
           movedToWantToRead: "Okuma listenize taşındı",
           movedToReading: "Okunuyor olarak işaretlendi",
           failedUpdate: "Kitap durumu güncellenemedi. Lütfen tekrar deneyin.",
+          deleteMessage: "“{{title}}” kitaplığınızdan kaldırılacak.",
           deleteWithSessionsMessage:
-            '"{{title}}" kitabını silmek istediğinizden emin misiniz? Bu kitaba ait tüm okuma seansları da silinecek.',
+            "“{{title}}” ve {{sessions}} ({{time}}) silinecek. Bu işlem geri alınamaz.",
+          sessionCountOne: "{{count}} seansı",
+          sessionCountOther: "{{count}} seansı",
           failedDelete: "Kitap silinemedi",
         },
       },
@@ -1080,7 +1089,7 @@ const resources = {
 
       navigation: {
         progress: "İlerleme",
-        home: "Ana Sayfa",
+        home: "Bugün",
         books: "Kitaplık",
         settings: "Ayarlar",
         bookDetails: "Kitap Detayları",
@@ -1140,11 +1149,12 @@ const resources = {
           title: "Küçük bir hatırlatma ister misiniz?",
           switchLabel: "Okumamı hatırlat",
           subtitle:
-            "Hedefinize ulaşmadıysanız günde bir nazik hatırlatma. Zamanını Ayarlar'dan seçebilirsiniz.",
+            "Hedefinize ulaşmadıysanız günde bir hatırlatma. Zamanını Ayarlar'dan seçebilirsiniz.",
         },
         firstBook: {
           title: "Şu anda ne okuyorsunuz?",
           subtitle: "Ekleyin, uygulamayı açtığınızda sizi beklesin. Bu adımı atlayabilirsiniz.",
+          subtitleAdded: "Uygulamayı açtığınızda sizi bekliyor olacak.",
           find: "Kitabımı bul",
           addAnother: "Başka bir kitap ekle",
           skip: "Şimdilik atla",

@@ -11,7 +11,7 @@ import {
   getTodayDateString,
   parseLocalDateString,
 } from "../utils/dateUtils";
-import { formatDate } from "../utils/format";
+import { formatDate, getAppLocale } from "../utils/format";
 
 interface SessionDatePickerProps {
   /** YYYY-MM-DD */
@@ -87,6 +87,8 @@ export default function SessionDatePicker({
           value={parseLocalDateString(value)}
           mode="date"
           display={Platform.OS === "ios" ? "inline" : "default"}
+          // iOS: month names in the app language, not the device's
+          locale={getAppLocale()}
           maximumDate={new Date()}
           accentColor={COLORS.accent.primary}
           onChange={(event, date) => {

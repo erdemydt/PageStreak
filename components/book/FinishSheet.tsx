@@ -115,6 +115,7 @@ export default function FinishSheet({
       visible={visible && info?.book.id === bookId}
       onClose={onClose}
       dismissible={!starting}
+      closeButton={false}
       footer={
         info?.next ? (
           <>

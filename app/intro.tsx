@@ -491,9 +491,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: SPACING[2],
   },
+  // The app icon (its tinted square is part of the image): round it like one
   logo: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
+    borderRadius: 7,
   },
   wordmark: {
     ...TYPE.headline,

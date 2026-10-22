@@ -26,7 +26,7 @@ import { FONTS, TYPE } from "../../../themes/typography";
 import type { UserPreferences } from "../../../types/models";
 import { getTodayDateString, parseDbDate } from "../../../utils/dateUtils";
 import { formatDate, formatDuration, LONG_DATE } from "../../../utils/format";
-import { planState } from "../../../utils/goalSettings";
+import { planState, projectTargetDate } from "../../../utils/goalSettings";
 import { loadGoalForDate } from "../../../utils/goalHistory";
 import { calculateStreaks } from "../../../utils/readingProgress";
 import { loadWeek, WeekDay } from "../../../utils/week";
@@ -187,7 +187,7 @@ export default function ProgressScreen() {
                 : growing && goalDate
                   ? t("progress.growingTo", {
                       target: targetGoal,
-                      date: formatDate(goalDate, LONG_DATE),
+                      date: formatDate(projectTargetDate(prefs) ?? goalDate, LONG_DATE),
                     })
                   : growing
                     ? t("progress.growingToNoDate", { target: targetGoal })

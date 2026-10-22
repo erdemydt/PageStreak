@@ -93,6 +93,7 @@ export default function GoalSheet({
       visible={visible}
       onClose={onClose}
       dismissible={!saving}
+      closeButton={false}
       title={t("growthJourney.edit.title")}
       footer={
         <>

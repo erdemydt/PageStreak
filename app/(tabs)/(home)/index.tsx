@@ -20,6 +20,7 @@ import Eyebrow from "../../../components/ui/Eyebrow";
 import Hairline from "../../../components/ui/Hairline";
 import OptionSheet from "../../../components/ui/OptionSheet";
 import ProgressRule from "../../../components/ui/ProgressRule";
+import { StatusBarBand } from "../../../components/ui/Screen";
 import SettingsButton from "../../../components/ui/SettingsButton";
 import { useSessionSheets } from "../../../contexts/SessionSheetsContext";
 import { BookWithStats, listBooksWithStats } from "../../../db/repos/books";
@@ -57,6 +58,7 @@ import {
   startReadingTimer,
   stopReadingTimer,
 } from "../../../utils/readingTimer";
+import { showToast } from "../../../utils/toast";
 import { loadWeek, WeekDay } from "../../../utils/week";
 
 // Shorter timed stops are treated as accidental; longer ones ask first
@@ -212,6 +214,7 @@ export default function TodayScreen() {
       if (elapsedMs < MIN_TIMED_MS) {
         // An accidental start/stop isn't a reading session
         await discardTimer();
+        showToast({ message: t("home.timer.tooShort") });
         return;
       }
       if (elapsedMs > LONG_TIMER_MS) {
@@ -280,218 +283,221 @@ export default function TodayScreen() {
     );
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + SPACING[5] },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Eyebrow style={styles.date}>
-            {formatDate(new Date(), {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            })}
-          </Eyebrow>
-          <SettingsButton />
-        </View>
-        <Text style={styles.greeting} accessibilityRole="header">
-          {greeting}{" "}
-          {prefs?.username ? (
-            <Text style={styles.greetingName}>{prefs.username}.</Text>
-          ) : null}
-        </Text>
-      </View>
-
-      <View style={styles.todayBlock}>
-        <View style={styles.todayRow}>
-          <View
-            style={styles.minutes}
-            accessible
-            accessibilityLabel={`${todayMinutes} ${t("today.ofGoal", { goal: dailyGoal })}`}
-          >
-            <Text style={styles.numeral}>{todayMinutes}</Text>
-            <Text style={styles.ofGoal}>
-              {t("today.ofGoal", { goal: dailyGoal })}
-            </Text>
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + SPACING[5] },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <Eyebrow style={styles.date}>
+              {formatDate(new Date(), {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
+            </Eyebrow>
+            <SettingsButton raised />
           </View>
-          {streak > 0 && (
-            <View style={styles.streak} accessible>
-              <Ionicons name="flame" size={16} color={COLORS.streak.fill} />
-              <Text style={styles.streakText}>
-                {t("today.streak", { count: streak })}
+          <Text style={styles.greeting} accessibilityRole="header">
+            {greeting}{" "}
+            {prefs?.username ? (
+              <Text style={styles.greetingName}>{prefs.username}.</Text>
+            ) : null}
+          </Text>
+        </View>
+
+        <View style={styles.todayBlock}>
+          <View style={styles.todayRow}>
+            <View
+              style={styles.minutes}
+              accessible
+              accessibilityLabel={`${todayMinutes} ${t("today.ofGoal", { goal: dailyGoal })}`}
+            >
+              <Text style={styles.numeral}>{todayMinutes}</Text>
+              <Text style={styles.ofGoal}>
+                {t("today.ofGoal", { goal: dailyGoal })}
               </Text>
+            </View>
+            {streak > 0 && (
+              <View style={styles.streak} accessible>
+                <Ionicons name="flame" size={16} color={COLORS.streak.fill} />
+                <Text style={styles.streakText}>
+                  {t("today.streak", { count: streak })}
+                </Text>
+              </View>
+            )}
+          </View>
+          <ProgressRule progress={todayMinutes / dailyGoal} />
+          <Text style={styles.statusLine}>{statusLine}</Text>
+        </View>
+
+        {week.length === 7 && (
+          <WeekStrip days={week} onPress={() => router.push("/readinglogs")} />
+        )}
+
+        <View style={styles.section}>
+          <Eyebrow>{t("today.currentlyReading")}</Eyebrow>
+          {shownBook ? (
+            <>
+              <BookRow book={shownBook} onPress={() => openBook(shownBook.id)} />
+              {reading.length > 1 && !timer && (
+                <View style={styles.switcher}>
+                  {reading.map((book) => {
+                    const selected = book.id === shownBook.id;
+                    return (
+                      <Pressable
+                        key={book.id}
+                        onPress={() => setPickedBookId(book.id)}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={t("today.showBook", {
+                          title: book.name,
+                        })}
+                        style={[
+                          styles.switcherItem,
+                          selected && styles.switcherItemSelected,
+                        ]}
+                      >
+                        <BookCover
+                          uri={book.cover_url}
+                          title={book.name}
+                          width={26}
+                        />
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+              {timer ? (
+                renderTimer(timer)
+              ) : (
+                <View style={styles.actionRow}>
+                  <Button
+                    title={t("today.logReading")}
+                    onPress={() => openLogger({ bookId: shownBook.id })}
+                    grow
+                  />
+                  <Button
+                    title={t("today.timer")}
+                    icon="play"
+                    variant="secondary"
+                    onPress={handleStartTimer}
+                  />
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={styles.empty}>
+              {timer && renderTimer(timer)}
+              <Text style={styles.emptyText}>
+                {books.length > 0
+                  ? t("today.noBookInProgress")
+                  : t("today.noBooksYet")}
+              </Text>
+              <Button
+                title={hasUpNext ? t("today.chooseBook") : t("today.addBook")}
+                variant="secondary"
+                onPress={() =>
+                  hasUpNext
+                    ? setChoosing(true)
+                    : openAddBook({ status: "currently_reading", closeOnAdd: true })
+                }
+              />
             </View>
           )}
         </View>
-        <ProgressRule progress={todayMinutes / dailyGoal} />
-        <Text style={styles.statusLine}>{statusLine}</Text>
-      </View>
 
-      {week.length === 7 && (
-        <WeekStrip days={week} onPress={() => router.push("/readinglogs")} />
-      )}
+        {todaySessions.length > 0 && (
+          <View style={styles.section}>
+            <Eyebrow>{t("today.todaysReading")}</Eyebrow>
+            <View>
+              {todaySessions.map((session, index) => (
+                <View key={session.id}>
+                  {index > 0 && <Hairline />}
+                  <SessionRow
+                    label={session.book_name}
+                    detail={formatSessionDetail(session)}
+                    onPress={() => editSession(session)}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
-      <View style={styles.section}>
-        <Eyebrow>{t("today.currentlyReading")}</Eyebrow>
-        {shownBook ? (
-          <>
-            <BookRow book={shownBook} onPress={() => openBook(shownBook.id)} />
-            {reading.length > 1 && !timer && (
-              <View style={styles.switcher}>
-                {reading.map((book) => {
-                  const selected = book.id === shownBook.id;
+        {yearlyGoal > 0 && (
+          <View style={styles.yearly}>
+            <View style={styles.yearlyRow}>
+              <Text style={styles.yearlyText}>
+                {finishedThisYear.length >= yearlyGoal
+                  ? t("today.yearlyDone", { goal: yearlyGoal, year: currentYear })
+                  : t("today.yearly", {
+                      count: finishedThisYear.length,
+                      goal: yearlyGoal,
+                      year: currentYear,
+                    })}
+              </Text>
+              <Text style={styles.yearlyPercent}>
+                {t("today.percent", {
+                  percent: Math.min(
+                    100,
+                    Math.round((finishedThisYear.length / yearlyGoal) * 100),
+                  ),
+                })}
+              </Text>
+            </View>
+            {yearlyGoal <= MAX_SPINES ? (
+              <View style={styles.spines} accessible={false}>
+                {Array.from({ length: yearlyGoal }, (_, i) => {
+                  const read = i < finishedThisYear.length;
                   return (
-                    <Pressable
-                      key={book.id}
-                      onPress={() => setPickedBookId(book.id)}
-                      accessibilityRole="tab"
-                      accessibilityState={{ selected }}
-                      accessibilityLabel={t("today.showBook", {
-                        title: book.name,
-                      })}
+                    <View
+                      key={i}
                       style={[
-                        styles.switcherItem,
-                        selected && styles.switcherItemSelected,
+                        styles.spine,
+                        read
+                          ? {
+                              height: 18 + ((i * 7) % 9),
+                              backgroundColor:
+                                COLORS.cover.spines[i % COLORS.cover.spines.length],
+                            }
+                          : styles.spineEmpty,
                       ]}
-                    >
-                      <BookCover
-                        uri={book.cover_url}
-                        title={book.name}
-                        width={26}
-                      />
-                    </Pressable>
+                    />
                   );
                 })}
               </View>
-            )}
-            {timer ? (
-              renderTimer(timer)
             ) : (
-              <View style={styles.actionRow}>
-                <Button
-                  title={t("today.logReading")}
-                  onPress={() => openLogger({ bookId: shownBook.id })}
-                  grow
-                />
-                <Button
-                  title={t("today.timer")}
-                  icon="play"
-                  variant="secondary"
-                  onPress={handleStartTimer}
-                />
-              </View>
+              <ProgressRule
+                progress={finishedThisYear.length / yearlyGoal}
+                color={COLORS.ink.primary}
+              />
             )}
-          </>
-        ) : (
-          <View style={styles.empty}>
-            {timer && renderTimer(timer)}
-            <Text style={styles.emptyText}>
-              {books.length > 0
-                ? t("today.noBookInProgress")
-                : t("today.noBooksYet")}
-            </Text>
-            <Button
-              title={hasUpNext ? t("today.chooseBook") : t("today.addBook")}
-              variant="secondary"
-              onPress={() =>
-                hasUpNext
-                  ? setChoosing(true)
-                  : openAddBook({ status: "currently_reading", closeOnAdd: true })
-              }
-            />
           </View>
         )}
-      </View>
 
-      {todaySessions.length > 0 && (
-        <View style={styles.section}>
-          <Eyebrow>{t("today.todaysReading")}</Eyebrow>
-          <View>
-            {todaySessions.map((session, index) => (
-              <View key={session.id}>
-                {index > 0 && <Hairline />}
-                <SessionRow
-                  label={session.book_name}
-                  detail={formatSessionDetail(session)}
-                  onPress={() => editSession(session)}
-                />
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {yearlyGoal > 0 && (
-        <View style={styles.yearly}>
-          <View style={styles.yearlyRow}>
-            <Text style={styles.yearlyText}>
-              {finishedThisYear.length >= yearlyGoal
-                ? t("today.yearlyDone", { goal: yearlyGoal, year: currentYear })
-                : t("today.yearly", {
-                    count: finishedThisYear.length,
-                    goal: yearlyGoal,
-                    year: currentYear,
-                  })}
-            </Text>
-            <Text style={styles.yearlyPercent}>
-              {t("today.percent", {
-                percent: Math.min(
-                  100,
-                  Math.round((finishedThisYear.length / yearlyGoal) * 100),
-                ),
-              })}
-            </Text>
-          </View>
-          {yearlyGoal <= MAX_SPINES ? (
-            <View style={styles.spines} accessible={false}>
-              {Array.from({ length: yearlyGoal }, (_, i) => {
-                const read = i < finishedThisYear.length;
-                return (
-                  <View
-                    key={i}
-                    style={[
-                      styles.spine,
-                      read
-                        ? {
-                            height: 18 + ((i * 7) % 9),
-                            backgroundColor:
-                              COLORS.cover.spines[i % COLORS.cover.spines.length],
-                          }
-                        : styles.spineEmpty,
-                    ]}
-                  />
-                );
-              })}
-            </View>
-          ) : (
-            <ProgressRule
-              progress={finishedThisYear.length / yearlyGoal}
-              color={COLORS.ink.primary}
-            />
-          )}
-        </View>
-      )}
-
-      <OptionSheet
-        visible={choosing}
-        title={t("today.chooseBook")}
-        options={upNext.map((book) => ({
-          key: String(book.id),
-          label: book.author ? `${book.name} · ${book.author}` : book.name,
-        }))}
-        selected=""
-        onSelect={(key) => {
-          const book = upNext.find((b) => String(b.id) === key);
-          if (book) setBookStatus(book, "currently_reading", { fromSheet: true });
-        }}
-        onClose={() => setChoosing(false)}
-      />
-    </ScrollView>
+        <OptionSheet
+          visible={choosing}
+          title={t("today.chooseBook")}
+          options={upNext.map((book) => ({
+            key: String(book.id),
+            label: book.author ? `${book.name} · ${book.author}` : book.name,
+          }))}
+          selected=""
+          onSelect={(key) => {
+            const book = upNext.find((b) => String(b.id) === key);
+            if (book) setBookStatus(book, "currently_reading", { fromSheet: true });
+          }}
+          onClose={() => setChoosing(false)}
+        />
+      </ScrollView>
+      <StatusBarBand />
+    </View>
   );
 }
 
@@ -568,7 +574,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginVertical: -SPACING[2],
-    marginRight: -SPACING[2],
   },
   date: {
     flexShrink: 1,

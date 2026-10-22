@@ -27,6 +27,8 @@ type Props = {
   footer?: ReactNode;
   /** false while saving: the backdrop, drag and back button do nothing */
   dismissible?: boolean;
+  /** false when the footer already has a button that closes (Cancel, Done): one way out is enough */
+  closeButton?: boolean;
   /** Wrap the content in a ScrollView (default true) */
   scroll?: boolean;
   /** E.g. to scroll a focused input at the bottom into view */
@@ -54,6 +56,7 @@ export default function Sheet({
   children,
   footer,
   dismissible = true,
+  closeButton = true,
   scroll = true,
   scrollRef,
 }: Props) {
@@ -171,26 +174,28 @@ export default function Sheet({
         >
           <View {...panResponder.panHandlers} style={styles.handleArea}>
             <View style={styles.handle} />
-            <View style={styles.titleRow}>
-              {title ? (
-                <Text style={styles.title} accessibilityRole="header">
-                  {title}
-                </Text>
-              ) : (
-                <View />
-              )}
-              {dismissible && (
-                <Pressable
-                  onPress={requestClose}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("a11y.close")}
-                  hitSlop={12}
-                  style={styles.close}
-                >
-                  <Ionicons name="close" size={20} color={COLORS.ink.secondary} />
-                </Pressable>
-              )}
-            </View>
+            {(title || closeButton) && (
+              <View style={styles.titleRow}>
+                {title ? (
+                  <Text style={styles.title} accessibilityRole="header">
+                    {title}
+                  </Text>
+                ) : (
+                  <View />
+                )}
+                {closeButton && dismissible && (
+                  <Pressable
+                    onPress={requestClose}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("a11y.close")}
+                    hitSlop={12}
+                    style={styles.close}
+                  >
+                    <Ionicons name="close" size={20} color={COLORS.ink.secondary} />
+                  </Pressable>
+                )}
+              </View>
+            )}
           </View>
           {scroll ? (
             <ScrollView

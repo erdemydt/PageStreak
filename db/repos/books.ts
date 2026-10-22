@@ -13,6 +13,7 @@ export type BookWithStats = EnhancedBook & {
   reading_time: number;
   /** SUM(pages_read) across sessions; 0 when no session recorded pages */
   pages_from_sessions: number;
+  session_count: number;
 };
 
 const STATUS_ORDER = `CASE WHEN b.reading_status = 'currently_reading' THEN 1
@@ -112,7 +113,8 @@ export async function listBooksWithStats(
   return queryAll<BookWithStats>(
     `SELECT b.*,
             COALESCE(SUM(s.minutes_read), 0) AS reading_time,
-            COALESCE(SUM(s.pages_read), 0) AS pages_from_sessions
+            COALESCE(SUM(s.pages_read), 0) AS pages_from_sessions,
+            COUNT(s.id) AS session_count
      FROM enhanced_books b
      LEFT JOIN reading_sessions s ON s.book_id = b.id
      ${where}

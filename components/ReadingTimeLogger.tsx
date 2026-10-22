@@ -272,6 +272,7 @@ export default function ReadingTimeLogger({
       onClose={handleClose}
       title={t("components.readingTimeLogger.title")}
       dismissible={!loading}
+      closeButton={false}
       scrollRef={scrollRef}
       footer={
         <>

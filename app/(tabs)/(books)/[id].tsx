@@ -56,6 +56,7 @@ import {
 const SESSIONS_PREVIEW = 5;
 
 type FinishEstimate = { date: string; basedOnGoal: boolean };
+const MIN_SESSIONS_FOR_ESTIMATE = 3;
 
 /**
  * A book's home: its status, progress, sessions and details. Opened from the
@@ -118,10 +119,15 @@ export default function BookDetailsScreen() {
       );
 
       // "Finish by": pace (pages/min) x minutes per day, using this book's
-      // recent reading, else all recent reading, else the daily goal
+      // recent reading, else all recent reading, else the daily goal. One or
+      // two sessions are too few to judge a pace from.
+      const pagedSessions = bookSessions.filter(
+        (session) => (session.pages_read ?? 0) > 0,
+      ).length;
       if (
         foundBook.reading_status === "currently_reading" &&
-        foundBook.page > 0
+        foundBook.page > 0 &&
+        pagedSessions >= MIN_SESSIONS_FOR_ESTIMATE
       ) {
         const [pagesPerMinute, bookMinutes, allMinutes] = await Promise.all([
           getPagesPerMinute(foundBook.id),
@@ -218,13 +224,13 @@ export default function BookDetailsScreen() {
     status === "currently_reading"
       ? book.date_started
         ? t("bookPage.statusReadingSince", {
-            date: formatShortDate(book.date_started),
+            date: formatShortDate(book.date_started, "long"),
           })
         : t("bookPage.statusReading")
       : status === "read"
         ? book.date_finished
           ? t("bookPage.statusFinishedOn", {
-              date: formatShortDate(book.date_finished),
+              date: formatShortDate(book.date_finished, "long"),
             })
           : t("bookPage.statusFinished")
         : t("bookPage.statusWantToRead");
@@ -492,6 +498,8 @@ export default function BookDetailsScreen() {
           deleting.current = active;
         }}
         onDeleted={() => router.back()}
+        sessionCount={sessions.length}
+        minutesRead={totalMinutes}
       />
     </View>
   );

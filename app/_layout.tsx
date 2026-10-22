@@ -4,7 +4,6 @@ import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
 import { useFonts } from "expo-font";
 import { router, Stack } from "expo-router";
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { AppState, AppStateStatus, View } from "react-native";
 import { LanguageProvider } from "../contexts/LanguageContext";
 import { SessionSheetsProvider } from "../contexts/SessionSheetsContext";
@@ -13,13 +12,11 @@ import { initializeDatabase } from "../db/db";
 import { getUserPreferences } from "../db/repos/preferences";
 import NotificationService from "../services/notificationService";
 import { COLORS } from "../themes/colors";
-import { FONTS } from "../themes/typography";
 import { isBootComplete } from "../utils/boot";
 import { applyWeeklyGoalGrowth } from "../utils/goalSettings";
 import ToastHost from "../components/ToastHost";
 
 export default function RootLayout() {
-  const { t } = useTranslation();
   // Nothing may touch the database before migrations finish, including
   // screens opened directly by a deep link (which skip app/index.tsx)
   const [dbAttempted, setDbAttempted] = useState(false);
@@ -106,18 +103,6 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="settings"
-            options={{
-              headerShown: true,
-              title: t("navigation.settings"),
-              headerStyle: { backgroundColor: COLORS.paper.base },
-              headerTintColor: COLORS.ink.primary,
-              headerTitleStyle: { fontFamily: FONTS.serif, fontSize: 19 },
-              headerShadowVisible: false,
-              headerBackButtonDisplayMode: "minimal",
-            }}
-          />
         </Stack>
       </SessionSheetsProvider>
       <ToastHost />

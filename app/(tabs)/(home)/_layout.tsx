@@ -43,6 +43,13 @@ export default function HomeLayout() {
           title: t("history.title"),
         }}
       />
+
+      <Stack.Screen
+        name="settings"
+        options={{
+          title: t("navigation.settings"),
+        }}
+      />
     </Stack>
   );
 }

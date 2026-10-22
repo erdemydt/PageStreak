@@ -38,7 +38,6 @@ app/
   intro.tsx              Onboarding: name (+ restore) → daily goal (presets) → grow it? (target, date, preview) →
                          reminder opt-in → saves user_preferences id=1 → optional first book (Add sheet). A plain
                          fade-in screen, not a native modal, so root-hosted sheets can present over it
-  settings.tsx           Root screen pushed from the gear (Today, Progress): name, language, reminder, backup, About, erase
   (tabs)/
     (home)/index.tsx     Today (Folio): minutes vs goal + streak, week strip (→ readinglogs), the book read most
                          recently (switcher if several), Log reading / timer, today's sessions (tap → edit), yearly line
@@ -49,6 +48,8 @@ app/
     (progress)/index.tsx Progress: streak, week strip + stats, daily-goal card (→ growth), year card (yearly-goal sheet)
     (progress)/growth.tsx   Growth Journey chart; GoalSheet is the only editor of daily/target goal and date
     (progress)/history.tsx  Sessions a week at a time; tap to edit, "+" logs on that day
+    (progress)/settings.tsx From the gear: name, language, reminder, backup, About, erase. (home)/settings re-exports it,
+                         so the gear pushes inside the current tab (SettingsButton picks the tab's route)
     profile.tsx, reading-growth.tsx  Redirect stubs (hidden tabs; Phase 8.4; remove after 2+ releases)
 components/              Screens' building blocks (intro/ holds the onboarding steps)
   today/                 Today's parts (WeekStrip)
@@ -166,7 +167,8 @@ tables there and to the backup service. Test migrations against real DB files: s
 - **Never export `unstable_settings.initialRouteName` from a tab stack layout.** With it, expo-router
   matches the launch URL `/` inside the tabs instead of `app/index.tsx`, so boot (onboarding, goal growth,
   `markBootComplete`) never runs. Don't navigate across tabs into a stack; give each tab its own route
-  instead (Home opens books via `(home)/book/[id]`, which re-exports the Books detail screen).
+  instead (Home opens books via `(home)/book/[id]`, which re-exports the Books detail screen). Don't put a root-stack
+  screen over the tabs either: switching tabs while it slid away left every tab ignoring touches (Settings, 9.2b).
 - Tabs stay mounted: load screen data with `useFocusRefresh(load, topics, deps?)`, not `useEffect([])`.
   New writes belong in a repo and must `emitDataChange(...)` so visible screens refresh.
 - Feedback: success → `showToast` (optionally with Undo); `Alert.alert` only for errors and decisions.
@@ -318,3 +320,7 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
 - **Phase 9.2: serif accents.** Newsreader's ascender (1470/2000) sat below its capital marks (~1742), so iOS clipped
   "İlerleme" to "Ilerleme". `assets/fonts/` now holds the three weights with ascent 1800 (script in `scripts/fonts/`);
   serif text sits ~3 px lower, no block heights changed. Checked every main screen in both languages.
+- **Phase 9.2b: Settings in the tab stacks.** Found while testing: with Settings as a root screen over the tabs, tapping
+  a tab while it was still sliding away (Back, then a tab) left all tab content ignoring touches until a restart (the
+  tab bar still worked). Settings now lives in `(progress)/settings` and `(home)/settings` (a re-export); the same quick
+  tab switch keeps working. The tab bar now shows on Settings.

@@ -85,6 +85,8 @@ Kept for the owner's release notes; clear it when a release ships.
   that load slowly show the drawn cover instead of a blank tile. Logging pages shows "Page 20 of 608" as you type.
   Reminders read as one calm sentence. The week's "per day" average counts the same days as "days met".
 - Turkish capitals in serif headings keep their accents (İlerleme, not Ilerleme).
+- Settings opens inside the current tab (the tab bar stays visible). Fixes the app ignoring taps after leaving Settings
+  and quickly switching tabs.
 
 ---
 
@@ -251,6 +253,8 @@ backups always include everything (no per-table export switches).
   same days as "Days met".
 - [x] **9.2 Serif accents**: Newsreader copies with ascent 1800 in `assets/fonts/` (`scripts/fonts/patch-newsreader.py`);
   serif text moved ~3 px, layout otherwise unchanged; checked Today, Progress, Growth, Library, book page, sheets, Settings.
+- [x] **9.2b Settings in the tab stacks**: as a root screen over the tabs, a tab tap during its pop transition left every
+  tab ignoring touches until restart. Now `(progress)/settings` + `(home)/settings` re-export; the gear pushes in its tab.
 - [ ] **9.3 Backup and restore on `Sheet`**: one "Create backup" (everything), picker first, merge/replace only when data
   exists, toasts. Test merge/replace against real backup JSONs, including an old-format one.
 - [ ] **9.4 Polish**: header/status-bar band, chips, gear styles, sheet close buttons, copy.

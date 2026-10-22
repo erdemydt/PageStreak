@@ -25,6 +25,7 @@ export default function ProgressLayout() {
       />
       <Stack.Screen name="growth" options={{ title: t("growthJourney.title") }} />
       <Stack.Screen name="history" options={{ title: t("history.title") }} />
+      <Stack.Screen name="settings" options={{ title: t("navigation.settings") }} />
     </Stack>
   );
 }

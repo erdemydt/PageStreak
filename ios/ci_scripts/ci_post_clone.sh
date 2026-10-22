@@ -23,8 +23,10 @@ if [ -f yarn.lock ]; then
   yarn install --frozen-lockfile
 elif [ -f pnpm-lock.yaml ]; then
   pnpm install --frozen-lockfile
-else
+elif [ -f package-lock.json ]; then
   npm ci
+else
+  npm install --no-audit --no-fund
 fi
 
 # Now handle iOS dependencies

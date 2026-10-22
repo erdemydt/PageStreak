@@ -126,7 +126,7 @@ tables there and to the backup service. Test migrations against real DB files: s
 - **Daily goal growth** (`utils/goalSettings.ts#applyWeeklyGoalGrowth`, run on cold start and on resume): linear,
   `+weekly_reading_rate_increase_minutes` per full week since `current_reading_rate_last_updated`,
   capped at the target, stops after the goal date. The new goal is recorded in `goal_history` as effective
-  *today* (never back-dated: users must not be judged against goals they never saw). Preference and
+  _today_ (never back-dated: users must not be judged against goals they never saw). Preference and
   goal-history writes happen together in `db.withTransactionAsync`.
 - **Streak** (`utils/readingProgress.ts#calculateStreaks`): consecutive local days, each meeting
   **the goal in effect that day** (`utils/goalHistory.ts`: `goal_history` table, one row per goal
@@ -339,3 +339,5 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   Review fixes: the reminder section reloads after a restore; a failure after the commit no longer says "nothing was
   changed"; Replace from Settings catches up the daily goal; a double tap on Restore no longer shows "not a backup";
   backups are written to the cache (they used to pile up in Documents).
+- **2026-10-22: Xcode Cloud CI.** Made `ios/ci_scripts/ci_post_clone.sh` use `npm ci` only when
+  `package-lock.json` is present, with an `npm install` fallback for checkouts missing the lockfile.

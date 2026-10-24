@@ -11,7 +11,7 @@ Run from the repo root after changing the icon (needs Pillow):
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageCms, ImageDraw
 
 # Folio palette (themes/colors.ts)
 PALETTES = {
@@ -44,6 +44,8 @@ IMAGES = Path("assets/images")
 IOS = Path("ios/PageStreak/Images.xcassets")
 ANDROID = Path("android/app/src/main/res")
 DENSITIES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
+# Untagged PNGs are drawn as Display P3 on iOS (the splash forest came out #005C3A), so tag every file sRGB
+SRGB = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
 
 
 # ---- SVG masters ----
@@ -136,9 +138,9 @@ def save(img, path, size=None, opaque=False):
     if opaque:
         img = img.convert("RGB")  # App Store icons must not have an alpha channel
     if path.suffix == ".webp":
-        img.save(path, "WEBP", lossless=True)
+        img.save(path, "WEBP", lossless=True, icc_profile=SRGB)
     else:
-        img.save(path, optimize=True)
+        img.save(path, optimize=True, icc_profile=SRGB)
     print(path)
 
 

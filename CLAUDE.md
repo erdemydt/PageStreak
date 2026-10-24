@@ -200,6 +200,12 @@ tables there and to the backup service. Test migrations against real DB files: s
   with a raised ascender (its stock one clips İ, Ö, Ğ on iOS). Regenerate them with `scripts/fonts/patch-newsreader.py`. Use `TYPE.*` / `FONTS.*`, which set
   `fontFamily` per weight; never put `fontWeight` on Folio text (iOS would fall back to the system font).
 - Light mode is forced (app.json, Info.plist, Android theme) until real dark mode exists.
+- **UIScene lifecycle is mandatory.** Apps built with the iOS 27 SDK (Xcode 27, which Xcode Cloud uses) are killed at
+  launch on iOS 27 unless they adopt scenes. `ios/PageStreak/AppDelegate.swift` holds a `SceneDelegate` (Info.plist
+  `UIApplicationSceneManifest`): AppDelegate still creates the window and starts React Native (expo-dev-launcher needs
+  the window during launch); SceneDelegate attaches it to the scene and forwards URLs, user activities and
+  active/background to the app delegate (Expo SDK 54 doesn't handle scenes). Never remove either. A Debug build made
+  with an older Xcode doesn't show this, so check launch on an iOS 27 simulator with a **Release** build.
 
 ## Working agreement
 
@@ -350,3 +356,11 @@ Cloud), every change ships via an App Store release (no OTA), and bump the versi
   (AppIcon Contents.json), `icon.png` (app.json icon), `Logo.png` (rounded, in-app and splash), favicon, Android adaptive
   foreground/legacy/round mipmaps and splash logos. Splash backgrounds are paper #F5F1E8 (app.json, colorset, storyboard,
   colors.xml); Android icon background forest. Unused Expo template images removed. Needs an on-device look (icons cache: reinstall).
+- **2026-10-24: 1.1.0 (build 41) closed instantly on launch.** The crash log showed
+  `_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`: Xcode Cloud built with the iOS 27 SDK, and iOS 27
+  terminates apps built with it that don't use the UIScene lifecycle. Not the old data (migrations from the original
+  app's DB pass, and 1.0.4's March `xccBuild` schema is the same). Fix: a `SceneDelegate` plus the scene manifest (see
+  Gotchas). Verified with Release builds on an iOS 27.1 simulator (the "iPhone Duo"; its default display screenshots
+  black, use `--display=primary`): the unfixed build is killed with "UIScene life cycle is required", the fixed one
+  boots onto Today over a DB from the original app (migrated, profile and goal history intact), sheets present, the dev
+  client launches, and background events and `pagestreak://` links (warm and cold) work. Also on iOS 26.5. Ships as 1.1.1.
